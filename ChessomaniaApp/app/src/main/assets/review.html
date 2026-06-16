@@ -18,6 +18,7 @@
     --text2: #8a8178;
     --sq-l: #f0d9b5;
     --sq-d: #b58863;
+    --board-size: min(380px, 92vw);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -69,7 +70,7 @@
 
   /* Eval bar above board */
   .eval-section {
-    width: min(320px, 88vw);
+    width: var(--board-size);
     margin-bottom: 6px;
     display: flex;
     align-items: center;
@@ -107,20 +108,20 @@
     flex-direction: column;
     justify-content: space-around;
     margin-right: 3px;
-    height: min(320px, 88vw);
+    height: var(--board-size);
     color: var(--text2);
     font-size: 0.6rem;
     font-weight: 700;
     user-select: none;
   }
-  .rlbls span { display: flex; align-items: center; justify-content: center; height: calc(min(320px, 88vw) / 8); }
+  .rlbls span { display: flex; align-items: center; justify-content: center; height: calc(var(--board-size) / 8); }
   .board-col { display: flex; flex-direction: column; }
   #rboard {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
-    width: min(320px, 88vw);
-    height: min(320px, 88vw);
+    width: var(--board-size);
+    height: var(--board-size);
     border-radius: 3px;
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0,0,0,.65);
@@ -129,7 +130,7 @@
   .flbls {
     display: flex;
     justify-content: space-around;
-    width: min(320px, 88vw);
+    width: var(--board-size);
     margin-top: 3px;
     margin-left: 0;
     color: var(--text2);
@@ -137,7 +138,7 @@
     font-weight: 700;
     user-select: none;
   }
-  .flbls span { display: flex; align-items: center; justify-content: center; width: calc(min(320px, 88vw) / 8); }
+  .flbls span { display: flex; align-items: center; justify-content: center; width: calc(var(--board-size) / 8); }
 
   /* Squares */
   .rsq {
@@ -194,7 +195,7 @@
 
   /* Eval graph */
   .graph-wrap {
-    width: min(320px, 88vw);
+    width: var(--board-size);
     height: 72px;
     background: var(--panel2);
     border: 1px solid var(--border);
@@ -212,7 +213,7 @@
 
   /* Progress */
   .progress-wrap {
-    width: min(320px, 88vw);
+    width: var(--board-size);
     margin-top: 4px;
     display: none;
   }
@@ -882,6 +883,11 @@ function renderBoard() {
     }
   }
 
+  const unicodeMap = {
+    w: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
+    b: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' }
+  };
+
   for (let ri = 0; ri < 8; ri++) {
     for (let fi = 0; fi < 8; fi++) {
       const f  = dF[fi], r = dR[ri], sq = f + r;
@@ -897,12 +903,29 @@ function renderBoard() {
       if (bto   === sq) d.classList.add('best-to');
 
       if (p) {
-        const img = document.createElement('img');
-        img.src = pImg(p.color, p.type);
-        img.className = 'rpiece';
-        img.draggable = false;
-        img.onerror = () => { img.style.display = 'none'; };
-        d.appendChild(img);
+        if (pTheme === 'Unicode') {
+          const sym = unicodeMap[p.color]?.[p.type] || '';
+          const span = document.createElement('span');
+          span.textContent = sym;
+          span.className = 'rpiece';
+          span.style.fontSize = '2.2rem';
+          span.style.lineHeight = '1';
+          span.style.display = 'flex';
+          span.style.alignItems = 'center';
+          span.style.justifyContent = 'center';
+          span.style.color = p.color === 'w' ? '#ffffff' : '#1a1a1a';
+          if (p.color === 'w') {
+            span.style.textShadow = '0 0 2px #000, 0 0 2px #000';
+          }
+          d.appendChild(span);
+        } else {
+          const img = document.createElement('img');
+          img.src = pImg(p.color, p.type);
+          img.className = 'rpiece';
+          img.draggable = false;
+          img.onerror = () => { img.style.display = 'none'; };
+          d.appendChild(img);
+        }
       }
       board.appendChild(d);
     }
