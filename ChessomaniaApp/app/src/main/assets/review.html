@@ -12,7 +12,6 @@
     --border: #3a3630;
     --accent: #b58863;
     --accent2: #a07040;
-    --glow: rgba(181,136,99,.22);
     --green: #629924;
     --red: #c94f36;
     --text: #d9d4cd;
@@ -24,15 +23,24 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: sans-serif;
+    font-family: 'Segoe UI', sans-serif;
     font-size: 14px;
-    padding: 10px;
-    height: 100vh;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
+    height: 100vh;
+    overflow: hidden;
   }
+
+  /* ── Scrollable content area ── */
+  #content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px;
+    padding-bottom: 20px;
+  }
+
   .card {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -41,36 +49,97 @@
     overflow: hidden;
   }
   .card-h {
-    padding: 6px 12px;
-    font-size: 0.7rem;
+    padding: 7px 12px;
+    font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.2px;
     color: var(--text2);
     border-bottom: 1px solid var(--border);
   }
   .card-b { padding: 10px; }
-  
-  /* Layout: Board on top, stats/history below */
+
+  /* ── Board area ── */
   .board-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     margin-bottom: 10px;
   }
-  
+
+  /* Eval bar above board */
+  .eval-section {
+    width: min(320px, 88vw);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eval-num {
+    font-size: 1rem;
+    font-weight: 700;
+    min-width: 46px;
+    text-align: center;
+    color: var(--text);
+  }
+  .eval-track {
+    flex: 1;
+    height: 7px;
+    background: #333;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .eval-fill {
+    height: 100%;
+    background: #e8e4df;
+    width: 50%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+  }
+
+  /* Board with rank/file labels */
+  .board-wrap {
+    display: flex;
+    align-items: flex-start;
+  }
+  .rlbls {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    margin-right: 3px;
+    height: min(320px, 88vw);
+    color: var(--text2);
+    font-size: 0.6rem;
+    font-weight: 700;
+    user-select: none;
+  }
+  .rlbls span { display: flex; align-items: center; justify-content: center; height: calc(min(320px, 88vw) / 8); }
+  .board-col { display: flex; flex-direction: column; }
   #rboard {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
-    width: min(340px, 90vw);
-    height: min(340px, 90vw);
-    border-radius: 4px;
+    width: min(320px, 88vw);
+    height: min(320px, 88vw);
+    border-radius: 3px;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0,0,0,.6);
-    background: #b58863;
+    box-shadow: 0 4px 20px rgba(0,0,0,.65);
     position: relative;
   }
+  .flbls {
+    display: flex;
+    justify-content: space-around;
+    width: min(320px, 88vw);
+    margin-top: 3px;
+    margin-left: 0;
+    color: var(--text2);
+    font-size: 0.6rem;
+    font-weight: 700;
+    user-select: none;
+  }
+  .flbls span { display: flex; align-items: center; justify-content: center; width: calc(min(320px, 88vw) / 8); }
+
+  /* Squares */
   .rsq {
     position: relative;
     display: flex;
@@ -78,41 +147,27 @@
     justify-content: center;
   }
   .rsq.light { background: var(--sq-l); }
-  .rsq.dark { background: var(--sq-d); }
-  .rsq.lf { background: rgba(205,210,20,.32)!important; }
-  .rsq.lt { background: rgba(205,210,20,.48)!important; }
-  .rsq.best-from { outline: 3px dashed rgba(56,189,248,.8); outline-offset: -3px; background: rgba(56,189,248,.2)!important; }
-  .rsq.best-to { outline: 3px solid rgba(56,189,248,.8); outline-offset: -3px; background: rgba(56,189,248,.3)!important; }
+  .rsq.dark  { background: var(--sq-d); }
+  .rsq.lf    { background: rgba(205,210,20,.32) !important; }
+  .rsq.lt    { background: rgba(205,210,20,.48) !important; }
+  .rsq.best-from { outline: 2px dashed rgba(56,189,248,.9); outline-offset: -2px; background: rgba(56,189,248,.2) !important; }
+  .rsq.best-to   { outline: 2px solid rgba(56,189,248,.9); outline-offset: -2px; background: rgba(56,189,248,.3) !important; }
+
+  /* Pieces */
   .rpiece {
-    width: 86%;
-    height: 86%;
-    position: relative;
-    z-index: 3;
+    width: 84%;
+    height: 84%;
     object-fit: contain;
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
     filter: drop-shadow(0 1px 3px rgba(0,0,0,.4));
   }
-  
-  .rlbls, .flbls {
-    display: flex;
-    color: var(--text2);
-    font-size: 0.65rem;
-    font-weight: 600;
-  }
-  .rlbls {
-    flex-direction: column;
-    justify-content: space-around;
-    margin-right: 4px;
-  }
-  .flbls {
-    justify-content: space-around;
-    width: min(340px, 90vw);
-    margin-top: 4px;
-  }
-  
+
   /* Controls */
   .control-row {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     margin: 8px 0;
     justify-content: center;
     width: 100%;
@@ -120,73 +175,86 @@
   .btn {
     padding: 6px 12px;
     border-radius: 6px;
-    border: none;
+    border: 1px solid var(--border);
     background: var(--panel2);
     color: var(--text);
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
     transition: all 0.15s;
-    border: 1px solid var(--border);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
+  .btn:active { filter: brightness(1.25); transform: scale(0.96); }
   .btn-accent {
     background: var(--accent);
     color: #fff;
-    border: none;
+    border-color: var(--accent2);
   }
-  .btn:active {
-    filter: brightness(1.2);
-  }
-  
-  /* Graph */
-  .graph-container {
-    width: min(340px, 90vw);
-    height: 80px;
+
+  /* Eval graph */
+  .graph-wrap {
+    width: min(320px, 88vw);
+    height: 72px;
     background: var(--panel2);
     border: 1px solid var(--border);
     border-radius: 6px;
-    position: relative;
     overflow: hidden;
-    margin-top: 4px;
+    margin-top: 6px;
+    position: relative;
   }
-  .graph-svg {
+  .graph-wrap svg {
     width: 100%;
     height: 100%;
+    display: block;
   }
-  .graph-dot {
-    fill: var(--accent);
-    stroke: #fff;
-    stroke-width: 1;
-    cursor: pointer;
+  .graph-dot { cursor: pointer; }
+
+  /* Progress */
+  .progress-wrap {
+    width: min(320px, 88vw);
+    margin-top: 4px;
+    display: none;
   }
-  .graph-dot.active {
-    fill: #fff;
-    stroke: var(--green);
-    stroke-width: 2;
-    r: 5px;
+  .progress-txt { font-size: 0.68rem; color: var(--text2); margin-bottom: 3px; }
+  .progress-track {
+    width: 100%;
+    height: 4px;
+    background: var(--panel2);
+    border-radius: 2px;
+    overflow: hidden;
   }
-  
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.2s;
+    border-radius: 2px;
+  }
+
   /* Badges */
   .badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.55rem;
+    font-size: 0.52rem;
     font-weight: 800;
     width: 14px;
     height: 14px;
     border-radius: 50%;
     color: #fff;
     margin-left: 4px;
+    flex-shrink: 0;
   }
-  .badge.blunder { background: #ef4444; }
-  .badge.mistake { background: #f97316; }
+  .badge.blunder    { background: #ef4444; }
+  .badge.mistake    { background: #f97316; }
   .badge.inaccuracy { background: #fbbf24; color: #1e1c19; }
-  .badge.good { background: #9ca3af; }
-  .badge.excellent { background: #38bdf8; }
-  .badge.best { background: #629924; }
-  
-  /* Table & Stats */
+  .badge.good       { background: #9ca3af; }
+  .badge.excellent  { background: #38bdf8; }
+  .badge.best       { background: #629924; }
+  .badge.forced     { background: #629924; }
+
+  /* Stats table */
   .summary-table {
     width: 100%;
     border-collapse: collapse;
@@ -199,692 +267,798 @@
   .summary-table th {
     text-align: left;
     color: var(--text2);
+    font-size: 0.65rem;
+    text-transform: uppercase;
   }
-  
+
+  /* Move list */
   .mlist {
-    max-height: 180px;
+    max-height: 160px;
     overflow-y: auto;
   }
   .rev-mrow {
     display: flex;
+    align-items: center;
     padding: 4px 6px;
-    font-size: 0.75rem;
-    border-bottom: 1px solid rgba(255,255,255,0.02);
+    font-size: 0.74rem;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
   }
-  .rev-mrow.active {
-    background: rgba(181,136,99,0.15);
-  }
+  .rev-mrow.active { background: rgba(181,136,99,0.15); }
   .rev-mnum {
     width: 28px;
     color: var(--text2);
     font-weight: 700;
+    flex-shrink: 0;
   }
   .rev-msan {
     flex: 1;
     display: flex;
     align-items: center;
+    padding: 0 3px;
+    border-radius: 3px;
+    min-height: 18px;
+    cursor: pointer;
   }
   .rev-msan.cur {
     background: var(--accent);
     color: #fff;
-    border-radius: 2px;
-    padding: 0 4px;
   }
-  
-  /* Progress Bar */
-  .progress-container {
-    width: 100%;
+
+  /* Move quality card */
+  .cls-label {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .cls-best, .cls-forced { background: #629924; color: #fff; }
+  .cls-excellent { background: #38bdf8; color: #fff; }
+  .cls-good { background: #9ca3af; color: #fff; }
+  .cls-inaccuracy { background: #fbbf24; color: #1e1c19; }
+  .cls-mistake { background: #f97316; color: #fff; }
+  .cls-blunder { background: #ef4444; color: #fff; }
+
+  /* Accuracy ring */
+  .acc-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
     margin-bottom: 8px;
-    display: none;
   }
-  .progress-bar {
-    width: 100%;
-    height: 5px;
+  .acc-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     background: var(--panel2);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-top: 4px;
+    border-radius: 8px;
+    padding: 8px 16px;
+    flex: 1;
+    border: 1px solid var(--border);
   }
-  .progress-fill {
-    height: 100%;
-    background: var(--accent);
-    width: 0%;
-    transition: width 0.2s;
+  .acc-val {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--green);
   }
-  
-  .eval-bar {
-    width: min(340px, 90vw);
-    height: 6px;
-    background: #333;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 4px;
-  }
-  .eval-fill {
-    height: 100%;
-    background: #e8e4df;
-    width: 50%;
-    transition: width 0.3s;
-  }
-  .eval-num {
-    font-size: 1.1rem;
-    font-weight: bold;
+  .acc-lbl { font-size: 0.6rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; }
+
+  /* Error state */
+  #error-banner {
+    display: none;
+    background: rgba(201,79,54,0.15);
+    border: 1px solid rgba(201,79,54,0.4);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    color: #f97316;
+    margin-bottom: 8px;
     text-align: center;
-    margin-bottom: 4px;
   }
-  .eval-num.white { color: #f0d9b5; }
-  .eval-num.black { color: #8a8178; }
 </style>
 </head>
 <body>
 
+<div id="content">
+
+  <!-- Error Banner -->
+  <div id="error-banner"></div>
+
   <!-- Progress -->
-  <div class="progress-container" id="progress-container">
-    <div style="font-size:0.7rem; color:var(--text2);" id="progress-txt">Initializing Engine...</div>
-    <div class="progress-bar">
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-txt" id="progress-txt">Initializing engine...</div>
+    <div class="progress-track">
       <div class="progress-fill" id="progress-fill"></div>
     </div>
   </div>
 
+  <!-- Board section -->
   <div class="board-container">
-    <div class="eval-num white" id="eval-val">0.0</div>
-    <div class="eval-bar"><div class="eval-fill" id="eval-fill"></div></div>
-    
-    <div style="display:flex; align-items:stretch;">
+    <!-- Eval bar -->
+    <div class="eval-section">
+      <div class="eval-num" id="eval-num">0.0</div>
+      <div class="eval-track"><div class="eval-fill" id="eval-fill"></div></div>
+    </div>
+
+    <!-- Board with rank labels -->
+    <div class="board-wrap">
       <div class="rlbls" id="rlbls"></div>
-      <div id="rboard"></div>
+      <div class="board-col">
+        <div id="rboard"></div>
+        <div class="flbls" id="flbls"></div>
+      </div>
     </div>
-    <div class="flbls" id="flbls"></div>
-    
+
+    <!-- Navigation controls -->
     <div class="control-row">
-      <button class="btn" onclick="jumpStart()">&lt;&lt;</button>
-      <button class="btn" onclick="prevMove()">&lt;</button>
-      <button class="btn" onclick="nextMove()">&gt;</button>
-      <button class="btn" onclick="jumpEnd()">&gt;&gt;</button>
-      <button class="btn" onclick="flip()">&uarr;&darr;</button>
+      <button class="btn" onclick="jumpStart()">&#171;</button>
+      <button class="btn" onclick="prevMove()">&#8249;</button>
+      <button class="btn" onclick="nextMove()">&#8250;</button>
+      <button class="btn" onclick="jumpEnd()">&#187;</button>
+      <button class="btn" onclick="flip()">&#8597;</button>
     </div>
-    
-    <div class="graph-container">
-      <svg class="graph-svg" id="graph-svg" viewBox="0 0 340 80" preserveAspectRatio="none"></svg>
+
+    <!-- Eval graph -->
+    <div class="graph-wrap">
+      <svg id="graph-svg" viewBox="0 0 320 72" preserveAspectRatio="none"></svg>
     </div>
   </div>
 
+  <!-- Move quality card -->
   <div class="card">
     <div class="card-h">Move Quality</div>
-    <div class="card-b" style="font-size:0.8rem;">
-      <div style="font-weight:bold; margin-bottom:4px;" id="played-move">—</div>
-      <div id="played-desc" style="color:var(--text2); font-size:0.75rem; margin-bottom:8px;">Move details will appear here.</div>
-      <div style="font-weight:bold; margin-bottom:4px;" id="suggested-move">—</div>
-      <div id="suggested-desc" style="color:var(--text2); font-size:0.75rem; margin-bottom:6px;">Suggested best move.</div>
-      <button class="btn btn-accent" style="width:100%; font-size:0.75rem; padding:4px;" id="btn-show-best" onclick="toggleBest()">Show Best Move</button>
+    <div class="card-b">
+      <div id="cls-badge-row" style="margin-bottom:6px;display:none;"></div>
+      <div style="font-weight:600; font-size:0.8rem; margin-bottom:2px;" id="played-move">—</div>
+      <div style="font-size:0.72rem; color:var(--text2); margin-bottom:8px;" id="played-desc">Select a move to see details.</div>
+      <div style="font-weight:600; font-size:0.78rem; margin-bottom:2px; color:#38bdf8;" id="suggested-move">—</div>
+      <div style="font-size:0.7rem; color:var(--text2); margin-bottom:8px;" id="suggested-desc"></div>
+      <button class="btn btn-accent" style="width:100%; display:none;" id="btn-show-best" onclick="toggleBest()">Show Best Move</button>
     </div>
   </div>
 
+  <!-- Review stats -->
   <div class="card">
     <div class="card-h">Review Report</div>
     <div class="card-b">
+      <div class="acc-row">
+        <div class="acc-box">
+          <div class="acc-val" id="acc-w">—</div>
+          <div class="acc-lbl">White</div>
+        </div>
+        <div class="acc-box">
+          <div class="acc-val" id="acc-b">—</div>
+          <div class="acc-lbl">Black</div>
+        </div>
+      </div>
       <table class="summary-table">
         <thead>
-          <tr>
-            <th>Metric</th>
-            <th>White</th>
-            <th>Black</th>
-          </tr>
+          <tr><th>Move Type</th><th>White</th><th>Black</th></tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Accuracy</td>
-            <td id="acc-w" style="font-weight:bold;color:var(--green)">—</td>
-            <td id="acc-b" style="font-weight:bold;color:var(--green)">—</td>
-          </tr>
-          <tr>
-            <td>Best/Forced Move</td>
-            <td id="best-w">0</td>
-            <td id="best-b">0</td>
-          </tr>
-          <tr>
-            <td>Excellent</td>
-            <td id="exc-w">0</td>
-            <td id="exc-b">0</td>
-          </tr>
-          <tr>
-            <td>Good</td>
-            <td id="gd-w">0</td>
-            <td id="gd-b">0</td>
-          </tr>
-          <tr>
-            <td>Inaccuracy</td>
-            <td id="inac-w" style="color:#fbbf24">0</td>
-            <td id="inac-b" style="color:#fbbf24">0</td>
-          </tr>
-          <tr>
-            <td>Mistake</td>
-            <td id="mist-w" style="color:#f97316">0</td>
-            <td id="mist-b" style="color:#f97316">0</td>
-          </tr>
-          <tr>
-            <td>Blunder</td>
-            <td id="blun-w" style="color:#ef4444;font-weight:bold">0</td>
-            <td id="blun-b" style="color:#ef4444;font-weight:bold">0</td>
-          </tr>
+          <tr><td>Best / Forced</td><td id="best-w">0</td><td id="best-b">0</td></tr>
+          <tr><td>Excellent</td><td id="exc-w">0</td><td id="exc-b">0</td></tr>
+          <tr><td>Good</td><td id="gd-w">0</td><td id="gd-b">0</td></tr>
+          <tr><td style="color:#fbbf24">Inaccuracy</td><td id="inac-w">0</td><td id="inac-b">0</td></tr>
+          <tr><td style="color:#f97316">Mistake</td><td id="mist-w">0</td><td id="mist-b">0</td></tr>
+          <tr><td style="color:#ef4444;font-weight:700">Blunder</td><td id="blun-w">0</td><td id="blun-b">0</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
+  <!-- Game moves list -->
   <div class="card">
     <div class="card-h">Game Moves</div>
     <div class="mlist card-b" id="mlist"></div>
   </div>
 
+</div><!-- /content -->
+
 <script src="chess.min.js"></script>
 <script>
-  'use strict';
-  
-  const FILES = ['a','b','c','d','e','f','g','h'];
-  const RANKS = [8,7,6,5,4,3,2,1];
-  
-  let chess = new Chess();
-  let hist = [];
-  let fens = [];
-  let evals = [];
-  let classifications = [];
-  let moveIdx = 0;
-  let sfWorker = null;
-  let isAnalyzing = false;
-  let isFlipped = false;
-  let showBest = false;
-  let lastMove = null;
-  let revPieces = 'cburnett';
+'use strict';
 
-  // IndexedDB Caching
-  const DB_NAME = 'ChessReviewCacheLocal';
-  const STORE_NAME = 'evals_local';
-  let db = null;
+const FILES = ['a','b','c','d','e','f','g','h'];
+const RANKS = [8,7,6,5,4,3,2,1];
 
-  function initDB() {
-    return new Promise((resolve) => {
-      if (db) return resolve(db);
-      const req = indexedDB.open(DB_NAME, 1);
-      req.onsuccess = (e) => { db = e.target.result; resolve(db); };
-      req.onupgradeneeded = (e) => {
-        const d = e.target.result;
-        if (!d.objectStoreNames.contains(STORE_NAME)) d.createObjectStore(STORE_NAME);
-      };
-      req.onerror = () => resolve(null);
-    });
+let chess     = new Chess();
+let hist      = [];
+let fens      = [];
+let evals     = [];
+let clsArr    = [];
+let moveIdx   = 0;
+let sfWorker  = null;
+let sfReady   = false;
+let analyzing = false;
+let flipped   = false;
+let showBest  = false;
+let lastMove  = null;
+let pTheme    = 'cburnett';
+
+/* ─── Android bridge ─────────────────────────────── */
+function android(method, ...args) {
+  if (window.Android && typeof window.Android[method] === 'function') {
+    try { window.Android[method](...args); } catch(e) { console.warn('android bridge error', e); }
   }
+}
 
-  function getCache(key) {
-    return initDB().then(d => {
-      if (!d) return null;
-      return new Promise((resolve) => {
-        const tx = d.transaction([STORE_NAME], 'readonly');
-        const req = tx.objectStore(STORE_NAME).get(key);
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => resolve(null);
-      });
-    });
-  }
+/* ─── IndexedDB cache ────────────────────────────── */
+const DB = 'ChessReview_v3';
+let db = null;
 
-  function setCache(key, val) {
-    return initDB().then(d => {
-      if (!d) return;
-      return new Promise((resolve) => {
-        const tx = d.transaction([STORE_NAME], 'readwrite');
-        const req = tx.objectStore(STORE_NAME).put(val, key);
-        req.onsuccess = () => resolve(true);
-        req.onerror = () => resolve(false);
-      });
-    });
-  }
-
-  function pImg(color, type) {
-    return 'pieces/' + revPieces + '/' + color + type.toUpperCase() + '.svg';
-  }
-
-  function callAndroid(method, ...args) {
-    if (window.Android && window.Android[method]) {
-      try { window.Android[method](...args); } catch(e) {}
-    }
-  }
-
-  window.startReview = function(base64Moves, pieceTheme, lightColor, darkColor) {
+async function openDB() {
+  if (db) return db;
+  return new Promise(res => {
+    const r = indexedDB.open(DB, 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('ev');
+    r.onsuccess = e => { db = e.target.result; res(db); };
+    r.onerror   = () => res(null);
+  });
+}
+async function cacheGet(k) {
+  const d = await openDB();
+  if (!d) return null;
+  return new Promise(res => {
     try {
-      if (pieceTheme) revPieces = pieceTheme;
-      if (lightColor) document.documentElement.style.setProperty('--sq-l', lightColor);
-      if (darkColor) document.documentElement.style.setProperty('--sq-d', darkColor);
-
-      const decoded = atob(base64Moves);
-      hist = decoded.split(',').map(m => m.trim()).filter(m => m.length > 0);
-      moveIdx = 0;
-      runAnalysis();
-    } catch(e) {
-      console.error('Failed to parse moves:', e);
-      callAndroid('onError', 'Error parsing moves');
-    }
-  };
-
-  function initSF() {
-    if (sfWorker) return;
+      const tx = d.transaction('ev', 'readonly');
+      const rq = tx.objectStore('ev').get(k);
+      rq.onsuccess = () => res(rq.result || null);
+      rq.onerror   = () => res(null);
+    } catch(e) { res(null); }
+  });
+}
+async function cacheSet(k, v) {
+  const d = await openDB();
+  if (!d) return;
+  return new Promise(res => {
     try {
-      sfWorker = new Worker('stockfish.js');
-      sfWorker.postMessage('uci');
-      sfWorker.postMessage('setoption name Skill Level value 20');
-      sfWorker.postMessage('isready');
-    } catch (e) {
-      console.error('Failed to init Stockfish worker:', e);
-      callAndroid('onError', 'Stockfish Init Error');
-    }
-  }
+      const tx = d.transaction('ev', 'readwrite');
+      const rq = tx.objectStore('ev').put(v, k);
+      rq.onsuccess = () => res(true);
+      rq.onerror   = () => res(false);
+    } catch(e) { res(false); }
+  });
+}
 
-  function evaluatePos(fen, depth) {
-    return new Promise((resolve) => {
-      initSF();
-      if (!sfWorker) return resolve({ cp: 0, mate: null, bestMove: '(none)' });
-      
-      let bestMove = '';
-      let cp = 0;
-      let mate = null;
-      
-      const onMsg = (e) => {
-        const line = e.data;
-        const cpMatch = line.match(/score cp (-?\d+)/);
-        const mateMatch = line.match(/score mate (-?\d+)/);
-        if (cpMatch) cp = parseInt(cpMatch[1]);
-        if (mateMatch) mate = parseInt(mateMatch[1]);
-        if (line.startsWith('bestmove')) {
-          bestMove = line.split(' ')[1];
-          sfWorker.removeEventListener('message', onMsg);
-          resolve({ cp, mate, bestMove });
-        }
-      };
-      
-      sfWorker.addEventListener('message', onMsg);
-      sfWorker.postMessage('position fen ' + fen);
-      sfWorker.postMessage('go depth ' + depth);
+/* ─── Stockfish worker ──────────────────────────── */
+function initSF() {
+  if (sfWorker) return;
+  try {
+    sfWorker = new Worker('stockfish.js');
+    sfWorker.onerror = (e) => {
+      console.error('SF Worker error:', e);
+      sfWorker = null;
+      sfReady = false;
+      showError('Engine failed to load. Showing basic board only.');
+    };
+    sfWorker.postMessage('uci');
+    sfWorker.postMessage('setoption name Hash value 16');
+    sfWorker.postMessage('setoption name Threads value 1');
+    sfWorker.postMessage('isready');
+    sfWorker.addEventListener('message', function onReady(e) {
+      if (e.data === 'readyok') {
+        sfReady = true;
+        sfWorker.removeEventListener('message', onReady);
+      }
     });
+  } catch(e) {
+    console.error('Cannot create SF worker:', e);
+    sfWorker = null;
+    sfReady = false;
+    showError('Engine not available. Board view only.');
   }
+}
 
-  function getNumericalEval(ev, turn) {
-    if (ev.mate !== null) {
-      return ev.mate > 0 ? (10000 - ev.mate * 100) : (-10000 - ev.mate * 100);
+function evalPos(fen, depth) {
+  return new Promise(resolve => {
+    if (!sfWorker) {
+      resolve({ cp: 0, mate: null, bestMove: '(none)' });
+      return;
     }
-    return ev.cp;
-  }
+    let cp = 0, mate = null, bestMove = '(none)';
+    const timeout = setTimeout(() => {
+      sfWorker.removeEventListener('message', onMsg);
+      resolve({ cp, mate, bestMove });
+    }, 8000); // 8s timeout per position
 
-  function classifyMove(prev, curr, turn, playedUci, bestUci, isForced) {
-    if (isForced) return 'forced';
-    if (playedUci === bestUci) return 'best';
-    
-    const prevVal = getNumericalEval(prev, turn);
-    const currVal = getNumericalEval(curr, turn);
-    const loss = turn === 'w' ? (prevVal - currVal) : (currVal - prevVal);
-    
-    if (loss <= 20) return 'excellent';
-    if (loss <= 50) return 'good';
-    if (loss <= 100) return 'inaccuracy';
-    if (loss <= 200) return 'mistake';
-    return 'blunder';
-  }
+    function onMsg(e) {
+      const line = e.data;
+      const cpM  = line.match(/score cp (-?\d+)/);
+      const matM = line.match(/score mate (-?\d+)/);
+      if (cpM)  cp   = parseInt(cpM[1]);
+      if (matM) mate = parseInt(matM[1]);
+      if (line.startsWith('bestmove')) {
+        clearTimeout(timeout);
+        const parts = line.split(' ');
+        bestMove = parts[1] || '(none)';
+        sfWorker.removeEventListener('message', onMsg);
+        resolve({ cp, mate, bestMove });
+      }
+    }
+    sfWorker.addEventListener('message', onMsg);
+    sfWorker.postMessage('position fen ' + fen);
+    sfWorker.postMessage('go depth ' + depth);
+  });
+}
 
-  async function runAnalysis() {
-    if (isAnalyzing) return;
-    isAnalyzing = true;
-    showBest = false;
-    
-    const prog = document.getElementById('progress-container');
-    const fill = document.getElementById('progress-fill');
-    const txt = document.getElementById('progress-txt');
-    prog.style.display = 'block';
-    fill.style.width = '0%';
-    txt.textContent = 'Loading cache...';
+/* ─── Entry point ───────────────────────────────── */
+window.startReview = function(b64moves, pieceTheme, lightColor, darkColor) {
+  try {
+    if (pieceTheme)   pTheme = pieceTheme;
+    if (lightColor)   document.documentElement.style.setProperty('--sq-l', lightColor);
+    if (darkColor)    document.documentElement.style.setProperty('--sq-d', darkColor);
 
-    const cacheKey = hist.join(',') + '_v2_local';
-    const cached = await getCache(cacheKey);
-    if (cached) {
-      evals = cached.evals;
-      classifications = cached.classifications;
-      fens = cached.fens;
-      isAnalyzing = false;
-      prog.style.display = 'none';
-      calcStats();
-      drawGraph();
-      moveIdx = 0;
-      render();
-      callAndroid('onAnalysisComplete');
+    const decoded = atob(b64moves);
+    const rawMoves = decoded.split(',').map(m => m.trim()).filter(m => m.length > 0);
+
+    // Validate moves with chess.js
+    const temp = new Chess();
+    hist = [];
+    for (const mv of rawMoves) {
+      const r = temp.move(mv);
+      if (r) hist.push(r.san);
+    }
+
+    if (hist.length === 0) {
+      showError('No valid moves to review.');
+      renderBoard(); // show empty starting board
       return;
     }
 
-    const temp = new Chess();
-    fens = [temp.fen()];
-    const uciMoves = [];
-    const forcedFlags = [];
+    moveIdx = hist.length; // start at final position
+    renderBoard(); // show board immediately with starting position
+    runAnalysis();
+  } catch(e) {
+    console.error('startReview error:', e);
+    showError('Failed to parse game moves.');
+    renderBoard();
+  }
+};
 
-    for (let i = 0; i < hist.length; i++) {
-      const legalCount = temp.moves().length;
-      forcedFlags.push(legalCount === 1);
-      const r = temp.move(hist[i]);
-      if (r) {
-        fens.push(temp.fen());
-        uciMoves.push(r.from + r.to);
-      }
-    }
+/* ─── Analysis ──────────────────────────────────── */
+async function runAnalysis() {
+  if (analyzing) return;
+  analyzing = true;
+  showBest = false;
 
-    evals = [];
-    initSF();
+  setProgress(true, 'Checking cache...', 0);
 
-    for (let i = 0; i < fens.length; i++) {
-      txt.textContent = `Analyzing ${i} / ${fens.length - 1}...`;
-      fill.style.width = `${Math.round((i / fens.length) * 100)}%`;
-      
-      let depth = 10;
-      if (fens.length - i < 10) depth = 12;
-      
-      const res = await evaluatePos(fens[i], depth);
-      evals.push(res);
-    }
-
-    classifications = [];
-    for (let i = 0; i < hist.length; i++) {
-      const prev = evals[i];
-      const curr = evals[i+1];
-      const turn = i % 2 === 0 ? 'w' : 'b';
-      const playedUci = uciMoves[i];
-      const bestUci = prev.bestMove;
-      
-      const cls = classifyMove(prev, curr, turn, playedUci, bestUci, forcedFlags[i]);
-      classifications.push(cls);
-    }
-
-    await setCache(cacheKey, { evals, classifications, fens });
-
-    isAnalyzing = false;
-    prog.style.display = 'none';
+  const cacheKey = hist.join(',') + '_v3';
+  const cached = await cacheGet(cacheKey);
+  if (cached && cached.evals && cached.evals.length > 0) {
+    evals   = cached.evals;
+    clsArr  = cached.clsArr;
+    fens    = cached.fens;
+    analyzing = false;
+    setProgress(false, '', 100);
     calcStats();
     drawGraph();
-    moveIdx = 0;
+    moveIdx = hist.length;
     render();
-    callAndroid('onAnalysisComplete');
+    android('onAnalysisComplete');
+    return;
   }
 
-  function calcStats() {
-    const stats = {
-      w: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, forced: 0, lossSum: 0, count: 0 },
-      b: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, forced: 0, lossSum: 0, count: 0 }
-    };
-    
-    for (let i = 0; i < hist.length; i++) {
-      const cls = classifications[i];
-      const turn = i % 2 === 0 ? 'w' : 'b';
-      const stat = stats[turn];
-      stat.count++;
-      
-      if (cls === 'best') stat.best++;
-      else if (cls === 'excellent') stat.excellent++;
-      else if (cls === 'good') stat.good++;
-      else if (cls === 'inaccuracy') stat.inaccuracy++;
-      else if (cls === 'mistake') stat.mistake++;
-      else if (cls === 'blunder') stat.blunder++;
-      else if (cls === 'forced') stat.forced++;
-      
-      const prevVal = getNumericalEval(evals[i], turn);
-      const currVal = getNumericalEval(evals[i+1], turn);
-      const loss = turn === 'w' ? Math.max(0, prevVal - currVal) : Math.max(0, currVal - prevVal);
-      if (cls !== 'forced' && Math.abs(prevVal) < 800) {
-        stat.lossSum += loss;
+  // Build FEN sequence
+  const temp2 = new Chess();
+  fens = [temp2.fen()];
+  const uciMoves = [];
+  const forcedFlags = [];
+
+  for (let i = 0; i < hist.length; i++) {
+    const legal = temp2.moves().length;
+    forcedFlags.push(legal === 1);
+    const r = temp2.move(hist[i]);
+    if (r) {
+      fens.push(temp2.fen());
+      uciMoves.push(r.from + r.to + (r.promotion || ''));
+    }
+  }
+
+  initSF();
+  // Wait a moment for SF to init if it just started
+  if (!sfReady && sfWorker) {
+    await new Promise(res => setTimeout(res, 1500));
+  }
+
+  if (!sfWorker) {
+    // No engine — show board only
+    analyzing = false;
+    setProgress(false, '', 0);
+    moveIdx = hist.length;
+    render();
+    return;
+  }
+
+  evals = [];
+  for (let i = 0; i < fens.length; i++) {
+    setProgress(true, `Analyzing ${i} / ${fens.length - 1}`, Math.round((i / fens.length) * 100));
+    const depth = (fens.length - i < 10) ? 12 : 10;
+    const res = await evalPos(fens[i], depth);
+    evals.push(res);
+  }
+
+  // Classify moves
+  clsArr = [];
+  for (let i = 0; i < hist.length; i++) {
+    if (!evals[i] || !evals[i+1]) { clsArr.push('good'); continue; }
+    const turn = i % 2 === 0 ? 'w' : 'b';
+    const cls = classifyMove(evals[i], evals[i+1], turn, uciMoves[i], evals[i].bestMove, forcedFlags[i]);
+    clsArr.push(cls);
+  }
+
+  await cacheSet(cacheKey, { evals, clsArr, fens });
+
+  analyzing = false;
+  setProgress(false, '', 100);
+  calcStats();
+  drawGraph();
+  moveIdx = hist.length;
+  render();
+  android('onAnalysisComplete');
+}
+
+/* ─── Classification ────────────────────────────── */
+function numEval(ev) {
+  if (ev.mate !== null) return ev.mate > 0 ? 10000 - ev.mate * 10 : -10000 - ev.mate * 10;
+  return ev.cp;
+}
+
+function classifyMove(prev, curr, turn, playedUci, bestUci, forced) {
+  if (forced) return 'forced';
+  if (playedUci === bestUci) return 'best';
+  const prevV = numEval(prev);
+  const currV = numEval(curr);
+  const loss = turn === 'w' ? (prevV - currV) : (currV - prevV);
+  if (loss <= 20)  return 'excellent';
+  if (loss <= 50)  return 'good';
+  if (loss <= 100) return 'inaccuracy';
+  if (loss <= 200) return 'mistake';
+  return 'blunder';
+}
+
+/* ─── Stats ─────────────────────────────────────── */
+function calcStats() {
+  const s = {
+    w: { best:0, excellent:0, good:0, inaccuracy:0, mistake:0, blunder:0, forced:0, lossSum:0, count:0 },
+    b: { best:0, excellent:0, good:0, inaccuracy:0, mistake:0, blunder:0, forced:0, lossSum:0, count:0 }
+  };
+  for (let i = 0; i < hist.length; i++) {
+    const cls  = clsArr[i] || 'good';
+    const turn = i % 2 === 0 ? 'w' : 'b';
+    const t = s[turn];
+    t.count++;
+    if (cls === 'best')       t.best++;
+    else if (cls === 'excellent') t.excellent++;
+    else if (cls === 'good')      t.good++;
+    else if (cls === 'inaccuracy') t.inaccuracy++;
+    else if (cls === 'mistake')   t.mistake++;
+    else if (cls === 'blunder')   t.blunder++;
+    else if (cls === 'forced')    t.forced++;
+
+    if (evals[i] && evals[i+1] && cls !== 'forced' && Math.abs(numEval(evals[i])) < 800) {
+      const pv = numEval(evals[i]);
+      const cv = numEval(evals[i+1]);
+      const loss = turn === 'w' ? Math.max(0, pv - cv) : Math.max(0, cv - pv);
+      t.lossSum += loss;
+    }
+  }
+
+  setText('best-w',  s.w.best + s.w.forced);
+  setText('best-b',  s.b.best + s.b.forced);
+  setText('exc-w',   s.w.excellent);
+  setText('exc-b',   s.b.excellent);
+  setText('gd-w',    s.w.good);
+  setText('gd-b',    s.b.good);
+  setText('inac-w',  s.w.inaccuracy);
+  setText('inac-b',  s.b.inaccuracy);
+  setText('mist-w',  s.w.mistake);
+  setText('mist-b',  s.b.mistake);
+  setText('blun-w',  s.w.blunder);
+  setText('blun-b',  s.b.blunder);
+
+  const acplW = s.w.count ? s.w.lossSum / s.w.count : 0;
+  const acplB = s.b.count ? s.b.lossSum / s.b.count : 0;
+  const accW  = s.w.count ? Math.round(100 * Math.exp(-0.007 * acplW)) : '—';
+  const accB  = s.b.count ? Math.round(100 * Math.exp(-0.007 * acplB)) : '—';
+  setText('acc-w', s.w.count ? accW + '%' : '—');
+  setText('acc-b', s.b.count ? accB + '%' : '—');
+}
+
+/* ─── Graph ─────────────────────────────────────── */
+function drawGraph() {
+  const svg = document.getElementById('graph-svg');
+  svg.innerHTML = '';
+  if (evals.length < 2) return;
+
+  const W = 320, H = 72, N = evals.length - 1;
+  const pts = evals.map((ev, i) => {
+    const x  = N === 0 ? W/2 : (i / N) * (W - 20) + 10;
+    let val  = numEval(ev) / 100;
+    val = Math.max(-8, Math.min(8, val));
+    const y  = H/2 - (val / 8) * (H/2 - 6);
+    return { x, y };
+  });
+
+  let html = '';
+  // Center line
+  html += `<line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>`;
+
+  // Shaded areas
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p1 = pts[i], p2 = pts[i+1];
+    const avgY = (p1.y + p2.y) / 2;
+    const col = avgY < H/2 ? 'rgba(98,153,36,0.2)' : 'rgba(201,79,54,0.2)';
+    html += `<polygon points="${p1.x},${p1.y} ${p2.x},${p2.y} ${p2.x},${H/2} ${p1.x},${H/2}" fill="${col}"/>`;
+  }
+
+  // Line
+  let path = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) path += ` L ${pts[i].x} ${pts[i].y}`;
+  html += `<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`;
+
+  // Dots
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    const active = i === moveIdx;
+    const r  = active ? 5 : 3;
+    const fc = active ? '#fff' : 'var(--accent)';
+    const sc = active ? 'var(--green)' : 'rgba(255,255,255,0.5)';
+    const sw = active ? 2 : 1;
+    html += `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fc}" stroke="${sc}" stroke-width="${sw}" class="graph-dot" onclick="jumpTo(${i})"/>`;
+  }
+
+  svg.innerHTML = html;
+}
+
+/* ─── Render ─────────────────────────────────────── */
+function render() {
+  // Rebuild chess state up to moveIdx
+  chess = new Chess();
+  for (let i = 0; i < moveIdx; i++) chess.move(hist[i]);
+
+  // Track last move for highlights
+  lastMove = null;
+  if (moveIdx > 0) {
+    const t = new Chess();
+    for (let i = 0; i < moveIdx - 1; i++) t.move(hist[i]);
+    const r = t.move(hist[moveIdx - 1]);
+    if (r) lastMove = { from: r.from, to: r.to };
+  }
+
+  renderBoard();
+  updMoveList();
+  updRecommendation();
+  updEval();
+  drawGraph();
+}
+
+function updEval() {
+  if (evals.length > moveIdx && evals[moveIdx]) {
+    const ev = evals[moveIdx];
+    const cp = numEval(ev);
+    const pct = Math.max(5, Math.min(95, 50 + cp * 0.07));
+    document.getElementById('eval-fill').style.width = pct + '%';
+    const s = ev.mate !== null
+      ? 'M' + (ev.mate > 0 ? '+' : '') + ev.mate
+      : (cp >= 0 ? '+' : '') + (cp / 100).toFixed(1);
+    document.getElementById('eval-num').textContent = s;
+    document.getElementById('eval-num').style.color = cp >= 0 ? '#f0d9b5' : '#8a8178';
+  } else {
+    document.getElementById('eval-fill').style.width = '50%';
+    document.getElementById('eval-num').textContent = '0.0';
+    document.getElementById('eval-num').style.color = 'var(--text)';
+  }
+}
+
+function pImg(color, type) {
+  // color: 'w'/'b',  type: 'k','q','r','b','n','p'
+  return 'pieces/' + pTheme + '/' + color + type.toUpperCase() + '.svg';
+}
+
+function renderBoard() {
+  const board = document.getElementById('rboard');
+  board.innerHTML = '';
+
+  const dR = flipped ? [...RANKS].reverse() : RANKS;
+  const dF = flipped ? [...FILES].reverse() : FILES;
+
+  // Rank labels
+  document.getElementById('rlbls').innerHTML = dR.map(r => `<span>${r}</span>`).join('');
+  // File labels
+  document.getElementById('flbls').innerHTML = dF.map(f => `<span>${f}</span>`).join('');
+
+  // Best move arrows
+  let bfrom = null, bto = null;
+  if (showBest && moveIdx < evals.length - 1 && evals[moveIdx]) {
+    const bm = evals[moveIdx].bestMove;
+    if (bm && bm !== '(none)' && bm.length >= 4) {
+      bfrom = bm.slice(0, 2);
+      bto   = bm.slice(2, 4);
+    }
+  }
+
+  for (let ri = 0; ri < 8; ri++) {
+    for (let fi = 0; fi < 8; fi++) {
+      const f  = dF[fi], r = dR[ri], sq = f + r;
+      const p  = chess.get(sq);
+      const isL = (FILES.indexOf(f) + r) % 2 === 1;
+
+      const d = document.createElement('div');
+      d.className = 'rsq ' + (isL ? 'light' : 'dark');
+
+      if (lastMove?.from === sq) d.classList.add('lf');
+      if (lastMove?.to   === sq) d.classList.add('lt');
+      if (bfrom === sq) d.classList.add('best-from');
+      if (bto   === sq) d.classList.add('best-to');
+
+      if (p) {
+        const img = document.createElement('img');
+        img.src = pImg(p.color, p.type);
+        img.className = 'rpiece';
+        img.draggable = false;
+        img.onerror = () => { img.style.display = 'none'; };
+        d.appendChild(img);
       }
-    }
-
-    document.getElementById('best-w').textContent = stats.w.best + stats.w.forced;
-    document.getElementById('best-b').textContent = stats.b.best + stats.b.forced;
-    document.getElementById('exc-w').textContent = stats.w.excellent;
-    document.getElementById('exc-b').textContent = stats.b.excellent;
-    document.getElementById('gd-w').textContent = stats.w.good;
-    document.getElementById('gd-b').textContent = stats.b.good;
-    document.getElementById('inac-w').textContent = stats.w.inaccuracy;
-    document.getElementById('inac-b').textContent = stats.b.inaccuracy;
-    document.getElementById('mist-w').textContent = stats.w.mistake;
-    document.getElementById('mist-b').textContent = stats.b.mistake;
-    document.getElementById('blun-w').textContent = stats.w.blunder;
-    document.getElementById('blun-b').textContent = stats.b.blunder;
-
-    const acplW = stats.w.count ? stats.w.lossSum / stats.w.count : 0;
-    const acplB = stats.b.count ? stats.b.lossSum / stats.b.count : 0;
-    const accW = stats.w.count ? Math.round(100 * Math.exp(-0.007 * acplW)) : 100;
-    const accB = stats.b.count ? Math.round(100 * Math.exp(-0.007 * acplB)) : 100;
-
-    document.getElementById('acc-w').textContent = accW + '%';
-    document.getElementById('acc-b').textContent = accB + '%';
-  }
-
-  function drawGraph() {
-    const svg = document.getElementById('graph-svg');
-    svg.innerHTML = '';
-    if (evals.length === 0) return;
-    
-    const N = evals.length - 1;
-    const points = [];
-    for (let i = 0; i < evals.length; i++) {
-      const x = N === 0 ? 170 : (i / N) * 310 + 15;
-      let evalVal = getNumericalEval(evals[i], 'w') / 100;
-      evalVal = Math.max(-8, Math.min(8, evalVal));
-      const y = 40 - (evalVal / 8) * 35;
-      points.push({ x, y });
-    }
-
-    let svgContent = '';
-    svgContent += `<line x1="10" y1="40" x2="330" y2="40" stroke="rgba(255,255,255,0.18)" stroke-width="1.2" />`;
-    
-    for (let i = 0; i < points.length - 1; i++) {
-      const p1 = points[i];
-      const p2 = points[i+1];
-      const polyPoints = `${p1.x},${p1.y} ${p2.x},${p2.y} ${p2.x},40 ${p1.x},40`;
-      const avgY = (p1.y + p2.y) / 2;
-      if (avgY < 40) {
-        svgContent += `<polygon points="${polyPoints}" fill="rgba(98, 153, 36, 0.15)" />`;
-      } else {
-        svgContent += `<polygon points="${polyPoints}" fill="rgba(201, 79, 54, 0.15)" />`;
-      }
-    }
-
-    let pathD = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length; i++) pathD += ` L ${points[i].x} ${points[i].y}`;
-    svgContent += `<path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="1.8" />`;
-
-    for (let i = 0; i < points.length; i++) {
-      const p = points[i];
-      const isActive = i === moveIdx;
-      const r = isActive ? 4.5 : 2.5;
-      const fill = isActive ? '#fff' : 'var(--accent)';
-      const stroke = isActive ? 'var(--green)' : '#fff';
-      svgContent += `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${isActive ? 2 : 1}" class="graph-dot" onclick="jumpTo(${i})" />`;
-    }
-
-    svg.innerHTML = svgContent;
-  }
-
-  function render() {
-    chess = new Chess();
-    for (let i = 0; i < moveIdx; i++) chess.move(hist[i]);
-    
-    lastMove = null;
-    if (moveIdx > 0 && hist.length > 0) {
-      const temp = new Chess();
-      for (let i = 0; i < moveIdx - 1; i++) temp.move(hist[i]);
-      const r = temp.move(hist[moveIdx - 1]);
-      if (r) lastMove = { from: r.from, to: r.to };
-    }
-
-    renderBoard();
-    updMoveList();
-    updRecommendation();
-    
-    if (evals.length > 0) {
-      const ev = evals[moveIdx];
-      let cp = getNumericalEval(ev, 'w');
-      let pct = Math.max(5, Math.min(95, 50 + cp * 0.08));
-      document.getElementById('eval-fill').style.width = pct + '%';
-      
-      const valStr = ev.mate !== null ? 'M' + ev.mate : (cp / 100 > 0 ? '+' : '') + (cp / 100).toFixed(1);
-      document.getElementById('eval-val').textContent = valStr;
-    } else {
-      document.getElementById('eval-fill').style.width = '50%';
-      document.getElementById('eval-val').textContent = '0.0';
-    }
-    
-    drawGraph();
-  }
-
-  function renderBoard() {
-    const board = document.getElementById('rboard');
-    board.innerHTML = '';
-    
-    const dR = isFlipped ? [...RANKS].reverse() : RANKS;
-    const dF = isFlipped ? [...FILES].reverse() : FILES;
-    
-    document.getElementById('rlbls').innerHTML = dR.map(r=>`<span>${r}</span>`).join('');
-    document.getElementById('flbls').innerHTML = dF.map(f=>`<span>${f}</span>`).join('');
-    
-    let showBestFrom = null;
-    let showBestTo = null;
-    if (showBest && moveIdx < evals.length - 1) {
-      const prevEv = evals[moveIdx];
-      if (prevEv && prevEv.bestMove && prevEv.bestMove !== '(none)') {
-        showBestFrom = prevEv.bestMove.slice(0, 2);
-        showBestTo = prevEv.bestMove.slice(2, 4);
-      }
-    }
-
-    for (let ri = 0; ri < 8; ri++) {
-      for (let fi = 0; fi < 8; fi++) {
-        const f = dF[fi], r = dR[ri], sq = f+r;
-        const p = chess.get(sq);
-        const isL = (FILES.indexOf(f) + r) % 2 === 1;
-        
-        const d = document.createElement('div');
-        d.className = 'rsq ' + (isL ? 'light' : 'dark');
-        
-        if (lastMove?.from === sq) d.classList.add('lf');
-        if (lastMove?.to === sq) d.classList.add('lt');
-        if (showBestFrom === sq) d.classList.add('best-from');
-        if (showBestTo === sq) d.classList.add('best-to');
-
-        if (p) {
-          const i = document.createElement('img');
-          i.src = pImg(p.color, p.type);
-          i.className = 'rpiece';
-          i.onerror = () => i.style.display = 'none';
-          d.appendChild(i);
-        }
-        
-        board.appendChild(d);
-      }
+      board.appendChild(d);
     }
   }
+}
 
-  function updMoveList() {
-    const container = document.getElementById('mlist');
-    container.innerHTML = '';
-    
-    const badgeHtml = (cls) => {
-      if (cls === 'best' || cls === 'forced') return `<span class="badge best">✓</span>`;
-      if (cls === 'excellent') return `<span class="badge excellent">🗲</span>`;
-      if (cls === 'good') return `<span class="badge good">⬈</span>`;
-      if (cls === 'inaccuracy') return `<span class="badge inaccuracy">?!</span>`;
-      if (cls === 'mistake') return `<span class="badge mistake">?</span>`;
-      if (cls === 'blunder') return `<span class="badge blunder">??</span>`;
-      return '';
-    };
+/* ─── Move list ─────────────────────────────────── */
+function badgeHtml(cls) {
+  if (!cls) return '';
+  const map = {
+    best:      ['best',      '✓'],
+    forced:    ['forced',    '✓'],
+    excellent: ['excellent', '!'],
+    good:      ['good',      '⬈'],
+    inaccuracy:['inaccuracy','?!'],
+    mistake:   ['mistake',   '?'],
+    blunder:   ['blunder',   '??'],
+  };
+  const [c, t] = map[cls] || ['good', ''];
+  return `<span class="badge ${c}">${t}</span>`;
+}
 
-    for (let i = 0; i < hist.length; i += 2) {
-      const row = document.createElement('div');
-      row.className = 'rev-mrow';
-      if (i === moveIdx - 1 || i + 1 === moveIdx - 1) row.classList.add('active');
-      
-      const wActive = i === moveIdx - 1 ? ' cur' : '';
-      const bActive = i + 1 === moveIdx - 1 ? ' cur' : '';
-      
-      const wBadge = classifications[i] ? badgeHtml(classifications[i]) : '';
-      const bBadge = classifications[i+1] ? badgeHtml(classifications[i+1]) : '';
-      
-      row.innerHTML = `
-        <span class="rev-mnum">${Math.floor(i/2) + 1}.</span>
-        <span class="rev-msan${wActive}" onclick="jumpTo(${i + 1})" style="flex:1;">${hist[i] || ''}${wBadge}</span>
-        <span class="rev-msan${bActive}" onclick="jumpTo(${i + 2})" style="flex:1;">${hist[i+1] || ''}${bBadge}</span>
-      `;
-      container.appendChild(row);
-    }
-    
-    const activeEl = container.querySelector('.rev-msan.cur');
-    if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+function updMoveList() {
+  const container = document.getElementById('mlist');
+  container.innerHTML = '';
+  for (let i = 0; i < hist.length; i += 2) {
+    const row = document.createElement('div');
+    row.className = 'rev-mrow';
+    if (i === moveIdx - 1 || i + 1 === moveIdx - 1) row.classList.add('active');
+
+    const wA = i === moveIdx - 1     ? ' cur' : '';
+    const bA = i + 1 === moveIdx - 1 ? ' cur' : '';
+    const wB = badgeHtml(clsArr[i]);
+    const bB = badgeHtml(clsArr[i+1]);
+
+    row.innerHTML = `
+      <span class="rev-mnum">${Math.floor(i/2)+1}.</span>
+      <span class="rev-msan${wA}" onclick="jumpTo(${i+1})">${hist[i]||''}${wB}</span>
+      <span class="rev-msan${bA}" onclick="jumpTo(${i+2})">${hist[i+1]||''}${bB}</span>
+    `;
+    container.appendChild(row);
+  }
+  const active = container.querySelector('.rev-msan.cur');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+/* ─── Recommendation ─────────────────────────────── */
+function updRecommendation() {
+  const playedEl   = document.getElementById('played-move');
+  const descEl     = document.getElementById('played-desc');
+  const suggEl     = document.getElementById('suggested-move');
+  const suggDesc   = document.getElementById('suggested-desc');
+  const btnShow    = document.getElementById('btn-show-best');
+  const clsRow     = document.getElementById('cls-badge-row');
+
+  if (hist.length === 0 || moveIdx === 0) {
+    playedEl.textContent = '—';
+    descEl.textContent   = 'Navigate moves to see details.';
+    suggEl.textContent   = '—';
+    suggDesc.textContent = '';
+    btnShow.style.display = 'none';
+    clsRow.style.display  = 'none';
+    return;
   }
 
-  function updRecommendation() {
-    const playedMove = document.getElementById('played-move');
-    const playedDesc = document.getElementById('played-desc');
-    const suggestedMove = document.getElementById('suggested-move');
-    const suggestedDesc = document.getElementById('suggested-desc');
-    const btnShow = document.getElementById('btn-show-best');
-    
-    if (hist.length === 0 || moveIdx === 0) {
-      playedMove.textContent = '—';
-      playedDesc.textContent = 'Moves details will appear here.';
-      suggestedMove.textContent = '—';
-      suggestedDesc.textContent = 'Suggested best move.';
-      btnShow.style.display = 'none';
-      return;
-    }
-    
-    btnShow.style.display = 'block';
-    btnShow.textContent = showBest ? 'Hide Best Move' : 'Show Best Move';
+  const idx  = moveIdx - 1;
+  const turn = idx % 2 === 0 ? 'White' : 'Black';
+  const san  = hist[idx];
+  const cls  = clsArr[idx];
 
-    const idx = moveIdx - 1;
-    const turn = idx % 2 === 0 ? 'White' : 'Black';
-    const playedSan = hist[idx];
-    
-    playedMove.textContent = `Played Move: ${playedSan}`;
-    if (classifications[idx]) {
-      const cls = classifications[idx].toUpperCase();
-      const ev = evals[idx+1];
-      let cpStr = '0.0';
-      if (ev) {
-        if (ev.mate !== null) cpStr = 'Mate in ' + ev.mate;
-        else cpStr = (ev.cp / 100 > 0 ? '+' : '') + (ev.cp / 100).toFixed(2);
-      }
-      playedDesc.textContent = `${turn} played ${playedSan}. Marked as ${cls}. Evaluation: ${cpStr}`;
-    } else {
-      playedDesc.textContent = '';
-    }
-
-    const prevEv = evals[idx];
-    if (prevEv && prevEv.bestMove && prevEv.bestMove !== '(none)') {
-      const uci = prevEv.bestMove;
-      const from = uci.slice(0, 2).toUpperCase();
-      const to = uci.slice(2, 4).toUpperCase();
-      
-      suggestedMove.textContent = `Engine suggestion: ${from} → ${to}`;
-      
-      let cpStr = '0.0';
-      if (prevEv.mate !== null) cpStr = 'Mate in ' + prevEv.mate;
-      else cpStr = (prevEv.cp / 100 > 0 ? '+' : '') + (prevEv.cp / 100).toFixed(2);
-      
-      suggestedDesc.textContent = `Projected evaluation: ${cpStr}`;
-    } else {
-      suggestedMove.textContent = '—';
-      suggestedDesc.textContent = 'No suggestion available.';
-    }
+  // Classification badge
+  if (cls) {
+    clsRow.style.display = 'block';
+    clsRow.innerHTML = `<span class="cls-label cls-${cls}">${cls}</span>`;
+  } else {
+    clsRow.style.display = 'none';
   }
 
-  function jumpStart() { moveIdx = 0; showBest = false; render(); }
-  function prevMove() { if (moveIdx > 0) { moveIdx--; showBest = false; render(); } }
-  function nextMove() { if (moveIdx < hist.length) { moveIdx++; showBest = false; render(); } }
-  function jumpEnd() { moveIdx = hist.length; showBest = false; render(); }
-  function jumpTo(idx) { moveIdx = idx; showBest = false; render(); }
-  function flip() { isFlipped = !isFlipped; renderBoard(); }
-  function toggleBest() { showBest = !showBest; renderBoard(); document.getElementById('btn-show-best').textContent = showBest ? 'Hide Best Move' : 'Show Best Move'; }
-  
-  callAndroid('onReviewLoaded');
+  playedEl.textContent = `${turn}: ${san}`;
+
+  if (cls && evals[idx+1]) {
+    const ev = evals[idx+1];
+    const cpStr = ev.mate !== null
+      ? 'Mate in ' + ev.mate
+      : (ev.cp >= 0 ? '+' : '') + (ev.cp / 100).toFixed(2);
+    descEl.textContent = `Evaluation after move: ${cpStr}`;
+  } else {
+    descEl.textContent = '';
+  }
+
+  btnShow.style.display = 'block';
+  btnShow.textContent   = showBest ? 'Hide Best Move' : 'Show Best Move';
+
+  if (evals[idx] && evals[idx].bestMove && evals[idx].bestMove !== '(none)') {
+    const uci = evals[idx].bestMove;
+    const from = uci.slice(0, 2).toUpperCase();
+    const to   = uci.slice(2, 4).toUpperCase();
+    suggEl.textContent = `Best: ${from} → ${to}`;
+
+    const ev2 = evals[idx];
+    const cpStr2 = ev2.mate !== null
+      ? 'Mate in ' + ev2.mate
+      : (ev2.cp >= 0 ? '+' : '') + (ev2.cp / 100).toFixed(2);
+    suggDesc.textContent = `Engine evaluation: ${cpStr2}`;
+  } else {
+    suggEl.textContent = evals.length > 0 ? 'Analysis pending...' : '—';
+    suggDesc.textContent = '';
+  }
+}
+
+/* ─── Navigation ─────────────────────────────────── */
+function jumpStart() { moveIdx = 0;            showBest = false; render(); }
+function prevMove()  { if (moveIdx > 0) { moveIdx--; showBest = false; render(); } }
+function nextMove()  { if (moveIdx < hist.length) { moveIdx++; showBest = false; render(); } }
+function jumpEnd()   { moveIdx = hist.length;  showBest = false; render(); }
+function jumpTo(i)   { moveIdx = i;            showBest = false; render(); }
+function flip()      { flipped = !flipped; renderBoard(); }
+function toggleBest() {
+  showBest = !showBest;
+  renderBoard();
+  document.getElementById('btn-show-best').textContent = showBest ? 'Hide Best Move' : 'Show Best Move';
+}
+
+/* ─── UI helpers ─────────────────────────────────── */
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function setProgress(show, msg, pct) {
+  const w = document.getElementById('progress-wrap');
+  const t = document.getElementById('progress-txt');
+  const f = document.getElementById('progress-fill');
+  w.style.display = show ? 'block' : 'none';
+  if (t) t.textContent = msg;
+  if (f) f.style.width  = pct + '%';
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  el.textContent = msg;
+  el.style.display = 'block';
+  android('onError', msg);
+}
+
+/* ─── Keyboard navigation ────────────────────────── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft')  prevMove();
+  if (e.key === 'ArrowRight') nextMove();
+  if (e.key === 'ArrowUp')    jumpStart();
+  if (e.key === 'ArrowDown')  jumpEnd();
+});
+
+/* ─── Initial render (empty board) ──────────────── */
+renderBoard();
+android('onReviewLoaded');
 </script>
 </body>
 </html>

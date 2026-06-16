@@ -432,7 +432,7 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
 .graph-dot:hover{fill:var(--green);r:5px}
 .graph-dot.active{fill:#fff;stroke:var(--accent);stroke-width:2;r:6px}
 
-.progress-bar-container{width:100%;height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-bottom:8px;display:none}
+.progress-bar-container{width:100%;background:transparent;border-radius:3px;margin-bottom:8px;display:none}
 .progress-bar-fill{height:100%;background:var(--accent);width:0%;transition:width 0.2s}
 
 .rev-mrow{display:flex;align-items:center;padding:5px 8px;font-size:.76rem;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer}
@@ -4010,11 +4010,17 @@ function initRevSF() {
   if (revWorker) return;
   try {
     revWorker = new Worker('/npm/stockfish.js/stockfish.js');
+    revWorker.onerror = (e) => {
+      console.error('Review SF worker error:', e);
+      revWorker = null;
+    };
     revWorker.postMessage('uci');
-    revWorker.postMessage('setoption name Skill Level value 20');
+    revWorker.postMessage('setoption name Hash value 32');
+    revWorker.postMessage('setoption name Threads value 1');
     revWorker.postMessage('isready');
   } catch (e) {
     console.error('Failed to init Stockfish for Review:', e);
+    revWorker = null;
   }
 }
 
@@ -4025,22 +4031,26 @@ function evaluatePosition(fen, depth) {
       resolve({ cp: 0, mate: null, bestMove: '(none)' });
       return;
     }
-    let bestMove = '';
+    let bestMove = '(none)';
     let cp = 0;
     let mate = null;
     
+    // Timeout per position to prevent hanging
+    const timer = setTimeout(() => {
+      revWorker.removeEventListener('message', onMsg);
+      resolve({ cp, mate, bestMove });
+    }, 10000);
+
     const onMsg = (e) => {
       const line = e.data;
       const cpMatch = line.match(/score cp (-?\d+)/);
       const mateMatch = line.match(/score mate (-?\d+)/);
-      if (cpMatch) {
-        cp = parseInt(cpMatch[1]);
-      }
-      if (mateMatch) {
-        mate = parseInt(mateMatch[1]);
-      }
+      if (cpMatch)  cp   = parseInt(cpMatch[1]);
+      if (mateMatch) mate = parseInt(mateMatch[1]);
       if (line.startsWith('bestmove')) {
-        bestMove = line.split(' ')[1];
+        clearTimeout(timer);
+        const parts = line.split(' ');
+        bestMove = parts[1] || '(none)';
         revWorker.removeEventListener('message', onMsg);
         resolve({ cp, mate, bestMove });
       }
@@ -4099,7 +4109,7 @@ async function runGameAnalysis() {
       progContainer.style.display = 'none';
       calculateReviewStats();
       drawEvaluationGraph();
-      revMoveIdx = 0;
+      revMoveIdx = revHist.length; // go to final position
       revRender();
       return;
     }
@@ -4119,12 +4129,21 @@ async function runGameAnalysis() {
     const r = temp.move(revHist[i]);
     if (r) {
       revFens.push(temp.fen());
-      uciMoves.push(r.from + r.to);
+      uciMoves.push(r.from + r.to + (r.promotion || ''));
     }
   }
 
   initRevSF();
   revEvals = [];
+  
+  // If worker failed to initialize, skip analysis and just show board
+  if (!revWorker) {
+    revIsAnalyzing = false;
+    progContainer.style.display = 'none';
+    revMoveIdx = revHist.length;
+    revRender();
+    return;
+  }
   
   for (let i = 0; i < revFens.length; i++) {
     txt.textContent = `Analyzing position ${i} / ${revFens.length - 1}...`;
@@ -4168,7 +4187,7 @@ async function runGameAnalysis() {
   progContainer.style.display = 'none';
   calculateReviewStats();
   drawEvaluationGraph();
-  revMoveIdx = 0;
+  revMoveIdx = revHist.length; // show final position after analysis
   revRender();
 }
 
@@ -4577,13 +4596,23 @@ function loadReviewMoves() {
   }
   
   revHist = validMoves;
-  runGameAnalysis();
+  revMoveIdx = validMoves.length;
+  revEvals = [];
+  revClassifications = [];
+  revFens = [];
+  revRender(); // show final position immediately
+  setTimeout(() => runGameAnalysis(), 100);
 }
 
 function triggerPostGameReview(gameMoves) {
   revHist = [...gameMoves];
+  revMoveIdx = revHist.length; // start at final position
+  revEvals = [];
+  revClassifications = [];
+  revFens = [];
   goTab('review');
-  runGameAnalysis();
+  revRender(); // show board immediately before analysis starts
+  setTimeout(() => runGameAnalysis(), 100); // slight delay for UI to paint first
 }
 
 // ══════════════════════════════════════════════════════════════════
