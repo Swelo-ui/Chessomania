@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base Chessomania Theme -->
+    <style name="Theme.Chessomania" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorPrimaryVariant">@color/accent2</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSecondaryVariant">@color/accent2</item>
+        <item name="colorSurface">@color/panel</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:colorBackground">@color/bg_dark</item>
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:statusBarColor">@color/bg_dark</item>
+        <item name="android:navigationBarColor">@color/panel</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- Splash Screen Theme -->
+    <style name="Theme.Chessomania.Splash" parent="Theme.Chessomania">
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
+    <!-- Dialog Style -->
+    <style name="Theme.Chessomania.Dialog" parent="Theme.Material3.Dark.Dialog">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="android:colorBackground">@color/panel</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+    </style>
+
+    <!-- Button Styles -->
+    <style name="Widget.Chessomania.Button.Primary" parent="Widget.Material3.Button">
+        <item name="android:backgroundTint">@color/accent</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="Widget.Chessomania.Button.Secondary" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/border</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="Widget.Chessomania.Button.Danger" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/red</item>
+        <item name="android:textColor">@color/red</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+</resources>

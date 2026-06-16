@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:gravity="center_horizontal">
+
+        <!-- Puzzle Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="♟ Puzzle Trainer"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/puz_subtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Find the best move!"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_next_puzzle"
+                style="@style/Widget.Chessomania.Button.Primary"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Next →"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Stats Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:background="@drawable/card_bg"
+                android:padding="8dp"
+                android:layout_marginEnd="6dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="✓ " android:textColor="#34d399" android:textSize="12sp"/>
+                <TextView android:id="@+id/puz_solved" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="0 Solved" android:textColor="@color/text_primary" android:textSize="12sp" android:textStyle="bold"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:background="@drawable/card_bg"
+                android:padding="8dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="✗ " android:textColor="#f87171" android:textSize="12sp"/>
+                <TextView android:id="@+id/puz_failed" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="0 Failed" android:textColor="@color/text_primary" android:textSize="12sp" android:textStyle="bold"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Puzzle Message -->
+        <TextView
+            android:id="@+id/puz_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Find the best move for White!"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:padding="12dp"
+            android:background="@drawable/card_bg"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Puzzle Board -->
+        <com.chessomania.app.ui.ChessBoardView
+            android:id="@+id/puzzle_board"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Puzzle Controls -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btn_puz_hint"
+                style="@style/Widget.Chessomania.Button.Secondary"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="💡 Hint"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btn_puz_flip"
+                style="@style/Widget.Chessomania.Button.Secondary"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="⇅ Flip"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btn_puz_next"
+                style="@style/Widget.Chessomania.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:text="Next →"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:background="@color/bg_dark"
+    android:padding="16dp">
+
+    <!-- Score Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:gravity="center"
+            android:background="@drawable/card_bg" android:padding="10dp" android:layout_marginEnd="6dp">
+            <TextView android:id="@+id/score_correct" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="0" android:textColor="#34d399"
+                android:textSize="26sp" android:textStyle="bold" android:gravity="center"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Correct" android:textColor="@color/text_secondary" android:textSize="11sp" android:gravity="center"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:gravity="center"
+            android:background="@drawable/card_bg" android:padding="10dp" android:layout_marginEnd="6dp">
+            <TextView android:id="@+id/score_wrong" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="0" android:textColor="#f87171"
+                android:textSize="26sp" android:textStyle="bold" android:gravity="center"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Wrong" android:textColor="@color/text_secondary" android:textSize="11sp" android:gravity="center"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:gravity="center"
+            android:background="@drawable/card_bg" android:padding="10dp">
+            <TextView android:id="@+id/score_streak" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="0" android:textColor="@color/accent"
+                android:textSize="26sp" android:textStyle="bold" android:gravity="center"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="🔥 Streak" android:textColor="@color/text_secondary" android:textSize="11sp" android:gravity="center"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Target Square Label -->
+    <TextView
+        android:id="@+id/coord_target"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="?"
+        android:textColor="@color/accent"
+        android:textSize="40sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Feedback Message -->
+    <TextView
+        android:id="@+id/coord_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Coordinate Board -->
+    <com.chessomania.app.ui.ChessBoardView
+        android:id="@+id/coord_board"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_coord_start"
+            style="@style/Widget.Chessomania.Button.Primary"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:text="▶ Start Training"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btn_coord_flip"
+            style="@style/Widget.Chessomania.Button.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="⇅ Flip Board"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+</LinearLayout>

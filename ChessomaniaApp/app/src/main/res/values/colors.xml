@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Chessomania Brand Colors -->
+    <color name="bg_dark">#161512</color>
+    <color name="panel">#1e1c19</color>
+    <color name="panel2">#272421</color>
+    <color name="border">#3a3630</color>
+    <color name="accent">#b58863</color>
+    <color name="accent2">#a07040</color>
+    <color name="text_primary">#d9d4cd</color>
+    <color name="text_secondary">#aba399</color>
+    <color name="sq_light">#f0d9b5</color>
+    <color name="sq_dark">#b58863</color>
+    <color name="green">#629924</color>
+    <color name="red">#c94f36</color>
+    <color name="highlight_from">#80cdd414</color>
+    <color name="highlight_to">#90cdd414</color>
+    <color name="sel_green">#7014a53c</color>
+    <color name="check_red">#99dc1e1e</color>
+    <color name="dot_color">#50000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
+    <color name="nav_indicator">#b58863</color>
+    <color name="status_bar">#161512</color>
+</resources>
