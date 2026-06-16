@@ -150,6 +150,7 @@ class PlayFragment : Fragment() {
             val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
             val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
             val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+            setupReviewButton(dialog, false)
 
             icon.setImageResource(R.drawable.ic_sword)
             icon.setColorFilter(ContextCompat.getColor(context, R.color.red))
@@ -425,6 +426,7 @@ class PlayFragment : Fragment() {
         val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
         val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
         val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+        setupReviewButton(dialog, true)
 
         val title = when(status) {
             ChessGame.GameStatus.CHECKMATE -> "Checkmate!"
@@ -494,6 +496,7 @@ class PlayFragment : Fragment() {
         val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
         val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
         val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+        setupReviewButton(dialog, false)
 
         icon.setImageResource(R.drawable.ic_sword)
         icon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.red))
@@ -533,6 +536,7 @@ class PlayFragment : Fragment() {
         val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
         val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
         val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+        setupReviewButton(dialog, true)
 
         icon.setImageResource(R.drawable.ic_sword)
         icon.setColorFilter(ContextCompat.getColor(context, R.color.red))
@@ -559,6 +563,7 @@ class PlayFragment : Fragment() {
         val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
         val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
         val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+        setupReviewButton(dialog, true)
 
         icon.setImageResource(R.drawable.ic_sword)
         icon.setColorFilter(ContextCompat.getColor(context, R.color.red))
@@ -898,6 +903,7 @@ class PlayFragment : Fragment() {
         val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
         val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
         val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+        setupReviewButton(dialog, true)
 
         icon.setImageResource(R.drawable.ic_sword)
         titleText.text = "Game Ended"
@@ -957,6 +963,7 @@ class PlayFragment : Fragment() {
         val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
         val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
         val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+        setupReviewButton(dialog, true)
 
         icon.setImageResource(R.drawable.ic_sword)
         icon.setColorFilter(ContextCompat.getColor(context, R.color.red))
@@ -984,6 +991,7 @@ class PlayFragment : Fragment() {
         val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
         val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
         val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+        setupReviewButton(dialog, true)
 
         icon.setImageResource(R.drawable.ic_sword)
         icon.setColorFilter(ContextCompat.getColor(context, R.color.red))
@@ -1003,6 +1011,25 @@ class PlayFragment : Fragment() {
         Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
         hideP2P()
         showP2PSetup()
+    }
+
+    private fun launchReview() {
+        val intent = Intent(requireContext(), GameReviewActivity::class.java)
+        intent.putStringArrayListExtra("moves", ArrayList(game.sanHistory))
+        startActivity(intent)
+    }
+
+    private fun setupReviewButton(dialog: Dialog, show: Boolean) {
+        val btnReview = dialog.findViewById<Button>(R.id.btn_review)
+        if (show) {
+            btnReview.visibility = View.VISIBLE
+            btnReview.setOnClickListener {
+                dialog.dismiss()
+                launchReview()
+            }
+        } else {
+            btnReview.visibility = View.GONE
+        }
     }
 
     class ChessP2PInterface(private val fragment: PlayFragment) {

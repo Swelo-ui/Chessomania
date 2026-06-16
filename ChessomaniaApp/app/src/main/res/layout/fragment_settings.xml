@@ -401,19 +401,19 @@
                 android:layout_marginBottom="10dp" />
 
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="♟  AI Engine — Minimax with Alpha-Beta Pruning"
+                android:text="♔  AI Engine — Minimax with Alpha-Beta Pruning"
                 android:textColor="@color/text_primary" android:textSize="13sp" android:layout_marginBottom="6dp"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="🧩  Puzzle Trainer — Classic chess tactics"
+                android:text="♘  Puzzle Trainer — Classic chess tactics"
                 android:textColor="@color/text_primary" android:textSize="13sp" android:layout_marginBottom="6dp"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="📍  Coordinate Trainer — Learn board notation"
+                android:text="♖  Coordinate Trainer — Learn board notation"
                 android:textColor="@color/text_primary" android:textSize="13sp" android:layout_marginBottom="6dp"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="⚔  All Special Moves — Castling, En Passant, Promotion"
+                android:text="♙  All Special Moves — Castling, En Passant, Promotion"
                 android:textColor="@color/text_primary" android:textSize="13sp" android:layout_marginBottom="6dp"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="🎨  4 Difficulty Levels — Easy, Mid, Hard, Max"
+                android:text="♗  4 Difficulty Levels — Easy, Mid, Hard, Max"
                 android:textColor="@color/text_primary" android:textSize="13sp"/>
         </LinearLayout>
 

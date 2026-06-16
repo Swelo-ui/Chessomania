@@ -51,7 +51,6 @@ class PuzzleFragment : Fragment() {
         boardView.game = game
         boardView.onMoveSelected = { from, to -> checkPuzzleMove(from, to) }
 
-        view.findViewById<Button>(R.id.btn_next_puzzle).setOnClickListener { nextPuzzle() }
         view.findViewById<Button>(R.id.btn_puz_hint).setOnClickListener { showHint() }
         view.findViewById<Button>(R.id.btn_puz_flip).setOnClickListener {
             isFlipped = !isFlipped

@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>ChessOmania Game Review</title>
+<style>
+  :root {
+    --bg: #161512;
+    --panel: #1e1c19;
+    --panel2: #272421;
+    --border: #3a3630;
+    --accent: #b58863;
+    --accent2: #a07040;
+    --glow: rgba(181,136,99,.22);
+    --green: #629924;
+    --red: #c94f36;
+    --text: #d9d4cd;
+    --text2: #8a8178;
+    --sq-l: #f0d9b5;
+    --sq-d: #b58863;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: sans-serif;
+    font-size: 14px;
+    padding: 10px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .card-h {
+    padding: 6px 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+  .card-b { padding: 10px; }
+  
+  /* Layout: Board on top, stats/history below */
+  .board-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  #rboard {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    width: min(340px, 90vw);
+    height: min(340px, 90vw);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,.6);
+    background: #b58863;
+    position: relative;
+  }
+  .rsq {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rsq.light { background: var(--sq-l); }
+  .rsq.dark { background: var(--sq-d); }
+  .rsq.lf { background: rgba(205,210,20,.32)!important; }
+  .rsq.lt { background: rgba(205,210,20,.48)!important; }
+  .rsq.best-from { outline: 3px dashed rgba(56,189,248,.8); outline-offset: -3px; background: rgba(56,189,248,.2)!important; }
+  .rsq.best-to { outline: 3px solid rgba(56,189,248,.8); outline-offset: -3px; background: rgba(56,189,248,.3)!important; }
+  .rpiece {
+    width: 86%;
+    height: 86%;
+    position: relative;
+    z-index: 3;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,.4));
+  }
+  
+  .rlbls, .flbls {
+    display: flex;
+    color: var(--text2);
+    font-size: 0.65rem;
+    font-weight: 600;
+  }
+  .rlbls {
+    flex-direction: column;
+    justify-content: space-around;
+    margin-right: 4px;
+  }
+  .flbls {
+    justify-content: space-around;
+    width: min(340px, 90vw);
+    margin-top: 4px;
+  }
+  
+  /* Controls */
+  .control-row {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0;
+    justify-content: center;
+    width: 100%;
+  }
+  .btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    background: var(--panel2);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    border: 1px solid var(--border);
+  }
+  .btn-accent {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+  }
+  .btn:active {
+    filter: brightness(1.2);
+  }
+  
+  /* Graph */
+  .graph-container {
+    width: min(340px, 90vw);
+    height: 80px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .graph-svg {
+    width: 100%;
+    height: 100%;
+  }
+  .graph-dot {
+    fill: var(--accent);
+    stroke: #fff;
+    stroke-width: 1;
+    cursor: pointer;
+  }
+  .graph-dot.active {
+    fill: #fff;
+    stroke: var(--green);
+    stroke-width: 2;
+    r: 5px;
+  }
+  
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.55rem;
+    font-weight: 800;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    color: #fff;
+    margin-left: 4px;
+  }
+  .badge.blunder { background: #ef4444; }
+  .badge.mistake { background: #f97316; }
+  .badge.inaccuracy { background: #fbbf24; color: #1e1c19; }
+  .badge.good { background: #9ca3af; }
+  .badge.excellent { background: #38bdf8; }
+  .badge.best { background: #629924; }
+  
+  /* Table & Stats */
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+  }
+  .summary-table td, .summary-table th {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-table th {
+    text-align: left;
+    color: var(--text2);
+  }
+  
+  .mlist {
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .rev-mrow {
+    display: flex;
+    padding: 4px 6px;
+    font-size: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+  }
+  .rev-mrow.active {
+    background: rgba(181,136,99,0.15);
+  }
+  .rev-mnum {
+    width: 28px;
+    color: var(--text2);
+    font-weight: 700;
+  }
+  .rev-msan {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+  .rev-msan.cur {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 2px;
+    padding: 0 4px;
+  }
+  
+  /* Progress Bar */
+  .progress-container {
+    width: 100%;
+    margin-bottom: 8px;
+    display: none;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 5px;
+    background: var(--panel2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.2s;
+  }
+  
+  .eval-bar {
+    width: min(340px, 90vw);
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .eval-fill {
+    height: 100%;
+    background: #e8e4df;
+    width: 50%;
+    transition: width 0.3s;
+  }
+  .eval-num {
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .eval-num.white { color: #f0d9b5; }
+  .eval-num.black { color: #8a8178; }
+</style>
+</head>
+<body>
+
+  <!-- Progress -->
+  <div class="progress-container" id="progress-container">
+    <div style="font-size:0.7rem; color:var(--text2);" id="progress-txt">Initializing Engine...</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <div class="board-container">
+    <div class="eval-num white" id="eval-val">0.0</div>
+    <div class="eval-bar"><div class="eval-fill" id="eval-fill"></div></div>
+    
+    <div style="display:flex; align-items:stretch;">
+      <div class="rlbls" id="rlbls"></div>
+      <div id="rboard"></div>
+    </div>
+    <div class="flbls" id="flbls"></div>
+    
+    <div class="control-row">
+      <button class="btn" onclick="jumpStart()">&lt;&lt;</button>
+      <button class="btn" onclick="prevMove()">&lt;</button>
+      <button class="btn" onclick="nextMove()">&gt;</button>
+      <button class="btn" onclick="jumpEnd()">&gt;&gt;</button>
+      <button class="btn" onclick="flip()">&uarr;&darr;</button>
+    </div>
+    
+    <div class="graph-container">
+      <svg class="graph-svg" id="graph-svg" viewBox="0 0 340 80" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Move Quality</div>
+    <div class="card-b" style="font-size:0.8rem;">
+      <div style="font-weight:bold; margin-bottom:4px;" id="played-move">—</div>
+      <div id="played-desc" style="color:var(--text2); font-size:0.75rem; margin-bottom:8px;">Move details will appear here.</div>
+      <div style="font-weight:bold; margin-bottom:4px;" id="suggested-move">—</div>
+      <div id="suggested-desc" style="color:var(--text2); font-size:0.75rem; margin-bottom:6px;">Suggested best move.</div>
+      <button class="btn btn-accent" style="width:100%; font-size:0.75rem; padding:4px;" id="btn-show-best" onclick="toggleBest()">Show Best Move</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Review Report</div>
+    <div class="card-b">
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>White</th>
+            <th>Black</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Accuracy</td>
+            <td id="acc-w" style="font-weight:bold;color:var(--green)">—</td>
+            <td id="acc-b" style="font-weight:bold;color:var(--green)">—</td>
+          </tr>
+          <tr>
+            <td>Best/Forced Move</td>
+            <td id="best-w">0</td>
+            <td id="best-b">0</td>
+          </tr>
+          <tr>
+            <td>Excellent</td>
+            <td id="exc-w">0</td>
+            <td id="exc-b">0</td>
+          </tr>
+          <tr>
+            <td>Good</td>
+            <td id="gd-w">0</td>
+            <td id="gd-b">0</td>
+          </tr>
+          <tr>
+            <td>Inaccuracy</td>
+            <td id="inac-w" style="color:#fbbf24">0</td>
+            <td id="inac-b" style="color:#fbbf24">0</td>
+          </tr>
+          <tr>
+            <td>Mistake</td>
+            <td id="mist-w" style="color:#f97316">0</td>
+            <td id="mist-b" style="color:#f97316">0</td>
+          </tr>
+          <tr>
+            <td>Blunder</td>
+            <td id="blun-w" style="color:#ef4444;font-weight:bold">0</td>
+            <td id="blun-b" style="color:#ef4444;font-weight:bold">0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Game Moves</div>
+    <div class="mlist card-b" id="mlist"></div>
+  </div>
+
+<script src="chess.min.js"></script>
+<script>
+  'use strict';
+  
+  const FILES = ['a','b','c','d','e','f','g','h'];
+  const RANKS = ['8','7','6','5','4','3','2','1'];
+  
+  let chess = new Chess();
+  let hist = [];
+  let fens = [];
+  let evals = [];
+  let classifications = [];
+  let moveIdx = 0;
+  let sfWorker = null;
+  let isAnalyzing = false;
+  let isFlipped = false;
+  let showBest = false;
+  let lastMove = null;
+
+  // IndexedDB Caching
+  const DB_NAME = 'ChessReviewCacheLocal';
+  const STORE_NAME = 'evals_local';
+  let db = null;
+
+  function initDB() {
+    return new Promise((resolve) => {
+      if (db) return resolve(db);
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+      req.onupgradeneeded = (e) => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains(STORE_NAME)) d.createObjectStore(STORE_NAME);
+      };
+      req.onerror = () => resolve(null);
+    });
+  }
+
+  function getCache(key) {
+    return initDB().then(d => {
+      if (!d) return null;
+      return new Promise((resolve) => {
+        const tx = d.transaction([STORE_NAME], 'readonly');
+        const req = tx.objectStore(STORE_NAME).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    });
+  }
+
+  function setCache(key, val) {
+    return initDB().then(d => {
+      if (!d) return;
+      return new Promise((resolve) => {
+        const tx = d.transaction([STORE_NAME], 'readwrite');
+        const req = tx.objectStore(STORE_NAME).put(val, key);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => resolve(false);
+      });
+    });
+  }
+
+  function pImg(color, type) {
+    return 'pieces/cburnett/' + color + type.toUpperCase() + '.png';
+  }
+
+  function callAndroid(method, ...args) {
+    if (window.Android && window.Android[method]) {
+      try { window.Android[method](...args); } catch(e) {}
+    }
+  }
+
+  window.startReview = function(base64Moves) {
+    try {
+      const decoded = atob(base64Moves);
+      hist = decoded.split(',').map(m => m.trim()).filter(m => m.length > 0);
+      moveIdx = 0;
+      runAnalysis();
+    } catch(e) {
+      console.error('Failed to parse moves:', e);
+      callAndroid('onError', 'Error parsing moves');
+    }
+  };
+
+  function initSF() {
+    if (sfWorker) return;
+    try {
+      sfWorker = new Worker('stockfish.js');
+      sfWorker.postMessage('uci');
+      sfWorker.postMessage('setoption name Skill Level value 20');
+      sfWorker.postMessage('isready');
+    } catch (e) {
+      console.error('Failed to init Stockfish worker:', e);
+      callAndroid('onError', 'Stockfish Init Error');
+    }
+  }
+
+  function evaluatePos(fen, depth) {
+    return new Promise((resolve) => {
+      initSF();
+      if (!sfWorker) return resolve({ cp: 0, mate: null, bestMove: '(none)' });
+      
+      let bestMove = '';
+      let cp = 0;
+      let mate = null;
+      
+      const onMsg = (e) => {
+        const line = e.data;
+        const cpMatch = line.match(/score cp (-?\d+)/);
+        const mateMatch = line.match(/score mate (-?\d+)/);
+        if (cpMatch) cp = parseInt(cpMatch[1]);
+        if (mateMatch) mate = parseInt(mateMatch[1]);
+        if (line.startsWith('bestmove')) {
+          bestMove = line.split(' ')[1];
+          sfWorker.removeEventListener('message', onMsg);
+          resolve({ cp, mate, bestMove });
+        }
+      };
+      
+      sfWorker.addEventListener('message', onMsg);
+      sfWorker.postMessage('position fen ' + fen);
+      sfWorker.postMessage('go depth ' + depth);
+    });
+  }
+
+  function getNumericalEval(ev, turn) {
+    if (ev.mate !== null) {
+      return ev.mate > 0 ? (10000 - ev.mate * 100) : (-10000 - ev.mate * 100);
+    }
+    return ev.cp;
+  }
+
+  function classifyMove(prev, curr, turn, playedUci, bestUci, isForced) {
+    if (isForced) return 'forced';
+    if (playedUci === bestUci) return 'best';
+    
+    const prevVal = getNumericalEval(prev, turn);
+    const currVal = getNumericalEval(curr, turn);
+    const loss = turn === 'w' ? (prevVal - currVal) : (currVal - prevVal);
+    
+    if (loss <= 20) return 'excellent';
+    if (loss <= 50) return 'good';
+    if (loss <= 100) return 'inaccuracy';
+    if (loss <= 200) return 'mistake';
+    return 'blunder';
+  }
+
+  async function runAnalysis() {
+    if (isAnalyzing) return;
+    isAnalyzing = true;
+    showBest = false;
+    
+    const prog = document.getElementById('progress-container');
+    const fill = document.getElementById('progress-fill');
+    const txt = document.getElementById('progress-txt');
+    prog.style.display = 'block';
+    fill.style.width = '0%';
+    txt.textContent = 'Loading cache...';
+
+    const cacheKey = hist.join(',') + '_v2_local';
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      evals = cached.evals;
+      classifications = cached.classifications;
+      fens = cached.fens;
+      isAnalyzing = false;
+      prog.style.display = 'none';
+      calcStats();
+      drawGraph();
+      moveIdx = 0;
+      render();
+      callAndroid('onAnalysisComplete');
+      return;
+    }
+
+    const temp = new Chess();
+    fens = [temp.fen()];
+    const uciMoves = [];
+    const forcedFlags = [];
+
+    for (let i = 0; i < hist.length; i++) {
+      const legalCount = temp.moves().length;
+      forcedFlags.push(legalCount === 1);
+      const r = temp.move(hist[i]);
+      if (r) {
+        fens.push(temp.fen());
+        uciMoves.push(r.from + r.to);
+      }
+    }
+
+    evals = [];
+    initSF();
+
+    for (let i = 0; i < fens.length; i++) {
+      txt.textContent = `Analyzing ${i} / ${fens.length - 1}...`;
+      fill.style.width = `${Math.round((i / fens.length) * 100)}%`;
+      
+      let depth = 10;
+      if (fens.length - i < 10) depth = 12;
+      
+      const res = await evaluatePos(fens[i], depth);
+      evals.push(res);
+    }
+
+    classifications = [];
+    for (let i = 0; i < hist.length; i++) {
+      const prev = evals[i];
+      const curr = evals[i+1];
+      const turn = i % 2 === 0 ? 'w' : 'b';
+      const playedUci = uciMoves[i];
+      const bestUci = prev.bestMove;
+      
+      const cls = classifyMove(prev, curr, turn, playedUci, bestUci, forcedFlags[i]);
+      classifications.push(cls);
+    }
+
+    await setCache(cacheKey, { evals, classifications, fens });
+
+    isAnalyzing = false;
+    prog.style.display = 'none';
+    calcStats();
+    drawGraph();
+    moveIdx = 0;
+    render();
+    callAndroid('onAnalysisComplete');
+  }
+
+  function calcStats() {
+    const stats = {
+      w: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, forced: 0, lossSum: 0, count: 0 },
+      b: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, forced: 0, lossSum: 0, count: 0 }
+    };
+    
+    for (let i = 0; i < hist.length; i++) {
+      const cls = classifications[i];
+      const turn = i % 2 === 0 ? 'w' : 'b';
+      const stat = stats[turn];
+      stat.count++;
+      
+      if (cls === 'best') stat.best++;
+      else if (cls === 'excellent') stat.excellent++;
+      else if (cls === 'good') stat.good++;
+      else if (cls === 'inaccuracy') stat.inaccuracy++;
+      else if (cls === 'mistake') stat.mistake++;
+      else if (cls === 'blunder') stat.blunder++;
+      else if (cls === 'forced') stat.forced++;
+      
+      const prevVal = getNumericalEval(evals[i], turn);
+      const currVal = getNumericalEval(evals[i+1], turn);
+      const loss = turn === 'w' ? Math.max(0, prevVal - currVal) : Math.max(0, currVal - prevVal);
+      if (cls !== 'forced' && Math.abs(prevVal) < 800) {
+        stat.lossSum += loss;
+      }
+    }
+
+    document.getElementById('best-w').textContent = stats.w.best + stats.w.forced;
+    document.getElementById('best-b').textContent = stats.b.best + stats.b.forced;
+    document.getElementById('exc-w').textContent = stats.w.excellent;
+    document.getElementById('exc-b').textContent = stats.b.excellent;
+    document.getElementById('gd-w').textContent = stats.w.good;
+    document.getElementById('gd-b').textContent = stats.b.good;
+    document.getElementById('inac-w').textContent = stats.w.inaccuracy;
+    document.getElementById('inac-b').textContent = stats.b.inaccuracy;
+    document.getElementById('mist-w').textContent = stats.w.mistake;
+    document.getElementById('mist-b').textContent = stats.b.mistake;
+    document.getElementById('blun-w').textContent = stats.w.blunder;
+    document.getElementById('blun-b').textContent = stats.b.blunder;
+
+    const acplW = stats.w.count ? stats.w.lossSum / stats.w.count : 0;
+    const acplB = stats.b.count ? stats.b.lossSum / stats.b.count : 0;
+    const accW = stats.w.count ? Math.round(100 * Math.exp(-0.007 * acplW)) : 100;
+    const accB = stats.b.count ? Math.round(100 * Math.exp(-0.007 * acplB)) : 100;
+
+    document.getElementById('acc-w').textContent = accW + '%';
+    document.getElementById('acc-b').textContent = accB + '%';
+  }
+
+  function drawGraph() {
+    const svg = document.getElementById('graph-svg');
+    svg.innerHTML = '';
+    if (evals.length === 0) return;
+    
+    const N = evals.length - 1;
+    const points = [];
+    for (let i = 0; i < evals.length; i++) {
+      const x = N === 0 ? 170 : (i / N) * 310 + 15;
+      let evalVal = getNumericalEval(evals[i], 'w') / 100;
+      evalVal = Math.max(-8, Math.min(8, evalVal));
+      const y = 40 - (evalVal / 8) * 35;
+      points.push({ x, y });
+    }
+
+    let svgContent = '';
+    svgContent += `<line x1="10" y1="40" x2="330" y2="40" stroke="rgba(255,255,255,0.18)" stroke-width="1.2" />`;
+    
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i+1];
+      const polyPoints = `${p1.x},${p1.y} ${p2.x},${p2.y} ${p2.x},40 ${p1.x},40`;
+      const avgY = (p1.y + p2.y) / 2;
+      if (avgY < 40) {
+        svgContent += `<polygon points="${polyPoints}" fill="rgba(98, 153, 36, 0.15)" />`;
+      } else {
+        svgContent += `<polygon points="${polyPoints}" fill="rgba(201, 79, 54, 0.15)" />`;
+      }
+    }
+
+    let pathD = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) pathD += ` L ${points[i].x} ${points[i].y}`;
+    svgContent += `<path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="1.8" />`;
+
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      const isActive = i === moveIdx;
+      const r = isActive ? 4.5 : 2.5;
+      const fill = isActive ? '#fff' : 'var(--accent)';
+      const stroke = isActive ? 'var(--green)' : '#fff';
+      svgContent += `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${isActive ? 2 : 1}" class="graph-dot" onclick="jumpTo(${i})" />`;
+    }
+
+    svg.innerHTML = svgContent;
+  }
+
+  function render() {
+    chess = new Chess();
+    for (let i = 0; i < moveIdx; i++) chess.move(hist[i]);
+    
+    lastMove = null;
+    if (moveIdx > 0 && hist.length > 0) {
+      const temp = new Chess();
+      for (let i = 0; i < moveIdx - 1; i++) temp.move(hist[i]);
+      const r = temp.move(hist[moveIdx - 1]);
+      if (r) lastMove = { from: r.from, to: r.to };
+    }
+
+    renderBoard();
+    updMoveList();
+    updRecommendation();
+    
+    if (evals.length > 0) {
+      const ev = evals[moveIdx];
+      let cp = getNumericalEval(ev, 'w');
+      let pct = Math.max(5, Math.min(95, 50 + cp * 0.08));
+      document.getElementById('eval-fill').style.width = pct + '%';
+      
+      const valStr = ev.mate !== null ? 'M' + ev.mate : (cp / 100 > 0 ? '+' : '') + (cp / 100).toFixed(1);
+      document.getElementById('eval-val').textContent = valStr;
+    } else {
+      document.getElementById('eval-fill').style.width = '50%';
+      document.getElementById('eval-val').textContent = '0.0';
+    }
+    
+    drawGraph();
+  }
+
+  function renderBoard() {
+    const board = document.getElementById('rboard');
+    board.innerHTML = '';
+    
+    const dR = isFlipped ? [...RANKS].reverse() : RANKS;
+    const dF = isFlipped ? [...FILES].reverse() : FILES;
+    
+    document.getElementById('rlbls').innerHTML = dR.map(r=>`<span>${r}</span>`).join('');
+    document.getElementById('flbls').innerHTML = dF.map(f=>`<span>${f}</span>`).join('');
+    
+    let showBestFrom = null;
+    let showBestTo = null;
+    if (showBest && moveIdx < evals.length - 1) {
+      const prevEv = evals[moveIdx];
+      if (prevEv && prevEv.bestMove && prevEv.bestMove !== '(none)') {
+        showBestFrom = prevEv.bestMove.slice(0, 2);
+        showBestTo = prevEv.bestMove.slice(2, 4);
+      }
+    }
+
+    for (let ri = 0; ri < 8; ri++) {
+      for (let fi = 0; fi < 8; fi++) {
+        const f = dF[fi], r = dR[ri], sq = f+r;
+        const p = chess.get(sq);
+        const isL = (FILES.indexOf(f) + r) % 2 === 1;
+        
+        const d = document.createElement('div');
+        d.className = 'rsq ' + (isL ? 'light' : 'dark');
+        
+        if (lastMove?.from === sq) d.classList.add('lf');
+        if (lastMove?.to === sq) d.classList.add('lt');
+        if (showBestFrom === sq) d.classList.add('best-from');
+        if (showBestTo === sq) d.classList.add('best-to');
+
+        if (p) {
+          const i = document.createElement('img');
+          i.src = pImg(p.color, p.type);
+          i.className = 'rpiece';
+          i.onerror = () => i.style.display = 'none';
+          d.appendChild(i);
+        }
+        
+        board.appendChild(d);
+      }
+    }
+  }
+
+  function updMoveList() {
+    const container = document.getElementById('mlist');
+    container.innerHTML = '';
+    
+    const badgeHtml = (cls) => {
+      if (cls === 'best' || cls === 'forced') return `<span class="badge best">✓</span>`;
+      if (cls === 'excellent') return `<span class="badge excellent">🗲</span>`;
+      if (cls === 'good') return `<span class="badge good">⬈</span>`;
+      if (cls === 'inaccuracy') return `<span class="badge inaccuracy">?!</span>`;
+      if (cls === 'mistake') return `<span class="badge mistake">?</span>`;
+      if (cls === 'blunder') return `<span class="badge blunder">??</span>`;
+      return '';
+    };
+
+    for (let i = 0; i < hist.length; i += 2) {
+      const row = document.createElement('div');
+      row.className = 'rev-mrow';
+      if (i === moveIdx - 1 || i + 1 === moveIdx - 1) row.classList.add('active');
+      
+      const wActive = i === moveIdx - 1 ? ' cur' : '';
+      const bActive = i + 1 === moveIdx - 1 ? ' cur' : '';
+      
+      const wBadge = classifications[i] ? badgeHtml(classifications[i]) : '';
+      const bBadge = classifications[i+1] ? badgeHtml(classifications[i+1]) : '';
+      
+      row.innerHTML = `
+        <span class="rev-mnum">${Math.floor(i/2) + 1}.</span>
+        <span class="rev-msan${wActive}" onclick="jumpTo(${i + 1})" style="flex:1;">${hist[i] || ''}${wBadge}</span>
+        <span class="rev-msan${bActive}" onclick="jumpTo(${i + 2})" style="flex:1;">${hist[i+1] || ''}${bBadge}</span>
+      `;
+      container.appendChild(row);
+    }
+    
+    const activeEl = container.querySelector('.rev-msan.cur');
+    if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function updRecommendation() {
+    const playedMove = document.getElementById('played-move');
+    const playedDesc = document.getElementById('played-desc');
+    const suggestedMove = document.getElementById('suggested-move');
+    const suggestedDesc = document.getElementById('suggested-desc');
+    const btnShow = document.getElementById('btn-show-best');
+    
+    if (hist.length === 0 || moveIdx === 0) {
+      playedMove.textContent = '—';
+      playedDesc.textContent = 'Moves details will appear here.';
+      suggestedMove.textContent = '—';
+      suggestedDesc.textContent = 'Suggested best move.';
+      btnShow.style.display = 'none';
+      return;
+    }
+    
+    btnShow.style.display = 'block';
+    btnShow.textContent = showBest ? 'Hide Best Move' : 'Show Best Move';
+
+    const idx = moveIdx - 1;
+    const turn = idx % 2 === 0 ? 'White' : 'Black';
+    const playedSan = hist[idx];
+    
+    playedMove.textContent = `Played Move: ${playedSan}`;
+    if (classifications[idx]) {
+      const cls = classifications[idx].toUpperCase();
+      const ev = evals[idx+1];
+      let cpStr = '0.0';
+      if (ev) {
+        if (ev.mate !== null) cpStr = 'Mate in ' + ev.mate;
+        else cpStr = (ev.cp / 100 > 0 ? '+' : '') + (ev.cp / 100).toFixed(2);
+      }
+      playedDesc.textContent = `${turn} played ${playedSan}. Marked as ${cls}. Evaluation: ${cpStr}`;
+    } else {
+      playedDesc.textContent = '';
+    }
+
+    const prevEv = evals[idx];
+    if (prevEv && prevEv.bestMove && prevEv.bestMove !== '(none)') {
+      const uci = prevEv.bestMove;
+      const from = uci.slice(0, 2).toUpperCase();
+      const to = uci.slice(2, 4).toUpperCase();
+      
+      suggestedMove.textContent = `Engine suggestion: ${from} → ${to}`;
+      
+      let cpStr = '0.0';
+      if (prevEv.mate !== null) cpStr = 'Mate in ' + prevEv.mate;
+      else cpStr = (prevEv.cp / 100 > 0 ? '+' : '') + (prevEv.cp / 100).toFixed(2);
+      
+      suggestedDesc.textContent = `Projected evaluation: ${cpStr}`;
+    } else {
+      suggestedMove.textContent = '—';
+      suggestedDesc.textContent = 'No suggestion available.';
+    }
+  }
+
+  function jumpStart() { moveIdx = 0; showBest = false; render(); }
+  function prevMove() { if (moveIdx > 0) { moveIdx--; showBest = false; render(); } }
+  function nextMove() { if (moveIdx < hist.length) { moveIdx++; showBest = false; render(); } }
+  function jumpEnd() { moveIdx = hist.length; showBest = false; render(); }
+  function jumpTo(idx) { moveIdx = idx; showBest = false; render(); }
+  function flip() { isFlipped = !isFlipped; renderBoard(); }
+  function toggleBest() { showBest = !showBest; renderBoard(); document.getElementById('btn-show-best').textContent = showBest ? 'Hide Best Move' : 'Show Best Move'; }
+  
+  callAndroid('onReviewLoaded');
+</script>
+</body>
+</html>

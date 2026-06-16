@@ -392,6 +392,60 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
     max-width: 100%;
   }
 }
+
+/* ── PAGE 6 — REVIEW ────────────────────────────────────────────── */
+#page-review{gap:0;padding:16px;align-items:flex-start;justify-content:center}
+.rev-left{width:240px;display:flex;flex-direction:column;gap:10px;margin-right:14px;flex-shrink:0}
+.rev-col{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0}
+.rev-right{width:240px;display:flex;flex-direction:column;gap:10px;margin-left:14px;flex-shrink:0}
+#rboard{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);
+  width:min(480px,calc(100vw - 550px));height:min(480px,calc(100vw - 550px));
+  border-radius:3px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.5);background:#b58863;position:relative}
+.rsq{position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.rsq.light{background:var(--sq-l)}.rsq.dark{background:var(--sq-d)}
+.rsq.sel{outline:3px solid rgba(20,165,60,.6);outline-offset:-3px;background:rgba(20,180,60,.28)!important}
+.rsq.lf{background:rgba(205,210,20,.32)!important}.rsq.lt{background:rgba(205,210,20,.48)!important}
+.rsq.best-from{outline:3px dashed rgba(56,189,248,.8);outline-offset:-3px;background:rgba(56,189,248,.2)!important}
+.rsq.best-to{outline:3px solid rgba(56,189,248,.8);outline-offset:-3px;background:rgba(56,189,248,.3)!important}
+.rpiece{width:86%;height:86%;position:relative;z-index:3;pointer-events:none;object-fit:contain;
+  filter:drop-shadow(0 1px 4px rgba(0,0,0,.4))}
+.rdot{position:absolute;z-index:4;pointer-events:none;border-radius:50%}
+.rdot.n{width:26%;height:26%;background:rgba(0,0,0,.2)}
+.rdot.c{width:86%;height:86%;background:transparent;border:6px solid rgba(0,0,0,.18)}
+
+.badge{display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;
+  width:16px;height:16px;border-radius:50%;color:#fff;margin-left:5px;flex-shrink:0;user-select:none}
+.badge.blunder{background:#ef4444}
+.badge.mistake{background:#f97316}
+.badge.inaccuracy{background:#fbbf24;color:#1e1c19}
+.badge.good{background:#9ca3af}
+.badge.excellent{background:#38bdf8}
+.badge.best{background:#629924}
+.badge.book{background:#a855f7}
+
+.graph-container{width:min(480px,calc(100vw - 550px));height:100px;background:var(--panel2);
+  border:1px solid var(--border);border-radius:6px;position:relative;margin-top:5px;overflow:hidden}
+.graph-svg{width:100%;height:100%}
+.graph-line{stroke:var(--accent);stroke-width:2;fill:none}
+.graph-cursor{stroke:#fff;stroke-width:1;stroke-dasharray:3}
+.graph-dot{fill:#b58863;stroke:#fff;stroke-width:1;cursor:pointer;transition:all 0.1s}
+.graph-dot:hover{fill:var(--green);r:5px}
+.graph-dot.active{fill:#fff;stroke:var(--accent);stroke-width:2;r:6px}
+
+.progress-bar-container{width:100%;height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-bottom:8px;display:none}
+.progress-bar-fill{height:100%;background:var(--accent);width:0%;transition:width 0.2s}
+
+.rev-mrow{display:flex;align-items:center;padding:5px 8px;font-size:.76rem;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer}
+.rev-mrow:hover{background:var(--panel2)}
+.rev-mrow.active{background:rgba(181,136,99,.15)}
+.rev-mnum{width:32px;color:var(--text2);font-weight:700}
+.rev-msan{flex:1;display:flex;align-items:center;min-height:20px;padding:0 4px;border-radius:3px}
+.rev-msan.cur{background:var(--accent);color:#fff}
+
+.summary-table{width:100%;border-collapse:collapse;font-size:.74rem}
+.summary-table td{padding:4px 6px;border-bottom:1px solid var(--border)}
+.summary-table tr:last-child td{border-bottom:none}
+.summary-table th{text-align:left;padding:6px;font-size:.65rem;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border)}
 </style>
 </head>
 <body>
@@ -467,6 +521,7 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
   <button class="tab-btn" onclick="goTab('puzzle')" id="tb-puzzle"><i data-lucide="puzzle"></i> Puzzles</button>
   <button class="tab-btn" onclick="goTab('coord')" id="tb-coord"><i data-lucide="map-pin"></i> Coordinates</button>
   <button class="tab-btn" onclick="goTab('analysis')" id="tb-analysis"><i data-lucide="search"></i> Analysis</button>
+  <button class="tab-btn" onclick="goTab('review')" id="tb-review"><i data-lucide="trending-up"></i> Review</button>
   <button class="tab-btn" onclick="goTab('settings')" id="tb-settings"><i data-lucide="settings"></i> Settings</button>
   <div class="nav-right">
     <span class="nav-pill" id="nav-status-pill"><i data-lucide="wifi-off" style="width:12px;height:12px;margin-right:4px;"></i> OFFLINE</span>
@@ -758,6 +813,132 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
 <!-- ══════════════════════════════════════════════════════════════════
      PAGE 5: SETTINGS
 ══════════════════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════════════════
+     PAGE 6: GAME REVIEW
+     ══════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-review">
+  <div class="rev-left">
+    <div class="card">
+      <div class="card-h">Review Summary</div>
+      <div class="card-b" style="padding: 10px;">
+        <div id="rev-stats-summary">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th style="color:#fff">White</th>
+                <th style="color:#aaa">Black</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Accuracy</td>
+                <td id="rev-acc-w" style="font-weight:bold;color:var(--green)">—</td>
+                <td id="rev-acc-b" style="font-weight:bold;color:var(--green)">—</td>
+              </tr>
+              <tr>
+                <td>Best Move <span class="badge best">✓</span></td>
+                <td id="rev-best-w">0</td>
+                <td id="rev-best-b">0</td>
+              </tr>
+              <tr>
+                <td>Excellent <span class="badge excellent">🗲</span></td>
+                <td id="rev-exc-w">0</td>
+                <td id="rev-exc-b">0</td>
+              </tr>
+              <tr>
+                <td>Good <span class="badge good">⬈</span></td>
+                <td id="rev-gd-w">0</td>
+                <td id="rev-gd-b">0</td>
+              </tr>
+              <tr>
+                <td>Inaccuracy <span class="badge inaccuracy">?!</span></td>
+                <td id="rev-inac-w" style="color:#fbbf24">0</td>
+                <td id="rev-inac-b" style="color:#fbbf24">0</td>
+              </tr>
+              <tr>
+                <td>Mistake <span class="badge mistake">?</span></td>
+                <td id="rev-mist-w" style="color:#f97316">0</td>
+                <td id="rev-mist-b" style="color:#f97316">0</td>
+              </tr>
+              <tr>
+                <td>Blunder <span class="badge blunder">??</span></td>
+                <td id="rev-blun-w" style="color:#ef4444;font-weight:bold">0</td>
+                <td id="rev-blun-b" style="color:#ef4444;font-weight:bold">0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">Move Timeline</div>
+      <div class="mlist card-b" id="rev-mlist" style="padding:4px 6px;max-height:220px"></div>
+    </div>
+  </div>
+
+  <div class="rev-col">
+    <!-- Progress Indicator -->
+    <div class="progress-bar-container" id="rev-progress-container">
+      <div style="font-size:0.7rem;margin-bottom:3px;color:var(--text2);display:flex;justify-content:space-between">
+        <span id="rev-progress-txt">Analyzing...</span>
+      </div>
+      <div style="width:100%;height:6px;background:var(--panel2);border-radius:3px;overflow:hidden">
+        <div class="progress-bar-fill" id="rev-progress-fill"></div>
+      </div>
+    </div>
+    
+    <div class="eval-bar-h" style="width:min(480px,calc(100vw - 550px))"><div class="eval-fill-h" id="rev-fillh"></div></div>
+    <div class="board-wrap">
+      <div class="rlbls" id="rev-rlbls"></div>
+      <div>
+        <div id="rboard"><img class="bgtex" src="" alt=""/></div>
+        <div class="flbls" id="rev-flbls"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px;width:100%;justify-content:center">
+      <button class="btn btn-h" style="padding:5px 10px;font-size:0.75rem" onclick="jumpReviewStart()"><i data-lucide="chevrons-left"></i></button>
+      <button class="btn btn-h" style="padding:5px 10px;font-size:0.75rem" onclick="prevReviewMove()"><i data-lucide="chevron-left"></i></button>
+      <button class="btn btn-h" style="padding:5px 10px;font-size:0.75rem" onclick="nextReviewMove()"><i data-lucide="chevron-right"></i></button>
+      <button class="btn btn-h" style="padding:5px 10px;font-size:0.75rem" onclick="jumpReviewEnd()"><i data-lucide="chevrons-right"></i></button>
+      <button class="btn btn-h" style="padding:5px 10px;font-size:0.75rem" onclick="revFlip()"><i data-lucide="refresh-cw"></i> Flip</button>
+    </div>
+    <div class="graph-container" id="rev-graph-container">
+      <svg class="graph-svg" id="rev-graph-svg" viewBox="0 0 500 120" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+
+  <div class="rev-right">
+    <div class="card">
+      <div class="card-h">Move Evaluation</div>
+      <div class="card-b" style="padding:10px">
+        <div class="bestmove-box">
+          <div class="bm-label">Played Move</div>
+          <div class="bm-move" id="rev-played" style="color:#fff">—</div>
+          <div class="an-line" id="rev-played-desc" style="margin-bottom:8px"></div>
+          
+          <div class="bm-label">Engine Best Move</div>
+          <div class="bm-move" id="rev-best-sugg">—</div>
+          <div class="an-line" id="rev-best-desc"></div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button class="btn btn-a" style="font-size:0.75rem;padding:5px 9px;flex:1" id="rev-btn-showbest" onclick="toggleShowBestMove()">Show Best Move</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">Import Custom Game</div>
+      <div class="card-b">
+        <div class="fen-row">
+          <input class="fen-inp" id="rev-pgn-inp" placeholder="Paste moves e4,e5,Nf3..." onkeydown="if(event.key==='Enter')loadReviewMoves()"/>
+          <button class="btn btn-a" style="padding:6px 10px;font-size:.75rem" onclick="loadReviewMoves()">Load</button>
+        </div>
+        <div style="font-size: 0.65rem; color: var(--text2); margin-top: 4px;">Enter comma-separated moves to review.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="page" id="page-settings">
   <div style="font-size:1.3rem;font-weight:800;width:100%;max-width:860px">⚙ Settings</div>
   <div class="settings-grid">
@@ -854,6 +1035,7 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
     <div class="go-sub" id="go-sub"></div>
     <div class="go-btns">
       <button class="btn btn-g" onclick="newB()">Play Again</button>
+      <button class="btn btn-a" onclick="document.getElementById('go-overlay').classList.remove('on'); triggerPostGameReview(bHist)">Review Game 📊</button>
       <button class="btn btn-h" onclick="document.getElementById('go-overlay').classList.remove('on')">Close</button>
     </div>
   </div>
@@ -956,6 +1138,7 @@ function goTab(id) {
   if (id==='analysis' && !anInited) initAnalysis();
   if (id==='coord' && !coordInited) initCoord();
   if (id==='puzzle' && !puzzleInited) initPuzzle();
+  if (id==='review' && !revInited) initReview();
   if (id==='settings') initSettings();
 }
 
@@ -987,20 +1170,20 @@ function snd(name) {
 
 // ── BOARD THEME APPLY ────────────────────────────────────────────────
 function applyBoardTheme(theme) {
-  const boards = ['board', 'pboard', 'cboard', 'aboard'];
+  const boards = ['board', 'pboard', 'cboard', 'aboard', 'rboard'];
   boards.forEach(id => {
     const board = document.getElementById(id);
     if (!board) return;
     const tex = board.querySelector('.bgtex');
     if (CSS_BOARDS[theme]) {
       const c = CSS_BOARDS[theme];
-      sqStyle.textContent = `.sq.light,.psq.light,.asq.light,.csq.light{background:${c.l}!important}
-        .sq.dark,.psq.dark,.asq.dark,.csq.dark{background:${c.d}!important}`;
+      sqStyle.textContent = `.sq.light,.psq.light,.asq.light,.csq.light,.rsq.light{background:${c.l}!important}
+        .sq.dark,.psq.dark,.asq.dark,.csq.dark,.rsq.dark{background:${c.d}!important}`;
       if (tex) { tex.style.display = 'none'; }
       board.classList.remove('imgm');
     } else {
-      sqStyle.textContent = `.sq.light,.psq.light,.asq.light,.csq.light{background:transparent!important}
-        .sq.dark,.psq.dark,.asq.dark,.csq.dark{background:transparent!important}`;
+      sqStyle.textContent = `.sq.light,.psq.light,.asq.light,.csq.light,.rsq.light{background:transparent!important}
+        .sq.dark,.psq.dark,.asq.dark,.csq.dark,.rsq.dark{background:transparent!important}`;
       if (tex) {
         tex.src = getBoardImgUrl(theme);
         tex.style.display = 'block';
@@ -3750,6 +3933,657 @@ function switchAboutTab(tab) {
     content.style.display = content.id.startsWith(tab) ? 'block' : 'none';
   });
   lucide.createIcons();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// GAME REVIEW (V2.0)
+// ══════════════════════════════════════════════════════════════════
+let revInited = false;
+let revChess = new Chess();
+let revHist = [];
+let revFens = [];
+let revEvals = [];
+let revClassifications = [];
+let revMoveIdx = 0;
+let revWorker = null;
+let revIsAnalyzing = false;
+let revFlipped = false;
+let revLastMv = null;
+let revSel = null;
+let revPieces = 'cburnett';
+let revShowBest = false;
+
+// IndexedDB Caching
+const DB_NAME = 'ChessomaniaReviewCache';
+const DB_VERSION = 1;
+const STORE_NAME = 'evaluations';
+let dbInstance = null;
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    if (dbInstance) return resolve(dbInstance);
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = (e) => reject(e);
+    request.onsuccess = (e) => {
+      dbInstance = e.target.result;
+      resolve(dbInstance);
+    };
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+}
+
+function getCache(key) {
+  return initDB().then(db => {
+    return new Promise((resolve) => {
+      const transaction = db.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  });
+}
+
+function setCache(key, value) {
+  return initDB().then(db => {
+    return new Promise((resolve) => {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const req = store.put(value, key);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => resolve(false);
+    });
+  });
+}
+
+function initReview() {
+  revInited = true;
+  revRender();
+}
+
+function initRevSF() {
+  if (revWorker) return;
+  try {
+    revWorker = new Worker('/npm/stockfish.js/stockfish.js');
+    revWorker.postMessage('uci');
+    revWorker.postMessage('setoption name Skill Level value 20');
+    revWorker.postMessage('isready');
+  } catch (e) {
+    console.error('Failed to init Stockfish for Review:', e);
+  }
+}
+
+function evaluatePosition(fen, depth) {
+  return new Promise((resolve) => {
+    initRevSF();
+    if (!revWorker) {
+      resolve({ cp: 0, mate: null, bestMove: '(none)' });
+      return;
+    }
+    let bestMove = '';
+    let cp = 0;
+    let mate = null;
+    
+    const onMsg = (e) => {
+      const line = e.data;
+      const cpMatch = line.match(/score cp (-?\d+)/);
+      const mateMatch = line.match(/score mate (-?\d+)/);
+      if (cpMatch) {
+        cp = parseInt(cpMatch[1]);
+      }
+      if (mateMatch) {
+        mate = parseInt(mateMatch[1]);
+      }
+      if (line.startsWith('bestmove')) {
+        bestMove = line.split(' ')[1];
+        revWorker.removeEventListener('message', onMsg);
+        resolve({ cp, mate, bestMove });
+      }
+    };
+    
+    revWorker.addEventListener('message', onMsg);
+    revWorker.postMessage(`position fen ${fen}`);
+    revWorker.postMessage(`go depth ${depth}`);
+  });
+}
+
+function getNumericalEval(evalObj, turn) {
+  if (evalObj.mate !== null) {
+    if (evalObj.mate > 0) return 10000 - evalObj.mate * 100;
+    return -10000 - evalObj.mate * 100;
+  }
+  return evalObj.cp;
+}
+
+function classifyMove(prev, curr, turn, playedUci, bestUci, isForced) {
+  if (isForced) return 'forced';
+  if (playedUci === bestUci) return 'best';
+  
+  const prevVal = getNumericalEval(prev, turn);
+  const currVal = getNumericalEval(curr, turn);
+  const loss = turn === 'w' ? (prevVal - currVal) : (currVal - prevVal);
+  
+  if (loss <= 20) return 'excellent';
+  if (loss <= 50) return 'good';
+  if (loss <= 100) return 'inaccuracy';
+  if (loss <= 200) return 'mistake';
+  return 'blunder';
+}
+
+async function runGameAnalysis() {
+  if (revIsAnalyzing) return;
+  revIsAnalyzing = true;
+  revShowBest = false;
+  
+  const progContainer = document.getElementById('rev-progress-container');
+  const fill = document.getElementById('rev-progress-fill');
+  const txt = document.getElementById('rev-progress-txt');
+  progContainer.style.display = 'block';
+  fill.style.width = '0%';
+  txt.textContent = 'Checking local cache...';
+
+  // Check cache
+  const cacheKey = revHist.join(',') + '_depth10';
+  try {
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      revEvals = cached.evals;
+      revClassifications = cached.classifications;
+      revFens = cached.fens;
+      revIsAnalyzing = false;
+      progContainer.style.display = 'none';
+      calculateReviewStats();
+      drawEvaluationGraph();
+      revMoveIdx = 0;
+      revRender();
+      return;
+    }
+  } catch (e) {
+    console.warn('Cache read error:', e);
+  }
+
+  // Set up chess context to generate FENs
+  const temp = new Chess();
+  revFens = [temp.fen()];
+  const uciMoves = [];
+  const forcedFlags = [];
+  
+  for (let i = 0; i < revHist.length; i++) {
+    const legalCount = temp.moves().length;
+    forcedFlags.push(legalCount === 1);
+    const r = temp.move(revHist[i]);
+    if (r) {
+      revFens.push(temp.fen());
+      uciMoves.push(r.from + r.to);
+    }
+  }
+
+  initRevSF();
+  revEvals = [];
+  
+  for (let i = 0; i < revFens.length; i++) {
+    txt.textContent = `Analyzing position ${i} / ${revFens.length - 1}...`;
+    fill.style.width = `${Math.round((i / revFens.length) * 100)}%`;
+    
+    // Adaptive depth based on phase
+    let depth = 10;
+    if (revFens.length - i < 12) {
+      depth = 12; // deeper in endgame
+    }
+    
+    const res = await evaluatePosition(revFens[i], depth);
+    revEvals.push(res);
+  }
+
+  revClassifications = [];
+  for (let i = 0; i < revHist.length; i++) {
+    const prev = revEvals[i];
+    const curr = revEvals[i+1];
+    const turn = i % 2 === 0 ? 'w' : 'b';
+    const playedUci = uciMoves[i];
+    const bestUci = prev.bestMove;
+    const isForced = forcedFlags[i];
+    
+    const cls = classifyMove(prev, curr, turn, playedUci, bestUci, isForced);
+    revClassifications.push(cls);
+  }
+
+  // Save cache
+  try {
+    await setCache(cacheKey, {
+      evals: revEvals,
+      classifications: revClassifications,
+      fens: revFens
+    });
+  } catch (e) {
+    console.warn('Cache write error:', e);
+  }
+
+  revIsAnalyzing = false;
+  progContainer.style.display = 'none';
+  calculateReviewStats();
+  drawEvaluationGraph();
+  revMoveIdx = 0;
+  revRender();
+}
+
+function calculateReviewStats() {
+  const stats = {
+    w: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, forced: 0, lossSum: 0, count: 0 },
+    b: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, forced: 0, lossSum: 0, count: 0 }
+  };
+  
+  for (let i = 0; i < revHist.length; i++) {
+    const cls = revClassifications[i];
+    const turn = i % 2 === 0 ? 'w' : 'b';
+    const stat = stats[turn];
+    stat.count++;
+    
+    if (cls === 'best') stat.best++;
+    else if (cls === 'excellent') stat.excellent++;
+    else if (cls === 'good') stat.good++;
+    else if (cls === 'inaccuracy') stat.inaccuracy++;
+    else if (cls === 'mistake') stat.mistake++;
+    else if (cls === 'blunder') stat.blunder++;
+    else if (cls === 'forced') stat.forced++;
+    
+    // Average centipawn loss
+    const prevVal = getNumericalEval(revEvals[i], turn);
+    const currVal = getNumericalEval(revEvals[i+1], turn);
+    const loss = turn === 'w' ? Math.max(0, prevVal - currVal) : Math.max(0, currVal - prevVal);
+    // Ignore forced moves or massive drops after mates for ACPL sanity
+    if (cls !== 'forced' && Math.abs(prevVal) < 800) {
+      stat.lossSum += loss;
+    }
+  }
+
+  // Update UI stats table
+  document.getElementById('rev-best-w').textContent = stats.w.best + stats.w.forced;
+  document.getElementById('rev-best-b').textContent = stats.b.best + stats.b.forced;
+  document.getElementById('rev-exc-w').textContent = stats.w.excellent;
+  document.getElementById('rev-exc-b').textContent = stats.b.excellent;
+  document.getElementById('rev-gd-w').textContent = stats.w.good;
+  document.getElementById('rev-gd-b').textContent = stats.b.good;
+  document.getElementById('rev-inac-w').textContent = stats.w.inaccuracy;
+  document.getElementById('rev-inac-b').textContent = stats.b.inaccuracy;
+  document.getElementById('rev-mist-w').textContent = stats.w.mistake;
+  document.getElementById('rev-mist-b').textContent = stats.b.mistake;
+  document.getElementById('rev-blun-w').textContent = stats.w.blunder;
+  document.getElementById('rev-blun-b').textContent = stats.b.blunder;
+
+  // Lichess accuracy formula: Accuracy = Math.round(100 * exp(-0.007 * ACPL))
+  const acplW = stats.w.count ? stats.w.lossSum / stats.w.count : 0;
+  const acplB = stats.b.count ? stats.b.lossSum / stats.b.count : 0;
+  
+  const accW = stats.w.count ? Math.round(100 * Math.exp(-0.007 * acplW)) : 100;
+  const accB = stats.b.count ? Math.round(100 * Math.exp(-0.007 * acplB)) : 100;
+  
+  document.getElementById('rev-acc-w').textContent = accW + '%';
+  document.getElementById('rev-acc-b').textContent = accB + '%';
+  
+  // Highlight blunder counts
+  document.getElementById('rev-blun-w').style.color = stats.w.blunder > 0 ? '#ef4444' : '#fff';
+  document.getElementById('rev-blun-b').style.color = stats.b.blunder > 0 ? '#ef4444' : '#fff';
+}
+
+function drawEvaluationGraph() {
+  const svg = document.getElementById('rev-graph-svg');
+  svg.innerHTML = '';
+  if (revEvals.length === 0) return;
+  
+  const N = revEvals.length - 1;
+  const points = [];
+  for (let i = 0; i < revEvals.length; i++) {
+    const x = N === 0 ? 250 : (i / N) * 460 + 20;
+    let evalVal = getNumericalEval(revEvals[i], 'w') / 100;
+    evalVal = Math.max(-8, Math.min(8, evalVal));
+    const y = 60 - (evalVal / 8) * 50;
+    points.push({ x, y });
+  }
+
+  let svgContent = '';
+  // Grid Lines
+  svgContent += `<line x1="10" y1="60" x2="490" y2="60" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" />`; // Center
+  svgContent += `<line x1="10" y1="30" x2="490" y2="30" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3" />`; // White +4.8
+  svgContent += `<line x1="10" y1="90" x2="490" y2="90" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3" />`; // Black -4.8
+
+  // Dual Gradient polygons
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i+1];
+    const polyPoints = `${p1.x},${p1.y} ${p2.x},${p2.y} ${p2.x},60 ${p1.x},60`;
+    const avgY = (p1.y + p2.y) / 2;
+    if (avgY < 60) {
+      svgContent += `<polygon points="${polyPoints}" fill="rgba(98, 153, 36, 0.15)" />`;
+    } else {
+      svgContent += `<polygon points="${polyPoints}" fill="rgba(201, 79, 54, 0.15)" />`;
+    }
+  }
+
+  // Curve Line
+  let pathD = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i++) {
+    pathD += ` L ${points[i].x} ${points[i].y}`;
+  }
+  svgContent += `<path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2.2" />`;
+
+  // Dynamic dots
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    const isActive = i === revMoveIdx;
+    const r = isActive ? 5.5 : 3.5;
+    const fill = isActive ? '#fff' : 'var(--accent)';
+    const stroke = isActive ? 'var(--green)' : '#fff';
+    const strokeW = isActive ? 2.5 : 1;
+    svgContent += `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}" class="graph-dot" onclick="jumpToReviewMove(${i})" />`;
+  }
+
+  svg.innerHTML = svgContent;
+}
+
+function revRender() {
+  revChess = new Chess();
+  for (let i = 0; i < revMoveIdx; i++) {
+    revChess.move(revHist[i]);
+  }
+  
+  revLastMv = null;
+  if (revMoveIdx > 0 && revHist.length > 0) {
+    const temp = new Chess();
+    for (let i = 0; i < revMoveIdx - 1; i++) {
+      temp.move(revHist[i]);
+    }
+    const r = temp.move(revHist[revMoveIdx - 1]);
+    if (r) revLastMv = { from: r.from, to: r.to };
+  }
+
+  revRenderBoard();
+  revUpdMoveList();
+  revUpdRecommendation();
+  
+  if (revEvals.length > 0) {
+    const ev = revEvals[revMoveIdx];
+    let cp = getNumericalEval(ev, 'w');
+    let pct = Math.max(5, Math.min(95, 50 + cp * 0.08));
+    document.getElementById('rev-fillh').style.width = pct + '%';
+  } else {
+    document.getElementById('rev-fillh').style.width = '50%';
+  }
+}
+
+function revRenderBoard() {
+  const board = document.getElementById('rboard');
+  const tex = board.querySelector('.bgtex');
+  board.innerHTML = '';
+  if (tex) board.appendChild(tex);
+  
+  const dR = revFlipped ? [...RANKS].reverse() : RANKS;
+  const dF = revFlipped ? [...FILES].reverse() : FILES;
+  
+  document.getElementById('rev-rlbls').innerHTML = dR.map(r=>`<span>${r}</span>`).join('');
+  document.getElementById('rev-flbls').innerHTML = dF.map(f=>`<span>${f}</span>`).join('');
+  
+  const dests = revSel ? revChess.moves({ square: revSel, verbose: true }).map(m=>m.to) : [];
+  
+  let showBestFrom = null;
+  let showBestTo = null;
+  if (revShowBest && revMoveIdx < revEvals.length - 1) {
+    const prevEv = revEvals[revMoveIdx];
+    if (prevEv && prevEv.bestMove && prevEv.bestMove !== '(none)') {
+      showBestFrom = prevEv.bestMove.slice(0, 2);
+      showBestTo = prevEv.bestMove.slice(2, 4);
+    }
+  }
+
+  for (let ri = 0; ri < 8; ri++) {
+    for (let fi = 0; fi < 8; fi++) {
+      const f = dF[fi], r = dR[ri], sq = f+r;
+      const p = revChess.get(sq);
+      const isL = (FILES.indexOf(f) + r) % 2 === 1;
+      
+      const d = document.createElement('div');
+      d.className = 'rsq ' + (isL ? 'light' : 'dark');
+      d.dataset.sq = sq;
+      
+      if (revSel === sq) d.classList.add('sel');
+      if (revLastMv?.from === sq) d.classList.add('lf');
+      if (revLastMv?.to === sq) d.classList.add('lt');
+      if (showBestFrom === sq) d.classList.add('best-from');
+      if (showBestTo === sq) d.classList.add('best-to');
+
+      if (p) {
+        const i = document.createElement('img');
+        i.src = pImg(p.color, p.type, G.pieceSet);
+        i.className = 'rpiece';
+        i.onerror = () => i.style.display = 'none';
+        d.appendChild(i);
+      }
+      
+      if (dests.includes(sq)) {
+        const dot = document.createElement('div');
+        dot.className = 'rdot ' + (p ? 'c' : 'n');
+        d.appendChild(dot);
+      }
+      
+      d.addEventListener('click', () => {
+        if (revIsAnalyzing) return;
+        const piece = revChess.get(sq);
+        if (revSel) {
+          if (revSel === sq) { revSel = null; revRenderBoard(); return; }
+          const mvs = revChess.moves({ square: revSel, verbose: true });
+          const mv = mvs.find(m => m.to === sq);
+          if (mv) {
+            const res = revChess.move({ from: revSel, to: sq, promotion: 'q' });
+            if (res) {
+              revHist = revHist.slice(0, revMoveIdx);
+              revHist.push(res.san);
+              revEvals = [];
+              revClassifications = [];
+              revMoveIdx++;
+              revSel = null;
+              runGameAnalysis();
+              return;
+            }
+          }
+          if (piece && piece.color === revChess.turn()) {
+            revSel = sq;
+            revRenderBoard();
+            return;
+          }
+          revSel = null;
+          revRenderBoard();
+        } else {
+          if (piece && piece.color === revChess.turn()) {
+            revSel = sq;
+            revRenderBoard();
+          }
+        }
+      });
+      
+      board.appendChild(d);
+    }
+  }
+}
+
+function revUpdMoveList() {
+  const container = document.getElementById('rev-mlist');
+  container.innerHTML = '';
+  
+  const badgeHtml = (cls) => {
+    if (cls === 'best') return `<span class="badge best" title="Best Move">✓</span>`;
+    if (cls === 'forced') return `<span class="badge best" title="Forced Move">✓</span>`;
+    if (cls === 'excellent') return `<span class="badge excellent" title="Excellent Move">🗲</span>`;
+    if (cls === 'good') return `<span class="badge good" title="Good Move">⬈</span>`;
+    if (cls === 'inaccuracy') return `<span class="badge inaccuracy" title="Inaccuracy">?!</span>`;
+    if (cls === 'mistake') return `<span class="badge mistake" title="Mistake">?</span>`;
+    if (cls === 'blunder') return `<span class="badge blunder" title="Blunder">??</span>`;
+    return '';
+  };
+
+  for (let i = 0; i < revHist.length; i += 2) {
+    const row = document.createElement('div');
+    row.className = 'rev-mrow';
+    
+    const wActive = i === revMoveIdx - 1 ? ' cur' : '';
+    const bActive = i + 1 === revMoveIdx - 1 ? ' cur' : '';
+    
+    const wBadge = revClassifications[i] ? badgeHtml(revClassifications[i]) : '';
+    const bBadge = revClassifications[i+1] ? badgeHtml(revClassifications[i+1]) : '';
+    
+    row.innerHTML = `
+      <span class="rev-mnum">${Math.floor(i/2) + 1}.</span>
+      <span class="rev-msan${wActive}" onclick="jumpToReviewMove(${i + 1})">${revHist[i] || ''}${wBadge}</span>
+      <span class="rev-msan${bActive}" onclick="jumpToReviewMove(${i + 2})">${revHist[i+1] || ''}${bBadge}</span>
+    `;
+    container.appendChild(row);
+  }
+  
+  const activeEl = container.querySelector('.rev-msan.cur');
+  if (activeEl) {
+    activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function revUpdRecommendation() {
+  const revPlayed = document.getElementById('rev-played');
+  const revPlayedDesc = document.getElementById('rev-played-desc');
+  const revBestSugg = document.getElementById('rev-best-sugg');
+  const revBestDesc = document.getElementById('rev-best-desc');
+  const btnShowBest = document.getElementById('rev-btn-showbest');
+  
+  if (revHist.length === 0 || revMoveIdx === 0) {
+    revPlayed.textContent = '—';
+    revPlayedDesc.textContent = 'No moves played yet.';
+    revBestSugg.textContent = '—';
+    revBestDesc.textContent = '';
+    btnShowBest.style.display = 'none';
+    return;
+  }
+  
+  btnShowBest.style.display = 'block';
+  btnShowBest.textContent = revShowBest ? 'Hide Best Move' : 'Show Best Move';
+
+  const idx = revMoveIdx - 1;
+  const turn = idx % 2 === 0 ? 'White' : 'Black';
+  const playedSan = revHist[idx];
+  
+  revPlayed.textContent = playedSan;
+  if (revClassifications[idx]) {
+    const cls = revClassifications[idx].toUpperCase();
+    const ev = revEvals[idx+1];
+    let cpStr = '0.0';
+    if (ev) {
+      if (ev.mate !== null) cpStr = 'Mate in ' + ev.mate;
+      else cpStr = (ev.cp / 100 > 0 ? '+' : '') + (ev.cp / 100).toFixed(2);
+    }
+    revPlayedDesc.textContent = `${turn} played ${playedSan}. Marked as ${cls}. Evaluation: ${cpStr}`;
+  } else {
+    revPlayedDesc.textContent = '';
+  }
+
+  const prevEv = revEvals[idx];
+  if (prevEv && prevEv.bestMove && prevEv.bestMove !== '(none)') {
+    const uci = prevEv.bestMove;
+    const from = uci.slice(0, 2).toUpperCase();
+    const to = uci.slice(2, 4).toUpperCase();
+    
+    revBestSugg.textContent = `${from} → ${to}`;
+    
+    let cpStr = '0.0';
+    if (prevEv.mate !== null) cpStr = 'Mate in ' + prevEv.mate;
+    else cpStr = (prevEv.cp / 100 > 0 ? '+' : '') + (prevEv.cp / 100).toFixed(2);
+    
+    revBestDesc.textContent = `The engine recommends ${from} to ${to}. Projected eval: ${cpStr}`;
+  } else {
+    revBestSugg.textContent = '—';
+    revBestDesc.textContent = 'No suggestion available.';
+  }
+}
+
+function jumpReviewStart() {
+  revMoveIdx = 0;
+  revShowBest = false;
+  revRender();
+}
+
+function prevReviewMove() {
+  if (revMoveIdx > 0) {
+    revMoveIdx--;
+    revShowBest = false;
+    revRender();
+  }
+}
+
+function nextReviewMove() {
+  if (revMoveIdx < revHist.length) {
+    revMoveIdx++;
+    revShowBest = false;
+    revRender();
+  }
+}
+
+function jumpReviewEnd() {
+  revMoveIdx = revHist.length;
+  revShowBest = false;
+  revRender();
+}
+
+function jumpToReviewMove(idx) {
+  revMoveIdx = idx;
+  revShowBest = false;
+  revRender();
+}
+
+function revFlip() {
+  revFlipped = !revFlipped;
+  revRenderBoard();
+}
+
+function toggleShowBestMove() {
+  revShowBest = !revShowBest;
+  revRenderBoard();
+  document.getElementById('rev-btn-showbest').textContent = revShowBest ? 'Hide Best Move' : 'Show Best Move';
+}
+
+function loadReviewMoves() {
+  const pgn = document.getElementById('rev-pgn-inp').value.trim();
+  if (!pgn) {
+    alert('Please enter some moves.');
+    return;
+  }
+  const rawMoves = pgn.replace(/\d+\./g, '').split(/[\s,]+/);
+  const moves = rawMoves.map(m => m.trim()).filter(m => m.length > 0);
+  
+  if (moves.length === 0) {
+    alert('Invalid move list!');
+    return;
+  }
+  
+  const testChess = new Chess();
+  const validMoves = [];
+  for (let i = 0; i < moves.length; i++) {
+    const res = testChess.move(moves[i]);
+    if (res) {
+      validMoves.push(res.san);
+    } else {
+      alert(`Invalid move at index ${i+1}: ${moves[i]}`);
+      return;
+    }
+  }
+  
+  revHist = validMoves;
+  runGameAnalysis();
+}
+
+function triggerPostGameReview(gameMoves) {
+  revHist = [...gameMoves];
+  goTab('review');
+  runGameAnalysis();
 }
 
 // ══════════════════════════════════════════════════════════════════
