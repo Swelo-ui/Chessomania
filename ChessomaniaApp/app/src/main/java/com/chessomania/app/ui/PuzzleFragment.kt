@@ -26,8 +26,8 @@ class PuzzleFragment : Fragment() {
     private val game = ChessGame()
     private val handler = Handler(Looper.getMainLooper())
     private val allPuzzles = PuzzleDatabase.puzzles
-    private var filteredPuzzles = allPuzzles.shuffled()
-    private var puzzleIndex = 0
+    private var currentThemeName = "All Themes"
+    private var currentLoadedPuzzle: Puzzle? = null
     private var solutionStep = 0
     private var solvedCount = 0
     private var failedCount = 0
@@ -84,26 +84,45 @@ class PuzzleFragment : Fragment() {
         themeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val selected = themes[position]
-                filteredPuzzles = if (selected == "All Themes") {
-                    allPuzzles.shuffled()
-                } else {
-                    allPuzzles.filter { it.theme == selected }.shuffled()
-                }
-                puzzleIndex = 0
-                loadPuzzle(0)
+                loadCurrentPuzzleForSelectedTheme(selected)
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
 
-    private fun loadPuzzle(index: Int) {
-        if (filteredPuzzles.isEmpty()) return
-        val puzzle = filteredPuzzles[index % filteredPuzzles.size]
+    private fun getThemeLevel(theme: String): Int {
+        val prefs = requireContext().getSharedPreferences("chessomania_puz_progress", android.content.Context.MODE_PRIVATE)
+        return prefs.getInt("level_$theme", 0) // Default to 0 (Level 1)
+    }
+
+    private fun saveThemeLevel(theme: String, level: Int) {
+        val prefs = requireContext().getSharedPreferences("chessomania_puz_progress", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putInt("level_$theme", level).apply()
+    }
+
+    private fun loadCurrentPuzzleForSelectedTheme(selectedTheme: String) {
+        currentThemeName = selectedTheme
         solutionStep = 0
         awaitingOpponent = false
         boardView.isInteractive = true
         boardView.highlightedPos = null
         boardView.highlightedToPos = null
+
+        val puzzle = getPuzzleForTheme(selectedTheme)
+        if (puzzle == null) {
+            messageText.text = "All puzzles in this theme solved! Next set loaded."
+            // Reset levels for this theme to loop
+            if (selectedTheme != "All Themes") {
+                saveThemeLevel(selectedTheme, 0)
+            } else {
+                // Reset all themes to loop
+                val themesList = allPuzzles.map { it.theme }.distinct()
+                themesList.forEach { saveThemeLevel(it, 0) }
+            }
+            loadCurrentPuzzleForSelectedTheme(selectedTheme)
+            return
+        }
+        currentLoadedPuzzle = puzzle
 
         PuzzleDatabase.loadPuzzleFen(game, puzzle.fen)
         boardView.game = game
@@ -113,16 +132,37 @@ class PuzzleFragment : Fragment() {
         isFlipped = boardView.isFlipped
 
         val side = if (puzzle.playerColor == Color.WHITE) "White" else "Black"
-        messageText.text = "Find the best move for $side! (${puzzle.theme})"
+        val level = (allPuzzles.filter { it.theme == puzzle.theme }.indexOf(puzzle) % 10) + 1
+        messageText.text = "Find the best move for $side! (${puzzle.theme} Lvl $level)"
         messageText.setBackgroundResource(R.drawable.card_bg)
         messageText.setTextColor(0xFFd9d4cd.toInt())
         boardView.invalidate()
     }
 
+    private fun getPuzzleForTheme(theme: String): Puzzle? {
+        if (theme == "All Themes") {
+            val themesList = allPuzzles.map { it.theme }.distinct()
+            val unsolvedThemes = themesList.filter { getThemeLevel(it) < 10 }
+            val chosenTheme = if (unsolvedThemes.isNotEmpty()) {
+                unsolvedThemes.random()
+            } else {
+                themesList.random()
+            }
+            val level = getThemeLevel(chosenTheme) % 10
+            val themePuzzles = allPuzzles.filter { it.theme == chosenTheme }.sortedBy { it.id }
+            return if (themePuzzles.isNotEmpty()) themePuzzles[level % themePuzzles.size] else null
+        } else {
+            val level = getThemeLevel(theme)
+            val themePuzzles = allPuzzles.filter { it.theme == theme }.sortedBy { it.id }
+            if (themePuzzles.isEmpty()) return null
+            if (level >= themePuzzles.size) return null
+            return themePuzzles[level]
+        }
+    }
+
     private fun checkPuzzleMove(from: Pos, to: Pos) {
         if (awaitingOpponent) return
-        if (filteredPuzzles.isEmpty()) return
-        val puzzle = filteredPuzzles[puzzleIndex % filteredPuzzles.size]
+        val puzzle = currentLoadedPuzzle ?: return
         if (solutionStep >= puzzle.solutionMoves.size) return
 
         val expectedUci = puzzle.solutionMoves[solutionStep]
@@ -153,7 +193,15 @@ class PuzzleFragment : Fragment() {
                 messageText.setTextColor(0xFF34d399.toInt())
                 boardView.isInteractive = false
                 com.chessomania.app.SettingsManager.playSound(requireContext(), "GenericNotify")
-                handler.postDelayed({ nextPuzzle() }, 2000)
+                
+                // Solve progress!
+                val solvedTheme = puzzle.theme
+                val curLevel = getThemeLevel(solvedTheme)
+                saveThemeLevel(solvedTheme, curLevel + 1)
+
+                handler.postDelayed({ 
+                    loadCurrentPuzzleForSelectedTheme(currentThemeName) 
+                }, 2000)
             } else {
                 // Play opponent move
                 awaitingOpponent = true
@@ -189,8 +237,7 @@ class PuzzleFragment : Fragment() {
     }
 
     private fun showHint() {
-        if (filteredPuzzles.isEmpty()) return
-        val puzzle = filteredPuzzles[puzzleIndex % filteredPuzzles.size]
+        val puzzle = currentLoadedPuzzle ?: return
         if (solutionStep >= puzzle.solutionMoves.size) return
         val uci = puzzle.solutionMoves[solutionStep]
         if (uci.length < 4) return
@@ -212,9 +259,13 @@ class PuzzleFragment : Fragment() {
     }
 
     private fun nextPuzzle() {
-        if (filteredPuzzles.isEmpty()) return
-        puzzleIndex++
-        loadPuzzle(puzzleIndex)
+        if (currentThemeName == "All Themes") {
+            loadCurrentPuzzleForSelectedTheme("All Themes")
+        } else {
+            val curLevel = getThemeLevel(currentThemeName)
+            saveThemeLevel(currentThemeName, (curLevel + 1) % 10)
+            loadCurrentPuzzleForSelectedTheme(currentThemeName)
+        }
     }
 
     override fun onResume() {
@@ -251,10 +302,17 @@ class PuzzleFragment : Fragment() {
             val theme = items[position]
             val iconRes = icons[theme] ?: 0
             if (iconRes != 0) {
-                textView.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0)
-                textView.compoundDrawablePadding = dpToPx(8)
+                val drawable = ContextCompat.getDrawable(context, iconRes)
+                if (drawable != null) {
+                    val size = dpToPx(18)
+                    drawable.setBounds(0, 0, size, size)
+                    textView.setCompoundDrawables(drawable, null, null, null)
+                    textView.compoundDrawablePadding = dpToPx(8)
+                } else {
+                    textView.setCompoundDrawables(null, null, null, null)
+                }
             } else {
-                textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                textView.setCompoundDrawables(null, null, null, null)
             }
             textView.gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
             textView.textAlignment = View.TEXT_ALIGNMENT_VIEW_START

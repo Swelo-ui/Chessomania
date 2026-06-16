@@ -1562,138 +1562,138 @@ let pSel=null,pLastMv=null,pSolved=0,pFailed=0,pMoveIdx=0;
 let curPuzzle=null, pHist=[];
 const PUZZLE_THEMES=[
   {name:'Back Rank',icon:'backRankMate',puzzles:[
-    {fen:'6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1',moves:['a1a8'],side:'w',tip:'Back rank checkmate - Rook to 8th rank!'},
-    {fen:'6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1',moves:['a1a8'],side:'w',tip:'Back rank checkmate - no escape for the king!'},
-    {fen:'5rk1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1',moves:['d1d8', 'f8d8'],side:'w',tip:'Forced rook trade on the back rank!'},
-    {fen:'5r1k/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1',moves:['d1d8', 'f8d8'],side:'w',tip:'Skewer/Back rank combination!'},
-    {fen:'r5k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1',moves:['d1d8', 'r5d8'],side:'w',tip:'Classic back rank rook checkmate!'},
-    {fen:'6k1/R4ppp/8/8/8/8/5PPP/6K1 w - - 0 1',moves:['a7a8'],side:'w',tip:'Rook coordinates back rank checkmate!'},
-    {fen:'6k1/5ppp/R7/8/8/8/5PPP/6K1 w - - 0 1',moves:['a6a8'],side:'w',tip:'Infiltrate the back rank for victory!'},
-    {fen:'r5k1/5ppp/8/8/8/8/1R3PPP/6K1 w - - 0 1',moves:['b2b8', 'r5b8'],side:'w',tip:'Rook sacrifice for back rank mate!'},
-    {fen:'6k1/2R2ppp/8/8/8/8/5PPP/6K1 w - - 0 1',moves:['c7c8'],side:'w',tip:'Slam the back rank door shut!'},
-    {fen:'6k1/5rpp/8/8/8/8/R4PPP/6K1 w - - 0 1',moves:['a2a8', 'f7f8', 'a8f8'],side:'w',tip:'Patience on the back rank!'}
+    {fen:'6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1',moves:['a1a8'],side:'w',tip:'Level 1: Direct back rank checkmate with the rook!'},
+    {fen:'6k1/5ppp/8/8/8/8/8/3R2K1 w - - 0 1',moves:['d1d8'],side:'w',tip:'Level 2: Back rank mate on the d-file!'},
+    {fen:'5rk1/5ppp/8/8/8/8/3R1PPP/3R2K1 w - - 0 1',moves:['d2d8', 'f8d8', 'd1d8'],side:'w',tip:'Level 3: Double rook invasion to force back rank checkmate!'},
+    {fen:'5rk1/5ppp/8/8/8/8/3Q1PPP/3R2K1 w - - 0 1',moves:['d2d8', 'f8d8', 'd1d8'],side:'w',tip:'Level 4: Queen and rook combo to force back rank mate!'},
+    {fen:'r5k1/5ppp/8/8/8/8/1R3PPP/1R4K1 w - - 0 1',moves:['b2b8', 'a8b8', 'b1b8'],side:'w',tip:'Level 5: Rook sacrifice/deflection to win back rank mate!'},
+    {fen:'6k1/5ppp/8/8/8/3B4/5PPP/r5K1 w - - 0 1',moves:['d3f1'],side:'w',tip:'Level 6: Block the back rank check with the bishop!'},
+    {fen:'5qk1/5ppp/8/8/8/8/1R3PPP/1R4K1 w - - 0 1',moves:['b2b8', 'f8b8', 'b1b8'],side:'w',tip:'Level 7: Queen deflection rook sacrifice back rank mate!'},
+    {fen:'6k1/5rpp/8/8/8/8/R4PPP/6K1 w - - 0 1',moves:['a2a8', 'f7f8', 'a8f8'],side:'w',tip:'Level 8: Infiltrating rook back rank checkmate!'},
+    {fen:'6k1/5ppp/8/8/8/8/1Q3PPP/6K1 w - - 0 1',moves:['b2b8'],side:'w',tip:'Level 9: Safe back rank queen checkmate!'},
+    {fen:'r5k1/5ppp/8/8/8/8/2R2PPP/2R3K1 w - - 0 1',moves:['c2c8', 'a8c8', 'c1c8'],side:'w',tip:'Level 10: Grandmaster double rook stack back rank mate!'}
   ]},
   {name:'Discovered Attack',icon:'discoveredAttack',puzzles:[
-    {fen:'rnb1kbnr/pppp1ppp/8/4p1q1/2B1P3/3P4/PPP2PPP/RNBQK1NR w KQkq - 1 4',moves:['d3d4'],side:'w',tip:'Discovered attack on the queen!'},
-    {fen:'r3k2r/ppp2ppp/2n1bn2/2b1p1q1/2B1P3/2NP1N2/PPP1QPPP/R1B1K2R w KQkq - 0 1',moves:['c3d5', 'g5g2', 'h1g1'],side:'w',tip:'Knight move discovers attack on queen!'},
-    {fen:'r1bqk2r/ppp2ppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['c3d5', 'f6d5', 'c4d5'],side:'w',tip:'Knight jump discovers bishop scope!'},
-    {fen:'rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',moves:['e4d5', 'd8d5', 'b1c3'],side:'w',tip:'Knight move attacks queen upon pawn capture!'},
-    {fen:'r2qk2r/ppp2ppp/2n2n2/2b1p3/2B1P1b1/2NP1N2/PPP3PP/R1BQK2R w KQkq - 3 8',moves:['c3d5', 'f6d5', 'c4d5'],side:'w',tip:'Unveil bishop pressure on f7!'},
-    {fen:'r1bqk2r/pppn1ppp/3p1n2/4p3/1bB1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 1 6',moves:['c3e2', 'c7c6', 'c2c3'],side:'w',tip:'Knight retreat discovers c3 pawn defense!'},
-    {fen:'rnbqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',moves:['d2d4', 'e5d4', 'c3c3'],side:'w',tip:'Central pawn push opens d-file discovered attacks!'},
-    {fen:'r3k2r/ppp2ppp/2np1n2/1B2p3/4P1b1/2NP1N2/PPPB1PPP/R3K2R w KQkq - 0 8',moves:['f3e5', 'd6e5', 'b5c6'],side:'w',tip:'Knight capture reveals diagonal bishop pin!'},
-    {fen:'r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['c3b5', 'c5b6', 'c2c3'],side:'w',tip:'Knight hop reveals dynamic center attack!'},
-    {fen:'r1b1k2r/ppp2ppp/2np1n2/4p3/1bB1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 7',moves:['c3d5', 'f6d5', 'c4d5'],side:'w',tip:'Centralized knight jump reveals bishop attack!'}
+    {fen:'rnb1kbnr/pppp1ppp/8/4p1q1/2B1P3/3P4/PPP2PPP/RNBQK1NR w KQkq - 1 4',moves:['d3d4'],side:'w',tip:'Level 1: Discover bishop attack on the queen!'},
+    {fen:'1k6/7q/8/8/8/3B4/8/1R2K3 w - - 0 1',moves:['d3e4', 'b8c7', 'e4h7'],side:'w',tip:'Level 2: Discover rook check and win the queen!'},
+    {fen:'1k6/7r/8/8/8/3B4/8/1R2K3 w - - 0 1',moves:['d3e4', 'b8c7', 'e4h7'],side:'w',tip:'Level 3: Discover rook check and win the rook!'},
+    {fen:'1k6/7n/8/8/8/3B4/8/1R2K3 w - - 0 1',moves:['d3e4', 'b8c7', 'e4h7'],side:'w',tip:'Level 4: Discover rook check and win the knight!'},
+    {fen:'1k6/7b/8/8/8/3B4/8/1R2K3 w - - 0 1',moves:['d3e4', 'b8c7', 'e4h7'],side:'w',tip:'Level 5: Discover rook check and win the bishop!'},
+    {fen:'r1b1k2r/ppp2ppp/2np1n2/4p3/1b2P3/2NP1N2/PPPB1PPP/R3KB1R w KQkq - 0 7',moves:['c3d5', 'f6d5', 'e4d5'],side:'w',tip:'Level 6: Center knight leap discovering bishop attack!'},
+    {fen:'1k6/7r/8/8/8/3B4/8/1R2K3 w - - 0 1',moves:['d3e4', 'b8c7', 'e4h7'],side:'w',tip:'Level 7: Discovered check combination on b-file!'},
+    {fen:'1k6/7q/8/8/8/3B4/8/1R2K3 w - - 0 1',moves:['d3e4', 'b8c7', 'e4h7'],side:'w',tip:'Level 8: Complex queen capture discovered check!'},
+    {fen:'k7/P7/8/8/8/3B4/8/1R2K3 w - - 0 1',moves:['d3e4'],side:'w',tip:'Level 9: Discovered checkmate on the long diagonal!'},
+    {fen:'r1b1k2r/ppppbppp/2n1pn2/8/q7/2NP1N2/PPP1QPPP/R3KB1R w KQkq - 6 7',moves:['c3a4'],side:'w',tip:'Level 10: Grandmaster discovered queen capture!'}
   ]},
   {name:'Double Check',icon:'doubleCheck',puzzles:[
-    {fen:'r1bqk2r/pppp1ppp/2n2n2/2b5/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 0 1',moves:['e4e5', 'f6e4', 'c3e4'],side:'w',tip:'Double check - attack the center and fork!'},
-    {fen:'r1bqk2r/ppp2ppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['c3d5', 'c6d4', 'c4f7'],side:'w',tip:'Deliver a double check pressure!'},
-    {fen:'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/2N2N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',moves:['d2d4', 'e5d4', 'e4e5'],side:'w',tip:'Initiate center pawn storm check!'},
-    {fen:'r3k2r/ppp2ppp/2np1n2/1B2p3/4P1b1/2NP1N2/PPPB1PPP/R3K2R w KQkq - 0 8',moves:['c3d5', 'g4f3', 'g2f3'],side:'w',tip:'Generate overlapping pins!'},
-    {fen:'rnbqkbnr/pp3ppp/2p5/3pp3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4',moves:['e4d5', 'c6d5', 'c4d5'],side:'w',tip:'Double attack the central files!'},
-    {fen:'r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['d2d4', 'e5d4', 'f3d4'],side:'w',tip:'Unleash double attack from bishop and knight!'},
-    {fen:'r1b1k2r/ppp2ppp/2np1n2/4p3/1bB1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 7',moves:['d2d4', 'e5d4', 'f3d4'],side:'w',tip:'Unveil double center threat!'},
-    {fen:'r1bqk2r/ppp1bppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 1 6',moves:['d2d4', 'e5d4', 'f3d4'],side:'w',tip:'Unleash central double threat!'},
-    {fen:'rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',moves:['d2d4', 'd5e4', 'b1c3'],side:'w',tip:'Initiate double developmental gambit!'},
-    {fen:'r1bqk2r/pppn1ppp/3p1n2/4p3/1bB1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 1 6',moves:['d2d4', 'e5d4', 'f3d4'],side:'w',tip:'Initiate double check tactics!'}
+    {fen:'3k4/8/3B4/8/8/8/8/3R2K1 w - - 0 1',moves:['d6c7', 'd8e8', 'd1d8'],side:'w',tip:'Level 1: Double check - bishop moves to c7!'},
+    {fen:'3k4/8/3B4/8/8/8/8/3R2K1 w - - 0 1',moves:['d6e7', 'd8e8', 'd1d8'],side:'w',tip:'Level 2: Double check - bishop moves to e7!'},
+    {fen:'1k6/8/8/8/8/8/1B6/1R2K3 w - - 0 1',moves:['b2e5', 'b8c8', 'b1b8'],side:'w',tip:'Level 3: Double check - discover and check with bishop!'},
+    {fen:'1k6/8/8/8/8/8/1B6/1R2K3 w - - 0 1',moves:['b2e5', 'b8a8', 'b1b8'],side:'w',tip:'Level 4: Double check on the cornered king!'},
+    {fen:'1k6/8/8/8/8/8/1B6/1R2K3 w - - 0 1',moves:['b2e5', 'b8c8', 'b1b8'],side:'w',tip:'Level 5: Multi-check combination on b-file!'},
+    {fen:'3k4/8/3B4/8/8/8/8/3R2K1 w - - 0 1',moves:['d6c7', 'd8e8', 'd1d8'],side:'w',tip:'Level 6: Double check sequence!'},
+    {fen:'1k6/8/8/8/8/8/1B6/1R2K3 w - - 0 1',moves:['b2e5', 'b8c8', 'b1b8'],side:'w',tip:'Level 7: Double check combination!'},
+    {fen:'3k4/8/3B4/8/8/8/8/3R2K1 w - - 0 1',moves:['d6e7', 'd8e8', 'd1d8'],side:'w',tip:'Level 8: Master double check pattern!'},
+    {fen:'1k6/8/8/8/8/8/1B6/1R2K3 w - - 0 1',moves:['b2e5', 'b8a8', 'b1b8'],side:'w',tip:'Level 9: Double check mate variant!'},
+    {fen:'r1b2r1k/pp4pp/2nb4/3Q1pN1/2B1p3/8/PPP2PPP/R1B1K2R w KQ - 2 13',moves:['d5g8', 'f8g8', 'g5f7'],side:'w',tip:'Level 10: Grandmaster double check smothered mate!'}
   ]},
   {name:'Fork',icon:'fork',puzzles:[
-    {fen:'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',moves:['f3g5', 'd8e7', 'g5f7'],side:'w',tip:'Knight fork - attack king and rook!'},
-    {fen:'rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',moves:['e4d5'],side:'w',tip:'Pawn capture fork threat!'},
-    {fen:'2r3k1/5ppp/R1N5/8/8/8/5PPP/6K1 w - - 0 1',moves:['c6e7', 'g8f8', 'e7c8'],side:'w',tip:'Knight fork - win the rook!'},
-    {fen:'r1bqk2r/ppp2ppp/2np1n2/4p3/2B1P3/P1NP4/1PP2PPP/R1BQK1NR b KQkq - 0 5',moves:['d6d5', 'e4d5', 'c6d5'],side:'b',tip:'Pawn push forks bishop and knight!'},
-    {fen:'r2qk2r/ppp1bppp/2np1n2/4p3/4P1b1/2NP1N2/PPPBBPPP/R2QK2R w KQkq - 4 7',moves:['f3e5', 'c6e5', 'd2d4'],side:'w',tip:'Knight fork trick to gain a pawn!'},
-    {fen:'r1bqk2r/ppp2ppp/2n5/1B1pp3/4n3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 7',moves:['d3e4', 'd5e4', 'd1d8'],side:'w',tip:'Win the knight and fork the queen!'},
-    {fen:'r1bqkb1r/ppp2ppp/2np1n2/4p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 2 5',moves:['c4f7', 'e8f7', 'f3g5'],side:'w',tip:'Bishop sacrifice leading to a knight fork!'},
-    {fen:'r2qk2r/ppp2ppp/2n1bn2/3pp3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 7',moves:['c4b5', 'd5d4', 'c3e2'],side:'w',tip:'Pawn fork threat from knight!'},
-    {fen:'r2q1rk1/ppp2ppp/2n5/3pNb2/3P4/2n5/PPP2PPP/R1BQR1K1 w - - 0 11',moves:['e5c6', 'b7c6', 'b2c3'],side:'w',tip:'Centralized knight fork on queen and rook!'},
-    {fen:'8/p1p3k1/8/2N5/8/8/6PP/6K1 w - - 0 1',moves:['c5e6', 'g7f7', 'e6c7'],side:'w',tip:'Centralized knight forks pawns!'}
+    {fen:'r3k3/8/8/3N4/8/8/8/4K3 w kq - 0 1',moves:['d5c7', 'e8d7', 'c7a8'],side:'w',tip:'Level 1: Knight fork - check the king and win the rook!'},
+    {fen:'2r3k1/8/8/3B4/8/8/8/4K3 w - - 0 1',moves:['d5e6', 'g8f8', 'e6c8'],side:'w',tip:'Level 2: Bishop fork - check the king and win the rook!'},
+    {fen:'2r3k1/8/8/8/8/8/8/3QK3 w - - 0 1',moves:['d1g4', 'g8f8', 'g4c8'],side:'w',tip:'Level 3: Queen fork - check the king and win the rook!'},
+    {fen:'4k3/8/2n1n3/8/3P4/8/8/4K3 w - - 0 1',moves:['d4d5', 'c6d8', 'd5e6'],side:'w',tip:'Level 4: Pawn fork - advance the pawn to attack two knights!'},
+    {fen:'3k4/8/2b5/8/8/8/8/3R2K1 w - - 0 1',moves:['d1d6', 'd8e7', 'd6c6'],side:'w',tip:'Level 5: Rook fork - check the king and win the bishop!'},
+    {fen:'4k3/8/q7/3N4/8/8/8/4K3 w - - 0 1',moves:['d5c7', 'e8d7', 'c7a6'],side:'w',tip:'Level 6: Knight fork - check the king and win the queen!'},
+    {fen:'6k1/8/8/3B4/8/r7/8/4K3 w - - 0 1',moves:['d5e6', 'g8f8', 'e6a2'],side:'w',tip:'Level 7: Bishop fork - check the king and win the rook!'},
+    {fen:'6k1/8/8/3n4/8/8/5Q2/4K3 w - - 0 1',moves:['f2g2', 'g8f8', 'g2d5'],side:'w',tip:'Level 8: Queen fork - check the king and win the knight!'},
+    {fen:'r3k2r/8/8/3N4/8/8/8/4K3 w kq - 0 1',moves:['d5c7', 'e8d7', 'c7a8'],side:'w',tip:'Level 9: Double knight fork - win a rook in the opening!'},
+    {fen:'r1b1k2r/ppp2ppp/2np1n2/4p3/1b2P3/2NP1N2/PPPB1PPP/R3KB1R w KQkq - 0 7',moves:['c3d5', 'f6d5', 'e4d5'],side:'w',tip:'Level 10: Grandmaster pawn fork combination after central trades!'}
   ]},
   {name:'Mate in 1',icon:'oneMove',puzzles:[
-    {fen:'r1bqkbnr/pppp1ppp/8/4p3/2BnP3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4',moves:['c4f7'],side:'w',tip:'Scholar\'s mate threat - King check!'},
-    {fen:'rnbqkbnr/pp3ppp/2p5/3pp3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4',moves:['f3f7'],side:'w',tip:'Queen checkmates protected by bishop!'},
-    {fen:'r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4',moves:['c4f7'],side:'b',tip:'Defend Scholar\'s mate with active checkmate!'},
-    {fen:'rnbqkbnr/ppp1p1pp/3p1p2/8/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4',moves:['f3h5'],side:'w',tip:'Fools mate variant - checkmate!'},
-    {fen:'rnb1kbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 3',moves:['d8h4'],side:'b',tip:'Fool\'s Mate - checkmate in one move!'},
-    {fen:'6k1/5ppp/8/8/8/8/8/5K1R w - - 0 1',moves:['h1h8'],side:'w',tip:'Rook checkmate on the back rank!'},
-    {fen:'6k1/R4ppp/8/8/8/8/8/6K1 w - - 0 1',moves:['a7a8'],side:'w',tip:'Checkmate the trapped king!'},
-    {fen:'6k1/5ppp/R7/8/8/8/8/6K1 w - - 0 1',moves:['a6a8'],side:'w',tip:'Rook coordinates back rank checkmate!'},
-    {fen:'6k1/2R2ppp/8/8/8/8/8/6K1 w - - 0 1',moves:['c7c8'],side:'w',tip:'Quick back rank mate!'},
-    {fen:'r5k1/5ppp/8/8/8/8/8/4K2R w - - 0 1',moves:['h1h8'],side:'w',tip:'Mate on the 8th rank!'}
+    {fen:'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4',moves:['f3f7'],side:'w',tip:'Level 1: Scholar\'s Mate - checkmate in one move!'},
+    {fen:'3k4/8/3K4/8/8/8/8/5R2 w - - 0 1',moves:['f1f8'],side:'w',tip:'Level 2: Rook back rank mate - King trapped!'},
+    {fen:'6k1/5ppp/8/8/8/8/6Q1/6K1 w - - 0 1',moves:['g2a8'],side:'w',tip:'Level 3: Queen back rank mate - game over!'},
+    {fen:'r1bqk1nr/pppp1ppp/2n5/4p3/2B1P3/3P1Q2/PPP2PPP/RNB1K1NR w KQkq - 1 4',moves:['f3f7'],side:'w',tip:'Level 4: Mate in one with queen on f7!'},
+    {fen:'rnbqkbnr/ppppp2p/5p2/6p1/4P3/3P4/PPP2PPP/RNBQKBNR w KQkq - 0 3',moves:['d1h5'],side:'w',tip:'Level 5: Fool\'s Mate - checkmate the weak king!'},
+    {fen:'k7/1P6/1K6/8/8/8/8/R7 w - - 0 1',moves:['a1a8'],side:'w',tip:'Level 6: Rook checkmate supported by pawn!'},
+    {fen:'6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1',moves:['a1a8'],side:'w',tip:'Level 7: Rook checkmate on the back rank!'},
+    {fen:'6k1/5ppp/R7/8/8/8/8/6K1 w - - 0 1',moves:['a6a8'],side:'w',tip:'Level 8: Trap the king behind pawns!'},
+    {fen:'6k1/2R2ppp/8/8/8/8/8/6K1 w - - 0 1',moves:['c7c8'],side:'w',tip:'Level 9: Slam checkmate down on c8!'},
+    {fen:'3r2k1/5ppp/8/8/8/8/8/3R2K1 w - - 0 1',moves:['d1d8'],side:'w',tip:'Level 10: Grandmaster-level checkmate in 1!'}
   ]},
   {name:'Pin',icon:'pin',puzzles:[
-    {fen:'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3',moves:['c6d4'],side:'b',tip:'Pin the knight to the queen!'},
-    {fen:'rnb1kbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3',moves:['d1h5'],side:'w',tip:'Pin the f7 pawn and threaten mate!'},
-    {fen:'rnbqk2r/pppp1ppp/4pn2/8/1bPP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4',moves:['d1c2'],side:'w',tip:'Defend the pinned knight!'},
-    {fen:'r1bqk2r/ppp1bppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 1 6',moves:['c1g5'],side:'w',tip:'Pin the opponent knight to the queen!'},
-    {fen:'r1b1k2r/ppp1qppp/2np1n2/1B2p3/4P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 7',moves:['c3d5', 'e7d8', 'c1g5'],side:'w',tip:'Exploit the pinned knight on c6!'},
-    {fen:'r1bqk2r/ppp1bppp/2n2n2/3pp3/4P3/2NP1N2/PPP1BPPP/R1BQK2R w KQkq - 0 6',moves:['c1g5', 'd5d4', 'c3b1'],side:'w',tip:'Establish an active pin on f6!'},
-    {fen:'r3k2r/ppp2ppp/2np1n2/1B2p3/4P1b1/2NP1N2/PPPB1PPP/R3K2R b KQkq - 0 8',moves:['g4f3', 'g2f3'],side:'b',tip:'Exploit pinned pieces on the c-file!'},
-    {fen:'rnbqkb1r/pp2pppp/2p2n2/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 0 4',moves:['c1g5', 'e7e6', 'e2e3'],side:'w',tip:'Pin the knight on f6!'},
-    {fen:'r1bqk2r/pppnbppp/3p1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 1 6',moves:['f3g5', 'd6d5', 'c3d5'],side:'w',tip:'Apply pressure to the pinned f7 pawn!'},
-    {fen:'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R b KQkq - 5 4',moves:['f6e4', 'c3e4', 'd7d5'],side:'b',tip:'Break the pin and fork the bishop!'}
+    {fen:'r1bqk2r/ppp2ppp/2np1n2/1B2p3/4P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['f3e5', 'e8g8', 'e5c6'],side:'w',tip:'Level 1: Exploiting pinned c6 knight to win the e5 pawn!'},
+    {fen:'rnbqk2r/pppp1ppp/4pn2/8/1bPP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4',moves:['d1c2'],side:'w',tip:'Level 2: Defend the pinned c3 knight with the queen!'},
+    {fen:'3rkb1r/pp3ppp/2n1pn2/1B1p4/3P4/2N2N2/PPP2PPP/R3K2R w KQq - 0 9',moves:['f3e5', 'd8c8'],side:'w',tip:'Level 3: Absolute pin - pile up on the pinned c6 knight!'},
+    {fen:'r1bqk2r/ppp2ppp/2np1n2/1b2p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['c4b5'],side:'w',tip:'Level 4: Capture the pinning bishop to free your pieces!'},
+    {fen:'r1bqk2r/ppp2ppp/2np1n2/1B2p3/3PP3/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['d4d5', 'a7a6', 'd5c6'],side:'w',tip:'Level 5: Exploit the pin on c6 by pushing the d-pawn!'},
+    {fen:'4k3/8/4q3/8/8/8/3R4/5K2 w - - 0 1',moves:['d2e2', 'e6e2', 'f1e2'],side:'w',tip:'Level 6: Pin the opponent\'s queen to the king and trade!'},
+    {fen:'4k3/3r4/8/8/8/1B6/8/4K3 w - - 0 1',moves:['b3a4', 'e8e7', 'a4d7'],side:'w',tip:'Level 7: Pin the rook to the king with the bishop and win it!'},
+    {fen:'r1bqk2r/ppp2ppp/2n2n2/1B1pp3/1b2P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['f3e5', 'e8g8', 'b5c6'],side:'w',tip:'Level 8: Master positional pin sequence in the center!'},
+    {fen:'r1bqk2r/ppp2ppp/2np1n2/1b2p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['e1g1'],side:'w',tip:'Level 9: Castling to safely escape the relative pin on c3!'},
+    {fen:'r1bqk2r/ppp2ppp/2n2n2/1B1pp3/1b2P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['f3e5', 'e8g8', 'b5c6'],side:'w',tip:'Level 10: Grandmaster absolute pin sequence winning material!'}
   ]},
   {name:'Promotion',icon:'promotion',puzzles:[
-    {fen:'8/P7/8/8/8/8/8/K5k1 w - - 0 1',moves:['a7a8q'],side:'w',tip:'Promote the pawn to queen!'},
-    {fen:'8/1P6/8/8/8/8/8/K5k1 w - - 0 1',moves:['b7b8q'],side:'w',tip:'Advance pawn to queen!'},
-    {fen:'8/2P5/8/8/8/8/8/K5k1 w - - 0 1',moves:['c7c8q'],side:'w',tip:'Promote pawn on c-file!'},
-    {fen:'8/3P4/8/8/8/8/8/K5k1 w - - 0 1',moves:['d7d8q'],side:'w',tip:'Promote pawn on d-file!'},
-    {fen:'8/4P3/8/8/8/8/8/K5k1 w - - 0 1',moves:['e7e8q'],side:'w',tip:'Promote pawn on e-file!'},
-    {fen:'8/5P2/8/8/8/8/8/K5k1 w - - 0 1',moves:['f7f8q'],side:'w',tip:'Promote pawn on f-file!'},
-    {fen:'8/6P1/8/8/8/8/8/K5k1 w - - 0 1',moves:['g7g8q'],side:'w',tip:'Promote pawn on g-file!'},
-    {fen:'8/7P/8/8/8/8/8/K5k1 w - - 0 1',moves:['h7h8q'],side:'w',tip:'Promote pawn on h-file!'},
-    {fen:'8/8/8/8/8/8/p7/k5K1 b - - 0 1',moves:['a2a1q'],side:'b',tip:'Black promotes pawn to queen!'},
-    {fen:'8/8/8/8/8/8/1p6/k5K1 b - - 0 1',moves:['b2b1q'],side:'b',tip:'Black advances pawn to queen!'}
+    {fen:'8/P7/8/8/8/8/8/K5k1 w - - 0 1',moves:['a7a8q'],side:'w',tip:'Level 1: Direct pawn promotion to queen!'},
+    {fen:'8/1P6/8/8/8/8/8/K5k1 w - - 0 1',moves:['b7b8q'],side:'w',tip:'Level 2: Advance pawn to queen on b-file!'},
+    {fen:'8/2P5/8/8/8/8/8/K5k1 w - - 0 1',moves:['c7c8q'],side:'w',tip:'Level 3: Advance pawn to queen on c-file!'},
+    {fen:'8/3P4/8/8/8/8/8/K5k1 w - - 0 1',moves:['d7d8q'],side:'w',tip:'Level 4: Advance pawn to queen on d-file!'},
+    {fen:'8/4P3/8/8/8/8/8/K5k1 w - - 0 1',moves:['e7e8q'],side:'w',tip:'Level 5: Advance pawn to queen on e-file!'},
+    {fen:'8/5P2/8/8/8/8/8/K5k1 w - - 0 1',moves:['f7f8q'],side:'w',tip:'Level 6: Advance pawn to queen on f-file!'},
+    {fen:'8/6P1/8/8/8/8/8/K5k1 w - - 0 1',moves:['g7g8q'],side:'w',tip:'Level 7: Advance pawn to queen on g-file!'},
+    {fen:'8/7P/8/8/8/8/8/K5k1 w - - 0 1',moves:['h7h8q'],side:'w',tip:'Level 8: Advance pawn to queen on h-file!'},
+    {fen:'8/8/8/8/8/8/p7/1k4K1 b - - 0 1',moves:['a2a1q'],side:'b',tip:'Level 9: Black pawn promotion to queen!'},
+    {fen:'8/8/8/8/8/8/1p6/k5K1 b - - 0 1',moves:['b2b1q'],side:'b',tip:'Level 10: Grandmaster-level underpressure promotion!'}
   ]},
   {name:'Sacrifice',icon:'sacrifice',puzzles:[
-    {fen:'r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4',moves:['f6e4', 'c4f7'],side:'b',tip:'Sacrifice to win material!'},
-    {fen:'r1bqkb1r/ppp2ppp/2n5/1B1pp3/4n3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['c3e4', 'd5e4', 'f3e5'],side:'w',tip:'Central knight sacrifice to win a pawn!'},
-    {fen:'r1bqkb1r/ppp2ppp/2n5/3pp1N1/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 6',moves:['c4f7', 'e8e7', 'f7d5'],side:'w',tip:'Sacrifice bishop to expose the king!'},
-    {fen:'r2qk2r/ppp2ppp/2n2n2/2b1p3/2B1P1b1/2NP1N2/PPP3PP/R1BQK2R w KQkq - 3 8',moves:['c4f7', 'e8f7', 'f3g5'],side:'w',tip:'Sacrifice the bishop on f7 to disrupt the king!'},
-    {fen:'rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',moves:['e4d5', 'd8d5', 'b1c3'],side:'w',tip:'Pawn sacrifice for rapid development!'},
-    {fen:'r1bqk2r/pppn1ppp/3p1n2/4p3/1bB1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 1 6',moves:['c4f7', 'e8f7', 'f3g5', 'f7g8', 'g5e6'],side:'w',tip:'Sacrifice the light-squared bishop to win a queen fork!'},
-    {fen:'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',moves:['c4f7', 'e8f7', 'f3g5', 'f7e8'],side:'w',tip:'Classic Fried Liver bishop sacrifice!'},
-    {fen:'r3k2r/ppp2ppp/2np1n2/1B2p3/4P1b1/2NP1N2/PPPB1PPP/R3K2R w KQkq - 0 8',moves:['b5c6', 'b7c6', 'f3e5', 'd6e5'],side:'w',tip:'Pawn sacrifice to open the b-file!'},
-    {fen:'r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['c4f7', 'e8f7', 'f3g5'],side:'w',tip:'Expose the black king with a bishop sacrifice!'},
-    {fen:'r1b1k2r/ppp2ppp/2np1n2/4p3/1bB1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 7',moves:['c4f7', 'e8f7', 'f3g5'],side:'w',tip:'Dismantle castling rights with a sacrifice!'}
+    {fen:'r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',moves:['c4f7', 'e8f7', 'f3e5'],side:'w',tip:'Level 1: Bishop sacrifice to draw out the king!'},
+    {fen:'5r1k/5Qpp/7N/8/8/8/8/6RK w - - 0 1',moves:['f7g8', 'f8g8', 'h6f7'],side:'w',tip:'Level 2: Queen sacrifice to force smothered checkmate!'},
+    {fen:'3r2k1/5ppp/8/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 3: Rook deflection sacrifice to win back rank control!'},
+    {fen:'r1bq1rk1/ppp1bppp/2n1pn2/3p4/3P4/2NBPN2/PPP2PPP/R1BQK2R w KQ - 4 7',moves:['d3h7', 'g8h7', 'f3g5'],side:'w',tip:'Level 4: Greek gift bishop sacrifice on h7!'},
+    {fen:'6rk/5ppp/8/8/8/8/1Q3PPP/1R4K1 w - - 0 1',moves:['b2b8', 'g8b8', 'b1b8'],side:'w',tip:'Level 5: Queen sacrifice to clear the back rank!'},
+    {fen:'r5k1/5ppp/8/8/8/8/1R3PPP/1R4K1 w - - 0 1',moves:['b2b8', 'a8b8', 'b1b8'],side:'w',tip:'Level 6: Rook sacrifice to force back rank mate!'},
+    {fen:'r1bqk1nr/pppp1ppp/2n5/4p3/1bB1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 5 4',moves:['c4f7', 'e8f7', 'f3e5', 'c6e5'],side:'w',tip:'Level 7: Complex center knight sacrifice trade!'},
+    {fen:'2r3k1/5ppp/Q7/8/8/8/5PPP/6K1 w - - 0 1',moves:['a6c8'],side:'w',tip:'Level 8: Queen sacrifice to deliver back rank checkmate!'},
+    {fen:'6rk/5ppp/8/8/8/8/2R2PPP/2R3K1 w - - 0 1',moves:['c2c8', 'g8c8', 'c1c8'],side:'w',tip:'Level 9: Double rook sacrifice checking line!'},
+    {fen:'r1b2r1k/pp4pp/2nb4/3Q1pN1/2B1p3/8/PPP2PPP/R1B1K2R w KQ - 2 13',moves:['d5g8', 'f8g8', 'g5f7'],side:'w',tip:'Level 10: Grandmaster queen sacrifice smothered mate combination!'}
   ]},
   {name:'Skewer',icon:'skewer',puzzles:[
-    {fen:'4k3/8/8/8/8/8/8/4K2R w - - 0 1',moves:['h1h8'],side:'w',tip:'Rook to 8th rank - check and win material!'},
-    {fen:'r3k2r/ppp2ppp/2np1n2/1B2p3/4P1b1/2NP1N2/PPPB1PPP/R3K2R w KQkq - 0 8',moves:['b5c6', 'b7c6'],side:'w',tip:'Skewer the king and pawn structure!'},
-    {fen:'3k4/8/8/8/q7/8/8/4K2R w K - 0 1',moves:['h1h8', 'd8e7', 'h8a8'],side:'w',tip:'Skewer the king and win the queen!'},
-    {fen:'2k5/8/8/8/r7/8/8/4K2R b K - 0 1',moves:['a4a1', 'e1d2', 'a1h1'],side:'b',tip:'Black skewers the white king and rook!'},
-    {fen:'8/p1p3k1/8/2N5/8/8/6PP/6K1 w - - 0 1',moves:['c5e6', 'g7f6', 'e6c7'],side:'w',tip:'Skewer the pawn with knight!'},
-    {fen:'4k3/8/8/8/b7/8/8/4K2R w K - 0 1',moves:['h1h8', 'd8e7', 'h8a8'],side:'w',tip:'Skewer the king and capture the bishop!'},
-    {fen:'2k5/8/8/8/b7/8/8/4K2R b K - 0 1',moves:['a4c6'],side:'b',tip:'Skewer rook and king on the diagonal!'},
-    {fen:'2k5/8/8/8/b7/8/8/3K3R w - - 0 1',moves:['h1h8', 'c8d7', 'h8a8'],side:'w',tip:'Skewer the bishop on a8!'},
-    {fen:'4k3/8/8/8/q7/8/8/3K3R w - - 0 1',moves:['h1h8', 'e8d7', 'h8a8'],side:'w',tip:'Diagonal king-queen skewer!'},
-    {fen:'3k4/8/8/8/8/8/8/r3K2R b K - 0 1',moves:['a1h1'],side:'b',tip:'Skewer king and win the rook!'}
+    {fen:'r3k3/8/8/8/8/8/8/4K2R w Kq - 0 1',moves:['h1h8', 'e8d7', 'h8a8'],side:'w',tip:'Level 1: Rook skewer - check king and win rook!'},
+    {fen:'4k3/8/8/8/r7/8/8/4K2B w - - 0 1',moves:['h1c6', 'e8d8', 'c6a4'],side:'w',tip:'Level 2: Bishop skewer - check king and win rook!'},
+    {fen:'q3k3/8/8/8/8/8/8/4K2R w K - 0 1',moves:['h1h8', 'e8d7', 'h8a8'],side:'w',tip:'Level 3: Queen skewer - check king and win queen!'},
+    {fen:'4K2R/8/8/8/r7/8/8/4k3 b - - 0 1',moves:['a4a8', 'e8d7', 'a8h8'],side:'b',tip:'Level 4: Black skewer - check white king and win rook!'},
+    {fen:'b1k5/8/8/8/8/8/8/3K3R w - - 0 1',moves:['h1h8', 'c8d7', 'h8a8'],side:'w',tip:'Level 5: Rook skewer - check king and win bishop!'},
+    {fen:'q3k3/8/8/8/8/8/8/3K3R w - - 0 1',moves:['h1h8', 'e8d7', 'h8a8'],side:'w',tip:'Level 6: Queen skewer on the diagonal!'},
+    {fen:'r3k3/8/8/8/8/8/8/3K3B w - - 0 1',moves:['h1a8'],side:'w',tip:'Level 7: Bishop skewer - capture the rook on a8!'},
+    {fen:'q3k3/8/8/8/8/8/8/3K3B w - - 0 1',moves:['h1a8'],side:'w',tip:'Level 8: Bishop skewer - capture the queen on a8!'},
+    {fen:'r3k3/8/8/8/8/8/8/3K3Q w - - 0 1',moves:['h1a8'],side:'w',tip:'Level 9: Queen skewer - capture the rook on a8!'},
+    {fen:'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',moves:['h1h8', 'e8d7', 'h8a8'],side:'w',tip:'Level 10: Grandmaster double skewer winning a full rook!'}
   ]},
   {name:'Zwischenzug',icon:'intermezzo',puzzles:[
-    {fen:'r1b1k2r/pppp1ppp/2n2n2/2b1p1q1/4P3/2NP1N2/PPP2PPP/R1BQKB1R w KQkq - 0 1',moves:['f3e5', 'g5d2', 'e1d2'],side:'w',tip:'Intermediate move - take the knight first!'},
-    {fen:'r1bqk2r/ppp2ppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['c3d5', 'c6d4', 'c4f7', 'e8f7'],side:'w',tip:'Intermediate capture before executing plan!'},
-    {fen:'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',moves:['d2d4', 'e5d4', 'e4e5', 'd7d5'],side:'w',tip:'Intermediate pawn challenge in the center!'},
-    {fen:'r3k2r/ppp2ppp/2np1n2/1B2p3/4P1b1/2NP1N2/PPPB1PPP/R3K2R w KQkq - 0 8',moves:['c3d5', 'g4f3', 'g2f3', 'e8c8'],side:'w',tip:'Intermediate defensive castling!'},
-    {fen:'rnbqkbnr/pp3ppp/2p5/3pp3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4',moves:['e4d5', 'c6d5', 'c4d5', 'd8d5'],side:'w',tip:'Intermediate queen trade threat!'},
-    {fen:'r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6',moves:['d2d4', 'e5d4', 'f3d4', 'c6d4'],side:'w',tip:'Intermediate recapture check!'},
-    {fen:'r1b1k2r/ppp2ppp/2np1n2/4p3/1bB1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 7',moves:['d2d4', 'e5d4', 'f3d4', 'b4c3'],side:'w',tip:'Intermediate bishop trade!'},
-    {fen:'r1bqk2r/ppp1bppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 1 6',moves:['d2d4', 'e5d4', 'f3d4', 'c6d4'],side:'w',tip:'Intermediate knight exchange!'},
-    {fen:'rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',moves:['d2d4', 'd5e4', 'b1c3', 'g8f6'],side:'w',tip:'Intermediate knight challenge!'},
-    {fen:'r1bqk2r/pppn1ppp/3p1n2/4p3/1bB1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 1 6',moves:['d2d4', 'e5d4', 'f3d4', 'b4c3'],side:'w',tip:'Intermediate counter-attack on c3!'}
+    {fen:'3r2k1/5ppp/8/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 1: Play intermediate check before recapturing rook!'},
+    {fen:'3r2k1/5ppp/7p/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 2: Play intermediate check before recapturing rook!'},
+    {fen:'3r2k1/5ppp/6p1/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 3: Intermediate back rank check sequence!'},
+    {fen:'3r2k1/5ppp/5p2/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 4: Intermediate back rank check sequence!'},
+    {fen:'3r2k1/5ppp/4p3/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 5: Intermediate trades in the center!'},
+    {fen:'3r2k1/5ppp/3p4/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 6: Zwischenzug rook capture sequence!'},
+    {fen:'3r2k1/5ppp/1p6/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 7: Delayed recapture check combination!'},
+    {fen:'3r2k1/5ppp/p7/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 8: Back rank intermediate deflection!'},
+    {fen:'3r2k1/5pp1/8/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 9: Zwischenzug tactical central trades!'},
+    {fen:'3r2k1/5p1p/8/8/8/8/r4PPP/R1R3K1 w - - 0 1',moves:['c1c8', 'd8c8', 'a1a2'],side:'w',tip:'Level 10: Grandmaster Zwischenzug check and recapture!'}
   ]}
 ];
 let curThemeIdx=0;
 function initPuzzle(){
   puzzleInited=true;
   buildThemeGrid();
-  nextPuzzle();
+  loadCurrentPuzzle();
 }
 function buildThemeGrid(){
   const g=document.getElementById('themes-grid'); g.innerHTML='';
   PUZZLE_THEMES.forEach((t,i)=>{
     const c=document.createElement('div'); c.className='theme-card'+(i===curThemeIdx?' on':'');
     c.innerHTML=`<img src="/images/puzzle-themes/${t.icon}.svg" onerror="this.style.opacity=.3"/><span>${t.name}</span>`;
-    c.onclick=()=>{curThemeIdx=i;document.querySelectorAll('.theme-card').forEach((x,j)=>x.classList.toggle('on',j===i));document.getElementById('theme-picker').style.display='none';nextPuzzle();};
+    c.onclick=()=>{curThemeIdx=i;document.querySelectorAll('.theme-card').forEach((x,j)=>x.classList.toggle('on',j===i));document.getElementById('theme-picker').style.display='none';loadCurrentPuzzle();};
     g.appendChild(c);
   });
 }
@@ -1701,21 +1701,37 @@ function showThemePicker(){
   const p=document.getElementById('theme-picker');p.style.display=p.style.display==='none'?'block':'none';
   document.getElementById('puz-main').style.display=p.style.display==='none'?'flex':'none';
 }
-function nextPuzzle(){
+function loadCurrentPuzzle(){
   document.getElementById('theme-picker').style.display='none';
   document.getElementById('puz-main').style.display='flex';
   const theme=PUZZLE_THEMES[curThemeIdx];
   const pool=theme.puzzles;
-  curPuzzle=pool[Math.floor(Math.random()*pool.length)];
+  
+  let level = parseInt(localStorage.getItem('puz_level_' + theme.name) || '0');
+  if (level >= pool.length) {
+    level = 0;
+    localStorage.setItem('puz_level_' + theme.name, 0);
+  }
+  
+  curPuzzle=pool[level];
   curPuzzle._idx=0; pMoveIdx=0; pHist=[];
   pChess=new Chess(curPuzzle.fen); pSel=null; pLastMv=null;
   pFlipped=curPuzzle.side==='b';
   document.getElementById('puz-icon').src='/images/puzzle-themes/'+theme.icon+'.svg';
   document.getElementById('puz-title').textContent=theme.name+' Puzzle';
   document.getElementById('puz-theme-name').textContent=theme.name;
-  document.getElementById('puz-sub').textContent=curPuzzle.tip||'Find the best move!';
+  
+  const levelNum = level + 1;
+  document.getElementById('puz-sub').textContent=`Lvl ${levelNum}: ${curPuzzle.tip || 'Find the best move!'}`;
   setMsg('Find the best move for '+(curPuzzle.side==='w'?'White':'Black')+'!','');
   pRender(); updatePuzStats();
+}
+function nextPuzzle(){
+  const theme=PUZZLE_THEMES[curThemeIdx];
+  const pool=theme.puzzles;
+  let level = parseInt(localStorage.getItem('puz_level_' + theme.name) || '0');
+  localStorage.setItem('puz_level_' + theme.name, (level + 1) % pool.length);
+  loadCurrentPuzzle();
 }
 function setMsg(t,type){
   const m=document.getElementById('puz-msg');
@@ -1763,7 +1779,14 @@ function pOnSq(sq){
         markSq(sq,'good');
         snd('Move');
         setTimeout(()=>{
-          if(pMoveIdx>=moves.length){pSolved++;snd('Confirmation');setMsg('Puzzle solved! Well done!','ok');updatePuzStats();}
+          if(pMoveIdx>=moves.length){
+            pSolved++;snd('Confirmation');setMsg('Puzzle solved! Well done!','ok');updatePuzStats();
+            const theme=PUZZLE_THEMES[curThemeIdx];
+            const pool=theme.puzzles;
+            let level = parseInt(localStorage.getItem('puz_level_' + theme.name) || '0');
+            localStorage.setItem('puz_level_' + theme.name, (level + 1) % pool.length);
+            setTimeout(()=>loadCurrentPuzzle(), 2000);
+          }
           else{ setMsg('Correct! Now find the next move...','ok'); setTimeout(()=>pAutoMove(),600); }
           pSel=null;pRender();
         },300);
