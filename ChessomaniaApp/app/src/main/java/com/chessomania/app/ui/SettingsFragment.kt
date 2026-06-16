@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
+import android.widget.Button
 import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
 import android.widget.Toast
@@ -128,6 +129,23 @@ class SettingsFragment : Fragment() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
+        val btnRuleBook = view.findViewById<Button>(R.id.btn_rule_book)
+        btnRuleBook.setOnClickListener {
+            showRuleBookDialog()
+        }
+    }
 
+    private fun showRuleBookDialog() {
+        val context = context ?: return
+        val dialog = android.app.Dialog(context)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_rule_book)
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        val btnClose = dialog.findViewById<Button>(R.id.btn_close_rules)
+        btnClose.setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 }

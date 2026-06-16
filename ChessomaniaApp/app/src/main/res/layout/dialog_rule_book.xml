@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="320dp"
+    android:layout_height="450dp"
+    android:orientation="vertical"
+    android:background="@drawable/game_over_dialog_bg"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Chess Rule Book"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginBottom="16dp"
+        android:fadeScrollbars="false"
+        android:scrollbarSize="4dp"
+        android:scrollbars="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="General Overview"
+                android:textColor="@color/accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Chess is a two-player strategy board game played on a checkered board with 64 squares arranged in an 8x8 grid. The player controlling the white pieces moves first, followed by the player controlling the black pieces."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:lineSpacingMultiplier="1.2"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Piece Movements"
+                android:textColor="@color/accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="King: Moves exactly one square in any direction (horizontally, vertically, or diagonally).\n\nQueen: Moves any number of vacant squares in any direction (horizontally, vertically, or diagonally).\n\nRook: Moves any number of vacant squares horizontally or vertically.\n\nBishop: Moves any number of vacant squares diagonally.\n\nKnight: Moves in an L-shape: two squares horizontally and one square vertically, or two squares vertically and one square horizontally. The knight is the only piece that can jump over other pieces.\n\nPawn: Moves forward one square. On its first move, it can optionally move forward two squares. Pawns capture opponent pieces diagonally forward."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:lineSpacingMultiplier="1.2"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Special Moves"
+                android:textColor="@color/accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Castling: A move involving the King and either Rook. The King moves two squares toward a Rook, and that Rook hops over the King to the adjacent square. This is only allowed if neither piece has moved, the path between them is clear, and the King is not currently in check, nor passes through check.\n\nPawn Promotion: When a pawn reaches the opposite end of the board (8th rank), it must be promoted to a Queen, Rook, Bishop, or Knight of the same color.\n\nEn Passant: If an opponent pawn moves forward two squares on its initial move and lands adjacent to your pawn, you may capture it diagonally as if it had only moved forward one square. This capture must be made on the very next turn."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:lineSpacingMultiplier="1.2"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Game Objectives"
+                android:textColor="@color/accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Check: The King is under immediate attack by an opponent piece.\n\nCheckmate: The King is in check and has no legal moves to escape the attack. The game ends immediately, and the player whose King is checkmated loses.\n\nStalemate: The player whose turn it is has no legal moves and their King is not in check. The game ends in a draw.\n\nDraw: Can occur via stalemate, mutual agreement, threefold repetition, the fifty-move rule, or insufficient material to force checkmate."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:lineSpacingMultiplier="1.2"
+                android:layout_marginBottom="4dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btn_close_rules"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:text="Close"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/white"
+        android:backgroundTint="@color/panel"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        app:cornerRadius="8dp"
+        app:strokeColor="@color/border"
+        app:strokeWidth="1dp"
+        style="@style/Widget.Material3.Button.OutlinedButton" />
+
+</LinearLayout>

@@ -215,14 +215,48 @@
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="16dp"/>
 
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="A state-of-the-art, fully offline chess application. Designed to be resource-friendly, ChessOmania operates entirely on your device with zero external APIs, ensuring absolute privacy and instant gameplay."
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:lineSpacingMultiplier="1.4"
-                android:layout_marginBottom="16dp" />
+                android:orientation="vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="A professional, fully offline chess application. Designed to be resource-friendly, ChessOmania operates entirely on your device with zero external APIs, ensuring absolute privacy and instant gameplay."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:lineSpacingMultiplier="1.4"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Creator: Himanshu Sharma"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/text_creator_linkedin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LinkedIn: www.linkedin.com/in/ai-himanshu-sharma"
+                    android:textColor="@color/accent"
+                    android:textSize="12sp"
+                    android:layout_marginTop="2dp"
+                    android:autoLink="web" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_rule_book"
+                style="@style/Widget.Chessomania.Button.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:layout_marginBottom="16dp"
+                android:text="Chess Rule Book"
+                android:textSize="11sp" />
 
             <View
                 android:layout_width="match_parent"
@@ -250,7 +284,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="⚙ Engine:"
+                        android:text="Engine:"
                         android:textColor="@color/text_primary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -265,7 +299,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🎨 Piece Styles:"
+                        android:text="Piece Styles:"
                         android:textColor="@color/text_primary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -280,7 +314,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="▤ Board Themes:"
+                        android:text="Board Themes:"
                         android:textColor="@color/text_primary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -303,7 +337,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🔊 Sounds:"
+                        android:text="Sounds:"
                         android:textColor="@color/text_primary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -318,7 +352,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="📊 RAM Footprint:"
+                        android:text="RAM Footprint:"
                         android:textColor="@color/text_primary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -333,7 +367,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🛡 Connection:"
+                        android:text="Connection:"
                         android:textColor="@color/text_primary"
                         android:textSize="11sp"
                         android:textStyle="bold" />

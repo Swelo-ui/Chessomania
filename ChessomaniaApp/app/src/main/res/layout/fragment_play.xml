@@ -474,8 +474,10 @@
                         android:layout_width="44dp"
                         android:layout_height="44dp"
                         android:layout_marginStart="8dp"
-                        android:text="📋"
-                        android:textSize="14sp" />
+                        app:icon="@drawable/ic_copy"
+                        app:iconSize="18dp"
+                        app:iconGravity="textStart"
+                        android:padding="0dp" />
                 </LinearLayout>
 
                 <LinearLayout
