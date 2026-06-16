@@ -62,7 +62,22 @@ class PuzzleFragment : Fragment() {
         val context = requireContext()
         val themes = listOf("All Themes") + allPuzzles.map { it.theme }.distinct().sorted()
         val themeSpinner = view.findViewById<Spinner>(R.id.spinner_puzzle_theme)
-        val themeAdapter = ArrayAdapter(context, R.layout.spinner_item, themes)
+        
+        val themeIcons = mapOf(
+            "All Themes" to R.drawable.ic_theme_all,
+            "Fork" to R.drawable.ic_theme_fork,
+            "Pin" to R.drawable.ic_theme_pin,
+            "Back Rank" to R.drawable.ic_theme_backrank,
+            "Skewer" to R.drawable.ic_theme_skewer,
+            "Sacrifice" to R.drawable.ic_theme_sacrifice,
+            "Discovered Attack" to R.drawable.ic_theme_discovered,
+            "Mate in 1" to R.drawable.ic_theme_mate,
+            "Double Check" to R.drawable.ic_theme_doublecheck,
+            "Zwischenzug" to R.drawable.ic_theme_zwischenzug,
+            "Promotion" to R.drawable.ic_theme_promotion
+        )
+
+        val themeAdapter = PuzzleThemeAdapter(context, themes, themeIcons)
         themeAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
         themeSpinner.adapter = themeAdapter
 
@@ -211,6 +226,43 @@ class PuzzleFragment : Fragment() {
         super.onHiddenChanged(hidden)
         if (!hidden) {
             boardView.refreshTheme()
+        }
+    }
+
+    private class PuzzleThemeAdapter(
+        context: android.content.Context,
+        private val items: List<String>,
+        private val icons: Map<String, Int>
+    ) : ArrayAdapter<String>(context, R.layout.spinner_item, items) {
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val view = super.getView(position, convertView, parent) as TextView
+            setupView(view, position)
+            return view
+        }
+
+        override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val view = super.getDropDownView(position, convertView, parent) as TextView
+            setupView(view, position)
+            return view
+        }
+
+        private fun setupView(textView: TextView, position: Int) {
+            val theme = items[position]
+            val iconRes = icons[theme] ?: 0
+            if (iconRes != 0) {
+                textView.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0)
+                textView.compoundDrawablePadding = dpToPx(8)
+            } else {
+                textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+            }
+            textView.gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+            textView.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+        }
+
+        private fun dpToPx(dp: Int): Int {
+            val scale = context.resources.displayMetrics.density
+            return (dp * scale + 0.5f).toInt()
         }
     }
 }
