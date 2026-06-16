@@ -349,6 +349,68 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
 </head>
 <body>
 
+<!-- Mobile Blocker Overlay -->
+<div id="mobile-blocker" style="display:none;position:fixed;inset:0;background:radial-gradient(circle at center, #272421 0%, #161512 100%);z-index:99999;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;font-family:'Noto',sans-serif;overflow-y:auto;">
+  <div style="background:rgba(30, 28, 25, 0.75);border:1px solid rgba(181, 136, 99, 0.25);border-radius:24px;padding:36px 28px;max-width:400px;width:100%;box-shadow:0 30px 60px rgba(0,0,0,0.8);backdrop-filter:blur(24px);display:flex;flex-direction:column;align-items:center;position:relative;overflow:hidden;">
+    
+    <!-- Decorative glow background -->
+    <div style="position:absolute;top:-50px;width:150px;height:150px;background:rgba(181,136,99,0.15);filter:blur(40px);border-radius:50%;pointer-events:none;"></div>
+    
+    <div style="margin-bottom:20px;position:relative;">
+      <!-- Emblem/Logo of ChessOmania -->
+      <img src="/logo/circle-logo.png" alt="ChessOmania" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(181,136,99,0.3));" />
+      <div style="position:absolute;bottom:-2px;right:-2px;background:var(--accent);border-radius:50%;padding:4px;border:2px solid var(--panel);display:flex;align-items:center;justify-content:center;color:#fff;">
+        <i data-lucide="smartphone" style="width:14px;height:14px;"></i>
+      </div>
+    </div>
+    
+    <h1 style="font-size:1.5rem;font-weight:800;color:var(--text);margin-bottom:8px;letter-spacing:0.5px;">Desktop Version</h1>
+    <p style="font-size:0.84rem;color:var(--text2);line-height:1.6;margin-bottom:24px;max-width:300px;">ChessOmania's web platform is optimized for larger PC & Laptop screens to ensure precise moves and professional analysis.</p>
+    
+    <div style="width:100%;height:1px;background:rgba(255,255,255,0.08);margin-bottom:24px;"></div>
+    
+    <h2 style="font-size:1.05rem;font-weight:700;color:var(--accent);margin-bottom:6px;letter-spacing:0.3px;">Play on Android App</h2>
+    <p style="font-size:0.78rem;color:var(--text2);line-height:1.5;margin-bottom:20px;">Download our official APK for a perfectly responsive mobile layout with offline support.</p>
+    
+    <!-- Primary APK Download Button -->
+    <a href="/chessomania.apk" download="ChessOmania.apk" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);color:#fff;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:0.9rem;transition:transform 0.2s, box-shadow 0.2s;box-shadow:0 8px 24px rgba(181,136,99,0.25);margin-bottom:16px;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 12px 28px rgba(181,136,99,0.35)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 8px 24px rgba(181,136,99,0.25)'">
+      <i data-lucide="download" style="width:18px;height:18px;"></i> Download our APK
+    </a>
+    
+    <!-- Contact Options -->
+    <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+      
+      <!-- Phone Contact Button -->
+      <a href="tel:6265643703" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;text-decoration:none;color:var(--text);font-size:0.8rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i data-lucide="phone" style="width:16px;height:16px;color:var(--accent);"></i>
+          <span>Contact: <strong>6265643703</strong></span>
+        </div>
+        <i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text2);"></i>
+      </a>
+
+      <!-- WhatsApp Direct Option -->
+      <a href="https://wa.me/916265643703?text=Hello%20Himanshu,%20I%20want%20to%20download%20the%20ChessOmania%20APK!" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;text-decoration:none;color:var(--text);font-size:0.8rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i data-lucide="message-square" style="width:16px;height:16px;color:#22c55e;"></i>
+          <span>WhatsApp Chat</span>
+        </div>
+        <i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text2);"></i>
+      </a>
+      
+      <!-- Mail Option -->
+      <a href="mailto:himashusharma.shriram@gmail.com?subject=ChessOmania%20APK%20Inquiry" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;text-decoration:none;color:var(--text);font-size:0.8rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+        <div style="display:flex;align-items:center;gap:10px;max-width:85%;">
+          <i data-lucide="mail" style="width:16px;height:16px;color:var(--accent);"></i>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Mail: <strong>himashusharma.shriram@gmail.com</strong></span>
+        </div>
+        <i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text2);"></i>
+      </a>
+
+    </div>
+  </div>
+</div>
+
 <!-- NAV -->
 <nav>
   <div class="nav-logo">
@@ -776,6 +838,23 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
 <script>
 'use strict';
+function initMobileBlocker() {
+  const blocker = document.getElementById('mobile-blocker');
+  if (blocker) {
+    blocker.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  }
+}
+if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+  if (document.readyState !== 'loading') {
+    initMobileBlocker();
+  } else {
+    document.addEventListener('DOMContentLoaded', initMobileBlocker);
+  }
+}
 // ── GLOBAL SETTINGS (shared across tabs) ────────────────────────────
 let G = {
   pieceSet: 'cburnett',

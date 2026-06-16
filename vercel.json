@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "public/chess/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "public/chess/$1"
+    }
+  ]
+}
