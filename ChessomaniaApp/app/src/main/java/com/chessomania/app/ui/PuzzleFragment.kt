@@ -6,7 +6,10 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -22,7 +25,8 @@ class PuzzleFragment : Fragment() {
 
     private val game = ChessGame()
     private val handler = Handler(Looper.getMainLooper())
-    private val puzzles = PuzzleDatabase.puzzles.shuffled()
+    private val allPuzzles = PuzzleDatabase.puzzles
+    private var filteredPuzzles = allPuzzles.shuffled()
     private var puzzleIndex = 0
     private var solutionStep = 0
     private var solvedCount = 0
@@ -54,11 +58,32 @@ class PuzzleFragment : Fragment() {
         }
         view.findViewById<Button>(R.id.btn_puz_next).setOnClickListener { nextPuzzle() }
 
-        loadPuzzle(0)
+        // Initialize Puzzle Theme Spinner
+        val context = requireContext()
+        val themes = listOf("All Themes") + allPuzzles.map { it.theme }.distinct().sorted()
+        val themeSpinner = view.findViewById<Spinner>(R.id.spinner_puzzle_theme)
+        val themeAdapter = ArrayAdapter(context, R.layout.spinner_item, themes)
+        themeAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        themeSpinner.adapter = themeAdapter
+
+        themeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selected = themes[position]
+                filteredPuzzles = if (selected == "All Themes") {
+                    allPuzzles.shuffled()
+                } else {
+                    allPuzzles.filter { it.theme == selected }.shuffled()
+                }
+                puzzleIndex = 0
+                loadPuzzle(0)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
     }
 
     private fun loadPuzzle(index: Int) {
-        val puzzle = puzzles[index % puzzles.size]
+        if (filteredPuzzles.isEmpty()) return
+        val puzzle = filteredPuzzles[index % filteredPuzzles.size]
         solutionStep = 0
         awaitingOpponent = false
         boardView.isInteractive = true
@@ -81,7 +106,8 @@ class PuzzleFragment : Fragment() {
 
     private fun checkPuzzleMove(from: Pos, to: Pos) {
         if (awaitingOpponent) return
-        val puzzle = puzzles[puzzleIndex % puzzles.size]
+        if (filteredPuzzles.isEmpty()) return
+        val puzzle = filteredPuzzles[puzzleIndex % filteredPuzzles.size]
         if (solutionStep >= puzzle.solutionMoves.size) return
 
         val expectedUci = puzzle.solutionMoves[solutionStep]
@@ -148,7 +174,8 @@ class PuzzleFragment : Fragment() {
     }
 
     private fun showHint() {
-        val puzzle = puzzles[puzzleIndex % puzzles.size]
+        if (filteredPuzzles.isEmpty()) return
+        val puzzle = filteredPuzzles[puzzleIndex % filteredPuzzles.size]
         if (solutionStep >= puzzle.solutionMoves.size) return
         val uci = puzzle.solutionMoves[solutionStep]
         if (uci.length < 4) return
@@ -170,6 +197,7 @@ class PuzzleFragment : Fragment() {
     }
 
     private fun nextPuzzle() {
+        if (filteredPuzzles.isEmpty()) return
         puzzleIndex++
         loadPuzzle(puzzleIndex)
     }

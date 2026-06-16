@@ -52,6 +52,34 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Theme Selection Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/card_bg"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Choose Theme:"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginStart="8dp" />
+
+            <Spinner
+                android:id="@+id/spinner_puzzle_theme"
+                android:layout_width="160dp"
+                android:layout_height="36dp"
+                android:background="@drawable/card_bg"
+                android:popupBackground="@color/panel" />
+        </LinearLayout>
+
         <!-- Stats Row -->
         <LinearLayout
             android:layout_width="match_parent"
