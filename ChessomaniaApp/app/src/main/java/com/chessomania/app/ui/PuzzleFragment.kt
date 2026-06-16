@@ -20,6 +20,7 @@ class PuzzleFragment : Fragment() {
 
     private lateinit var boardView: ChessBoardView
     private lateinit var messageText: TextView
+    private lateinit var subtitleText: TextView
     private lateinit var solvedText: TextView
     private lateinit var failedText: TextView
 
@@ -43,6 +44,7 @@ class PuzzleFragment : Fragment() {
 
         boardView = view.findViewById(R.id.puzzle_board)
         messageText = view.findViewById(R.id.puz_message)
+        subtitleText = view.findViewById(R.id.puz_subtitle)
         solvedText = view.findViewById(R.id.puz_solved)
         failedText = view.findViewById(R.id.puz_failed)
 
@@ -108,19 +110,32 @@ class PuzzleFragment : Fragment() {
         boardView.highlightedPos = null
         boardView.highlightedToPos = null
 
-        val puzzle = getPuzzleForTheme(selectedTheme)
-        if (puzzle == null) {
+        val rawPuzzle = getPuzzleForTheme(selectedTheme)
+        if (rawPuzzle == null) {
             messageText.text = "All puzzles in this theme solved! Next set loaded."
-            // Reset levels for this theme to loop
             if (selectedTheme != "All Themes") {
                 saveThemeLevel(selectedTheme, 0)
             } else {
-                // Reset all themes to loop
                 val themesList = allPuzzles.map { it.theme }.distinct()
                 themesList.forEach { saveThemeLevel(it, 0) }
             }
             loadCurrentPuzzleForSelectedTheme(selectedTheme)
             return
+        }
+
+        val isProcedural = rawPuzzle.id == -1
+        var puzzle = rawPuzzle
+        if (!isProcedural && Math.random() < 0.5) {
+            val mirroredFen = PuzzleDatabase.mirrorFen(rawPuzzle.fen)
+            val mirroredMoves = rawPuzzle.solutionMoves.map { PuzzleDatabase.mirrorMove(it) }
+            puzzle = Puzzle(
+                rawPuzzle.id,
+                mirroredFen,
+                mirroredMoves,
+                rawPuzzle.theme,
+                rawPuzzle.description,
+                rawPuzzle.playerColor
+            )
         }
         currentLoadedPuzzle = puzzle
 
@@ -132,8 +147,11 @@ class PuzzleFragment : Fragment() {
         isFlipped = boardView.isFlipped
 
         val side = if (puzzle.playerColor == Color.WHITE) "White" else "Black"
-        val level = (allPuzzles.filter { it.theme == puzzle.theme }.indexOf(puzzle) % 10) + 1
-        messageText.text = "Find the best move for $side! (${puzzle.theme} Lvl $level)"
+        val level = getThemeLevel(puzzle.theme) + 1
+        val cleanDesc = puzzle.description.replace(Regex("^Level\\s+\\d+:\\s*", RegexOption.IGNORE_CASE), "")
+
+        messageText.text = "Find the best move for $side! (${puzzle.theme})"
+        subtitleText.text = "Lvl $level: $cleanDesc"
         messageText.setBackgroundResource(R.drawable.card_bg)
         messageText.setTextColor(0xFFd9d4cd.toInt())
         boardView.invalidate()
@@ -142,20 +160,28 @@ class PuzzleFragment : Fragment() {
     private fun getPuzzleForTheme(theme: String): Puzzle? {
         if (theme == "All Themes") {
             val themesList = allPuzzles.map { it.theme }.distinct()
-            val unsolvedThemes = themesList.filter { getThemeLevel(it) < 10 }
+            val unsolvedThemes = themesList.filter { getThemeLevel(it) < 150 }
             val chosenTheme = if (unsolvedThemes.isNotEmpty()) {
                 unsolvedThemes.random()
             } else {
                 themesList.random()
             }
-            val level = getThemeLevel(chosenTheme) % 10
+            val level = getThemeLevel(chosenTheme)
             val themePuzzles = allPuzzles.filter { it.theme == chosenTheme }.sortedBy { it.id }
-            return if (themePuzzles.isNotEmpty()) themePuzzles[level % themePuzzles.size] else null
+            return if (level >= themePuzzles.size) {
+                PuzzleDatabase.generateProceduralPuzzle(chosenTheme, level + 1)
+            } else if (themePuzzles.isNotEmpty()) {
+                themePuzzles[level]
+            } else {
+                null
+            }
         } else {
             val level = getThemeLevel(theme)
             val themePuzzles = allPuzzles.filter { it.theme == theme }.sortedBy { it.id }
+            if (level >= themePuzzles.size) {
+                return PuzzleDatabase.generateProceduralPuzzle(theme, level + 1)
+            }
             if (themePuzzles.isEmpty()) return null
-            if (level >= themePuzzles.size) return null
             return themePuzzles[level]
         }
     }
@@ -263,7 +289,7 @@ class PuzzleFragment : Fragment() {
             loadCurrentPuzzleForSelectedTheme("All Themes")
         } else {
             val curLevel = getThemeLevel(currentThemeName)
-            saveThemeLevel(currentThemeName, (curLevel + 1) % 10)
+            saveThemeLevel(currentThemeName, curLevel + 1)
             loadCurrentPuzzleForSelectedTheme(currentThemeName)
         }
     }
