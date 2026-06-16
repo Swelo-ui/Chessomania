@@ -647,6 +647,167 @@ app.get('/chess/', (req, res) => {
 });
 app.use(express.static(PUBLIC_DIR));
 
+
+// ══════════════════════════════════════════════════════════════════
+// QUICK ROOM API (no login needed — 6-char code based P2P relay)
+// ══════════════════════════════════════════════════════════════════
+const quickRooms = new Map(); // code -> { hostSse, guestSse, chess, moves, status, created }
+
+function genRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous I,O,0,1
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+function roomSend(room, role, data) {
+  const sse = role === 'host' ? room.hostSse : room.guestSse;
+  if (sse && !sse.writableEnded) {
+    try { sse.write(`data: ${JSON.stringify(data)}\n\n`); } catch(e) {}
+  }
+}
+
+function roomBroadcast(room, data) {
+  roomSend(room, 'host', data);
+  roomSend(room, 'guest', data);
+}
+
+// Clean up rooms older than 2 hours
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, room] of quickRooms) {
+    if (now - room.created > 2 * 60 * 60 * 1000) {
+      quickRooms.delete(code);
+    }
+  }
+}, 5 * 60 * 1000);
+
+// POST /api/room/create — host creates room
+app.post('/api/room/create', (req, res) => {
+  let code;
+  do { code = genRoomCode(); } while (quickRooms.has(code));
+  quickRooms.set(code, {
+    hostSse: null, guestSse: null,
+    chess: null, moves: [], status: 'waiting',
+    created: Date.now(), hostColor: 'w'
+  });
+  res.json({ ok: true, code });
+});
+
+// GET /api/room/events/:code?role=host|guest — SSE stream
+app.get('/api/room/events/:code', (req, res) => {
+  const { code } = req.params;
+  const role = req.query.role;
+  const room = quickRooms.get(code);
+  if (!room) return res.status(404).json({ error: 'Room not found' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  if (role === 'host') {
+    room.hostSse = res;
+    // Notify host they are connected
+    res.write(`data: ${JSON.stringify({ type: 'host_ready', code })}\n\n`);
+  } else {
+    room.guestSse = res;
+    room.status = 'playing';
+    // Start game — host=White, guest=Black
+    let ChessGame;
+    try { ChessGame = require('chess.js').Chess; } catch(e) { ChessGame = require('chess.js'); }
+    room.chess = new ChessGame();
+    room.moves = [];
+    // Notify both players
+    roomSend(room, 'host',  { type: 'game_start', yourColor: 'w', opponentColor: 'b', fen: room.chess.fen() });
+    roomSend(room, 'guest', { type: 'game_start', yourColor: 'b', opponentColor: 'w', fen: room.chess.fen() });
+  }
+
+  const heartbeat = setInterval(() => {
+    try { res.write(': heartbeat\n\n'); } catch(e) { clearInterval(heartbeat); }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    if (role === 'host') room.hostSse = null;
+    else {
+      room.guestSse = null;
+      // Notify host guest left
+      roomSend(room, 'host', { type: 'opponent_left' });
+    }
+  });
+});
+
+// POST /api/room/move — relay a move
+app.post('/api/room/move', (req, res) => {
+  const { code, from, to, promotion, role } = req.body;
+  const room = quickRooms.get(code);
+  if (!room) return res.status(404).json({ error: 'Room not found' });
+  if (!room.chess) return res.status(400).json({ error: 'Game not started' });
+
+  const expectedTurn = room.chess.turn() === 'w' ? 'host' : 'guest';
+  if (role !== expectedTurn) return res.status(400).json({ error: 'Not your turn' });
+
+  let moveResult;
+  try {
+    moveResult = room.chess.move({ from, to, promotion: promotion || undefined });
+  } catch(e) { moveResult = null; }
+
+  if (!moveResult) return res.status(400).json({ error: 'Illegal move' });
+
+  room.moves.push({ from, to, promotion, san: moveResult.san });
+  const fen = room.chess.fen();
+  const opponent = role === 'host' ? 'guest' : 'host';
+  roomSend(room, opponent, { type: 'move', from, to, promotion, san: moveResult.san, fen });
+
+  let gameOver = null;
+  if (room.chess.in_checkmate()) gameOver = { reason: 'checkmate', winner: role };
+  else if (room.chess.in_stalemate()) gameOver = { reason: 'stalemate', winner: null };
+  else if (room.chess.in_draw()) gameOver = { reason: 'draw', winner: null };
+
+  if (gameOver) {
+    roomBroadcast(room, { type: 'game_over', ...gameOver, fen });
+    room.status = 'finished';
+  }
+
+  res.json({ ok: true, san: moveResult.san, fen, gameOver });
+});
+
+// POST /api/room/resign
+app.post('/api/room/resign', (req, res) => {
+  const { code, role } = req.body;
+  const room = quickRooms.get(code);
+  if (!room) return res.status(404).json({ error: 'Room not found' });
+  const opponent = role === 'host' ? 'guest' : 'host';
+  roomSend(room, opponent, { type: 'game_over', reason: 'resigned', winner: opponent });
+  room.status = 'finished';
+  res.json({ ok: true });
+});
+
+// POST /api/room/rematch
+app.post('/api/room/rematch', (req, res) => {
+  const { code } = req.body;
+  const room = quickRooms.get(code);
+  if (!room) return res.status(404).json({ error: 'Room not found' });
+  let ChessGame;
+  try { ChessGame = require('chess.js').Chess; } catch(e) { ChessGame = require('chess.js'); }
+  room.chess = new ChessGame();
+  room.moves = [];
+  room.status = 'playing';
+  // Swap colors for rematch
+  room.hostColor = room.hostColor === 'w' ? 'b' : 'w';
+  const hc = room.hostColor, gc = hc === 'w' ? 'b' : 'w';
+  roomSend(room, 'host',  { type: 'game_start', yourColor: hc, opponentColor: gc, fen: room.chess.fen() });
+  roomSend(room, 'guest', { type: 'game_start', yourColor: gc, opponentColor: hc, fen: room.chess.fen() });
+  res.json({ ok: true });
+});
+
+// GET /api/room/check/:code — check if room exists
+app.get('/api/room/check/:code', (req, res) => {
+  const room = quickRooms.get(req.params.code.toUpperCase());
+  res.json({ exists: !!room, status: room?.status || null });
+});
+
 // ── Fallback 404 ──────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).send('404 Not Found');

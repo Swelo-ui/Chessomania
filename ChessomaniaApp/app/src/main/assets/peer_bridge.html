@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://unpkg.com/peerjs@1/dist/peerjs.min.js"></script>
+  <script>
+    let p2pPeer = null;
+    let p2pConn = null;
+    let isHost = false;
+    let roomCode = '';
+
+    // STUN config for NAT traversal
+    const peerConfig = {
+      debug: 1,
+      config: {
+        'iceServers': [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    };
+
+    // Callback helpers to talk to Kotlin (Android Interface)
+    function callAndroid(method, ...args) {
+      if (window.Android && window.Android[method]) {
+        try {
+          window.Android[method](...args);
+        } catch (e) {
+          console.error("Error calling Android method " + method, e);
+        }
+      } else {
+        console.log("Console call to Android: " + method + "(" + JSON.stringify(args) + ")");
+      }
+    }
+
+    let hostThemes = null;
+
+    function createRoom(code, boardTheme, pieceTheme, soundTheme) {
+      disconnect();
+      isHost = true;
+      roomCode = code;
+      hostThemes = {
+        boardTheme: boardTheme || '',
+        pieceTheme: pieceTheme || '',
+        soundTheme: soundTheme || ''
+      };
+      
+      try {
+        p2pPeer = new Peer(code, peerConfig);
+
+        p2pPeer.on('open', (id) => {
+          callAndroid('onRoomCreated', id);
+        });
+
+        p2pPeer.on('connection', (conn) => {
+          p2pConn = conn;
+          setupConnection();
+          conn.on('open', () => {
+            conn.send({
+              type: 'start',
+              color: 'b',
+              boardTheme: hostThemes.boardTheme,
+              pieceTheme: hostThemes.pieceTheme,
+              soundTheme: hostThemes.soundTheme
+            });
+            callAndroid('onConnected', true, hostThemes.boardTheme, hostThemes.pieceTheme, hostThemes.soundTheme);
+          });
+        });
+
+        p2pPeer.on('error', (err) => {
+          callAndroid('onError', 'Host error: ' + err.type);
+        });
+      } catch (e) {
+        callAndroid('onError', 'Failed to create peer: ' + e.message);
+      }
+    }
+
+    function joinRoom(code) {
+      disconnect();
+      isHost = false;
+      roomCode = code;
+
+      try {
+        p2pPeer = new Peer(undefined, peerConfig);
+
+        p2pPeer.on('open', (id) => {
+          const conn = p2pPeer.connect(code, { reliable: true });
+          p2pConn = conn;
+          setupConnection();
+          conn.on('open', () => {
+            // Joiner waits for Host to send start message with theme config
+          });
+          conn.on('error', (err) => {
+            callAndroid('onError', 'Connection error: ' + err);
+          });
+        });
+
+        p2pPeer.on('error', (err) => {
+          callAndroid('onError', 'Join error: ' + err.type);
+        });
+      } catch (e) {
+        callAndroid('onError', 'Failed to create join peer: ' + e.message);
+      }
+    }
+
+    function setupConnection() {
+      if (!p2pConn) return;
+
+      p2pConn.on('data', (data) => {
+        if (data.type === 'start') {
+          callAndroid('onConnected', false, data.boardTheme || '', data.pieceTheme || '', data.soundTheme || '');
+        } else if (data.type === 'move') {
+          callAndroid('onMoveReceived', data.from, data.to, data.promotion || '');
+        } else if (data.type === 'resign') {
+          callAndroid('onResignReceived');
+        } else if (data.type === 'newgame') {
+          callAndroid('onRematchReceived');
+        } else if (data.type === 'leave') {
+          callAndroid('onLeaveReceived');
+        }
+      });
+
+      p2pConn.on('close', () => {
+        callAndroid('onDisconnected');
+      });
+    }
+
+    function sendMove(from, to, promotion) {
+      if (p2pConn && p2pConn.open) {
+        p2pConn.send({
+          type: 'move',
+          from: from,
+          to: to,
+          promotion: promotion || undefined
+        });
+      }
+    }
+
+    function resign() {
+      if (p2pConn && p2pConn.open) {
+        p2pConn.send({ type: 'resign' });
+      }
+    }
+
+    function leave() {
+      if (p2pConn && p2pConn.open) {
+        p2pConn.send({ type: 'leave' });
+      }
+      disconnect();
+    }
+
+    function rematch() {
+      if (p2pConn && p2pConn.open) {
+        p2pConn.send({ type: 'newgame' });
+      }
+    }
+
+    // Direct interface for Kotlin to trigger disconnection manually
+    function disconnect() {
+      if (p2pConn) {
+        try { p2pConn.close(); } catch(e) {}
+        p2pConn = null;
+      }
+      if (p2pPeer) {
+        try { p2pPeer.destroy(); } catch(e) {}
+        p2pPeer = null;
+      }
+    }
+  </script>
+</head>
+<body>
+  <div style="color: #888; font-family: sans-serif; font-size: 10px; padding: 5px;">
+    ChessOmania WebRTC P2P Bridge Active.
+  </div>
+</body>
+</html>

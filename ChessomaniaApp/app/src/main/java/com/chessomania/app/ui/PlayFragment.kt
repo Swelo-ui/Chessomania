@@ -1,6 +1,5 @@
 package com.chessomania.app.ui
 
-import android.app.AlertDialog
 import android.app.Dialog
 import android.view.Window
 import android.graphics.drawable.ColorDrawable
@@ -23,7 +22,12 @@ import com.chessomania.app.R
 import com.chessomania.app.chess.*
 import com.chessomania.app.net.*
 import com.chessomania.app.SettingsManager
-import kotlinx.coroutines.flow.collect
+import com.chessomania.app.MainActivity
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.JavascriptInterface
+import android.content.ClipboardManager
+import android.content.ClipData
 import kotlinx.coroutines.launch
 import kotlin.concurrent.thread
 
@@ -48,17 +52,23 @@ class PlayFragment : Fragment() {
     private lateinit var diffContainer: LinearLayout
     private lateinit var diffLabel: TextView
 
-    // Multiplayer components
+    // P2P Multiplayer components
     private lateinit var onlinePanel: LinearLayout
-    private lateinit var layoutLoggedOut: LinearLayout
-    private lateinit var layoutLoggedIn: LinearLayout
-    private lateinit var editUsername: EditText
-    private lateinit var editPassword: EditText
-    private lateinit var btnLogin: Button
-    private lateinit var btnRegister: Button
-    private lateinit var textLoggedInAs: TextView
-    private lateinit var btnFriendsList: Button
-    private lateinit var btnLogout: Button
+    private lateinit var p2pSetupLayout: LinearLayout
+    private lateinit var btnP2pHost: Button
+    private lateinit var editP2pCode: EditText
+    private lateinit var btnP2pJoin: Button
+    private lateinit var p2pHostLayout: LinearLayout
+    private lateinit var textP2pRoomCode: TextView
+    private lateinit var btnP2pCopyCode: Button
+    private lateinit var textP2pHostStatus: TextView
+    private lateinit var btnP2pCancelHost: Button
+    private lateinit var p2pConnectedLayout: LinearLayout
+    private lateinit var textP2pStatus: TextView
+    private lateinit var textP2pTurnInfo: TextView
+    private lateinit var btnP2pLeave: Button
+    private lateinit var p2pWebView: WebView
+    private var isWebViewInited = false
 
     private val game = ChessGame()
     private val ai = ChessAI()
@@ -73,8 +83,6 @@ class PlayFragment : Fragment() {
     private var myColor: Color? = null
     private var myUsername: String? = null
     private var opponentUsername: String? = null
-    private val incomingChallenges = mutableListOf<SseEvent>()
-    private var sseCollectionJob: kotlinx.coroutines.Job? = null
 
     private val moveAdapter = MoveHistoryAdapter()
 
@@ -104,28 +112,90 @@ class PlayFragment : Fragment() {
         diffContainer = view.findViewById(R.id.diff_container)
         diffLabel = view.findViewById(R.id.diff_label)
 
-        // Multiplayer UI bindings
+        // P2P UI bindings
         onlinePanel = view.findViewById(R.id.online_panel)
-        layoutLoggedOut = view.findViewById(R.id.layout_logged_out)
-        layoutLoggedIn = view.findViewById(R.id.layout_logged_in)
-        editUsername = view.findViewById(R.id.edit_username)
-        editPassword = view.findViewById(R.id.edit_password)
-        btnLogin = view.findViewById(R.id.btn_login)
-        btnRegister = view.findViewById(R.id.btn_register)
-        textLoggedInAs = view.findViewById(R.id.text_logged_in_as)
-        btnFriendsList = view.findViewById(R.id.btn_friends_list)
-        btnLogout = view.findViewById(R.id.btn_logout)
-        val editServerUrl = view.findViewById<EditText>(R.id.edit_server_url)
-        val btnSaveServer = view.findViewById<Button>(R.id.btn_save_server)
-        
-        // Display and manage server info
-        editServerUrl.setText(SettingsManager.getServerUrl(requireContext()))
-        btnSaveServer.setOnClickListener {
-            val url = editServerUrl.text.toString().trim()
-            if (url.isNotEmpty()) {
-                SettingsManager.setServerUrl(requireContext(), url)
-                Toast.makeText(context, "Server IP updated", Toast.LENGTH_SHORT).show()
+        p2pSetupLayout = view.findViewById(R.id.p2p_setup_layout)
+        btnP2pHost = view.findViewById(R.id.btn_p2p_host)
+        editP2pCode = view.findViewById(R.id.edit_p2p_code)
+        btnP2pJoin = view.findViewById(R.id.btn_p2p_join)
+        p2pHostLayout = view.findViewById(R.id.p2p_host_layout)
+        textP2pRoomCode = view.findViewById(R.id.text_p2p_room_code)
+        btnP2pCopyCode = view.findViewById(R.id.btn_p2p_copy_code)
+        textP2pHostStatus = view.findViewById(R.id.text_p2p_host_status)
+        btnP2pCancelHost = view.findViewById(R.id.btn_p2p_cancel_host)
+        p2pConnectedLayout = view.findViewById(R.id.p2p_connected_layout)
+        textP2pStatus = view.findViewById(R.id.text_p2p_status)
+        textP2pTurnInfo = view.findViewById(R.id.text_p2p_turn_info)
+        btnP2pLeave = view.findViewById(R.id.btn_p2p_leave)
+        p2pWebView = view.findViewById(R.id.p2p_webview)
+
+        btnP2pHost.setOnClickListener {
+            initP2PWebView()
+            val shortCode = generateShortRoomCode()
+            val boardTheme = SettingsManager.getBoardTheme(requireContext())
+            val pieceTheme = SettingsManager.getPieceTheme(requireContext())
+            val soundTheme = SettingsManager.getSoundTheme(requireContext())
+            p2pWebView.loadUrl("javascript:createRoom('$shortCode', '$boardTheme', '$pieceTheme', '$soundTheme')")
+        }
+
+        btnP2pLeave.setOnClickListener {
+            val context = context ?: return@setOnClickListener
+            val dialog = Dialog(context)
+            dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+            dialog.setContentView(R.layout.dialog_game_over)
+            dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+            val icon = dialog.findViewById<ImageView>(R.id.dialog_icon)
+            val titleText = dialog.findViewById<TextView>(R.id.dialog_title)
+            val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
+            val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
+            val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+
+            icon.setImageResource(R.drawable.ic_sword)
+            icon.setColorFilter(ContextCompat.getColor(context, R.color.red))
+            titleText.text = "Leave Game"
+            subtitleText.text = "Are you sure you want to leave the game?"
+
+            btnPositive.text = "Yes"
+            btnPositive.backgroundTintList = ContextCompat.getColorStateList(context, R.color.red)
+            btnNegative.text = "No"
+
+            btnPositive.setOnClickListener {
+                dialog.dismiss()
+                activity?.runOnUiThread {
+                    p2pWebView.loadUrl("javascript:leave()")
+                }
+                showLocalLeaveDialog()
             }
+            btnNegative.setOnClickListener {
+                dialog.dismiss()
+            }
+            dialog.show()
+        }
+
+        btnP2pJoin.setOnClickListener {
+            val code = editP2pCode.text.toString().trim().uppercase()
+            if (code.length == 6) {
+                initP2PWebView()
+                p2pWebView.loadUrl("javascript:joinRoom('$code')")
+            } else {
+                Toast.makeText(context, "Please enter a 6-character room code", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        btnP2pCopyCode.setOnClickListener {
+            val code = textP2pRoomCode.text.toString()
+            if (code.isNotEmpty()) {
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Room Code", code)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(context, "Room code copied!", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        btnP2pCancelHost.setOnClickListener {
+            hideP2P()
+            showP2PSetup()
         }
 
         // Setup RecyclerView
@@ -147,83 +217,10 @@ class PlayFragment : Fragment() {
             onlinePanel.visibility = if (isFriendMode) View.VISIBLE else View.GONE
             
             if (isFriendMode) {
-                updateLoginState()
+                showP2PSetup()
             } else {
-                // If switching away from Friend mode, stop SSE service
-                val intent = Intent(requireContext(), SSEService::class.java).apply {
-                    action = SSEService.ACTION_DISCONNECT
-                }
-                requireContext().startService(intent)
-                sseCollectionJob?.cancel()
-                sseCollectionJob = null
-                
-                activeGameId = null
-                myColor = null
-                myUsername = null
-                opponentUsername = null
-                
-                nameBlack.text = if (isAIMode) "ChessOmania Engine" else "Player 2 (Black)"
-                nameWhite.text = "You (White)"
-                newGame()
+                hideP2P()
             }
-        }
-
-        // Multiplayer Authentication Listeners
-        btnLogin.setOnClickListener {
-            val username = editUsername.text.toString().trim()
-            val password = editPassword.text.toString().trim()
-            if (username.isNotEmpty() && password.isNotEmpty()) {
-                lifecycleScope.launch {
-                    val result = NetworkClient.post(requireContext(), "/api/login", mapOf("username" to username, "password" to password))
-                    if (result is ApiResult.Success) {
-                        val token = result.data["token"] as? String ?: ""
-                        val actualUser = result.data["username"] as? String ?: username
-                        SecurePrefs.saveSession(requireContext(), token, actualUser)
-                        Toast.makeText(context, "Logged in as $actualUser", Toast.LENGTH_SHORT).show()
-                        editPassword.text.clear()
-                        updateLoginState()
-                    } else if (result is ApiResult.Error) {
-                        Toast.makeText(context, "Login failed: ${result.message}", Toast.LENGTH_LONG).show()
-                    }
-                }
-            } else {
-                Toast.makeText(context, "Please enter username and password", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        btnRegister.setOnClickListener {
-            val username = editUsername.text.toString().trim()
-            val password = editPassword.text.toString().trim()
-            if (username.isNotEmpty() && password.isNotEmpty()) {
-                lifecycleScope.launch {
-                    val result = NetworkClient.post(requireContext(), "/api/register", mapOf("username" to username, "password" to password))
-                    if (result is ApiResult.Success) {
-                        val token = result.data["token"] as? String ?: ""
-                        val actualUser = result.data["username"] as? String ?: username
-                        SecurePrefs.saveSession(requireContext(), token, actualUser)
-                        Toast.makeText(context, "Registered successfully as $actualUser", Toast.LENGTH_SHORT).show()
-                        editPassword.text.clear()
-                        updateLoginState()
-                    } else if (result is ApiResult.Error) {
-                        Toast.makeText(context, "Registration failed: ${result.message}", Toast.LENGTH_LONG).show()
-                    }
-                }
-            } else {
-                Toast.makeText(context, "Please enter username and password", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        btnLogout.setOnClickListener {
-            lifecycleScope.launch {
-                NetworkClient.post(requireContext(), "/api/logout", emptyMap())
-                SecurePrefs.clearSession(requireContext())
-                updateLoginState()
-            }
-        }
-
-        btnFriendsList.setOnClickListener {
-            val sheet = FriendsBottomSheet()
-            sheet.show(childFragmentManager, "FriendsBottomSheet")
         }
 
         // Difficulty buttons
@@ -323,7 +320,6 @@ class PlayFragment : Fragment() {
     }
 
     private fun sendMoveToServer(from: Pos, to: Pos, promotion: PieceType?) {
-        val gId = activeGameId ?: return
         val fromStr = "${(from.col + 'a'.code).toChar()}${8 - from.row}"
         val toStr = "${(to.col + 'a'.code).toChar()}${8 - to.row}"
         val promoStr = when (promotion) {
@@ -331,34 +327,12 @@ class PlayFragment : Fragment() {
             PieceType.ROOK -> "r"
             PieceType.BISHOP -> "b"
             PieceType.KNIGHT -> "n"
-            else -> null
+            else -> ""
         }
-        
-        lifecycleScope.launch {
-            val result = NetworkClient.post(
-                requireContext(),
-                "/api/game/move",
-                mapOf(
-                    "gameId" to gId,
-                    "from" to fromStr,
-                    "to" to toStr,
-                    "promotion" to promoStr
-                )
-            )
-            if (result is ApiResult.Error) {
-                Toast.makeText(context, "Move sync failed: ${result.message}", Toast.LENGTH_SHORT).show()
-                // Revert move locally
-                game.undoLastMove()
-                boardView.setLastMove(
-                    game.moveHistory.lastOrNull()?.from,
-                    game.moveHistory.lastOrNull()?.to,
-                    false
-                )
-                boardView.clearSelection()
-                renderBoard()
-                updateUI()
-            }
+        activity?.runOnUiThread {
+            p2pWebView.loadUrl("javascript:sendMove('$fromStr', '$toStr', '$promoStr')")
         }
+        updateP2PTurnInfo()
     }
 
     private fun triggerAI() {
@@ -414,13 +388,29 @@ class PlayFragment : Fragment() {
     }
 
     private fun showPromotionDialog(from: Pos, to: Pos) {
-        val items = arrayOf("♛ Queen", "♜ Rook", "♝ Bishop", "♞ Knight")
-        val types = arrayOf(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT)
-        AlertDialog.Builder(requireContext())
-            .setTitle("Choose Promotion")
-            .setItems(items) { _, which -> handleMove(from, to, types[which]) }
-            .setCancelable(false)
-            .show()
+        val dialog = Dialog(requireContext())
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_promotion)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+        dialog.setCancelable(false)
+
+        dialog.findViewById<View>(R.id.btn_promo_queen).setOnClickListener {
+            dialog.dismiss()
+            handleMove(from, to, PieceType.QUEEN)
+        }
+        dialog.findViewById<View>(R.id.btn_promo_rook).setOnClickListener {
+            dialog.dismiss()
+            handleMove(from, to, PieceType.ROOK)
+        }
+        dialog.findViewById<View>(R.id.btn_promo_bishop).setOnClickListener {
+            dialog.dismiss()
+            handleMove(from, to, PieceType.BISHOP)
+        }
+        dialog.findViewById<View>(R.id.btn_promo_knight).setOnClickListener {
+            dialog.dismiss()
+            handleMove(from, to, PieceType.KNIGHT)
+        }
+        dialog.show()
     }
 
     private fun showGameOverDialog(status: ChessGame.GameStatus) {
@@ -517,12 +507,10 @@ class PlayFragment : Fragment() {
         btnPositive.setOnClickListener {
             dialog.dismiss()
             if (isFriendMode) {
-                val gId = activeGameId
-                if (gId != null) {
-                    lifecycleScope.launch {
-                        NetworkClient.post(requireContext(), "/api/game/resign", mapOf("gameId" to gId))
-                    }
+                activity?.runOnUiThread {
+                    p2pWebView.loadUrl("javascript:resign()")
                 }
+                showLocalResignDialog()
             } else {
                 showGameOverDialog(ChessGame.GameStatus.CHECKMATE)
             }
@@ -533,9 +521,64 @@ class PlayFragment : Fragment() {
         dialog.show()
     }
 
+    private fun showLocalResignDialog() {
+        val context = context ?: return
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_game_over)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        val icon = dialog.findViewById<ImageView>(R.id.dialog_icon)
+        val titleText = dialog.findViewById<TextView>(R.id.dialog_title)
+        val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
+        val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
+        val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+
+        icon.setImageResource(R.drawable.ic_sword)
+        icon.setColorFilter(ContextCompat.getColor(context, R.color.red))
+        titleText.text = "Resigned"
+        subtitleText.text = "You resigned. Game over!"
+        btnPositive.text = "OK"
+        btnNegative.visibility = View.GONE
+        btnPositive.setOnClickListener { dialog.dismiss() }
+        dialog.show()
+
+        activeGameId = null
+        updateUI()
+    }
+
+    private fun showLocalLeaveDialog() {
+        val context = context ?: return
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_game_over)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        val icon = dialog.findViewById<ImageView>(R.id.dialog_icon)
+        val titleText = dialog.findViewById<TextView>(R.id.dialog_title)
+        val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
+        val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
+        val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+
+        icon.setImageResource(R.drawable.ic_sword)
+        icon.setColorFilter(ContextCompat.getColor(context, R.color.red))
+        titleText.text = "Left Game"
+        subtitleText.text = "You left the game."
+        btnPositive.text = "OK"
+        btnNegative.visibility = View.GONE
+        btnPositive.setOnClickListener { dialog.dismiss() }
+        dialog.show()
+
+        hideP2P()
+        showP2PSetup()
+    }
+
     private fun newGame() {
         if (isFriendMode) {
-            Toast.makeText(context, "Challenge a friend to start a new match", Toast.LENGTH_SHORT).show()
+            activity?.runOnUiThread {
+                p2pWebView.loadUrl("javascript:rematch()")
+            }
+            Toast.makeText(context, "Requesting rematch...", Toast.LENGTH_SHORT).show()
             return
         }
         isAIThinking = false
@@ -651,283 +694,371 @@ class PlayFragment : Fragment() {
         super.onResume()
         boardView.refreshTheme()
         if (isFriendMode) {
-            updateLoginState()
-        }
-    }
-
-    fun getIncomingChallenges(): List<SseEvent> = incomingChallenges
-    fun removeChallenge(challengeId: String) {
-        incomingChallenges.removeAll { it.challengeId == challengeId }
-    }
-
-    private fun updateLoginState() {
-        val context = context ?: return
-        val loggedIn = SecurePrefs.isLoggedIn(context)
-        if (loggedIn) {
-            layoutLoggedOut.visibility = View.GONE
-            layoutLoggedIn.visibility = View.VISIBLE
-            val username = SecurePrefs.getUsername(context) ?: "User"
-            textLoggedInAs.text = "Logged in as: $username"
-            
-            // Connect to real-time events service
-            val intent = Intent(context, SSEService::class.java).apply {
-                action = SSEService.ACTION_CONNECT
-            }
-            context.startService(intent)
-            
-            startEventCollection()
-            
-            // Auto rejoin stored active game session
-            val activeId = SettingsManager.getActiveGameId(context)
-            if (activeId != null) {
-                rejoinGame(activeId)
+            (activity as? MainActivity)?.updateStatusBadge("P2P")
+            initP2PWebView()
+            if (activeGameId == "p2p_game") {
+                p2pSetupLayout.visibility = View.GONE
+                p2pHostLayout.visibility = View.GONE
+                p2pConnectedLayout.visibility = View.VISIBLE
+            } else if (p2pHostLayout.visibility == View.VISIBLE) {
+                // Keep host waiting layout
+            } else {
+                p2pSetupLayout.visibility = View.VISIBLE
+                p2pHostLayout.visibility = View.GONE
+                p2pConnectedLayout.visibility = View.GONE
             }
         } else {
-            layoutLoggedOut.visibility = View.VISIBLE
-            layoutLoggedIn.visibility = View.GONE
-            
-            // Disconnect from events service
-            val intent = Intent(context, SSEService::class.java).apply {
-                action = SSEService.ACTION_DISCONNECT
-            }
-            context.startService(intent)
-            
-            sseCollectionJob?.cancel()
-            sseCollectionJob = null
-            
-            activeGameId = null
-            myColor = null
-            myUsername = null
-            opponentUsername = null
-            renderBoard()
-            updateUI()
+            (activity as? MainActivity)?.updateStatusBadge("OFFLINE")
         }
     }
 
-    private fun rejoinGame(gameId: String) {
-        val context = context ?: return
-        lifecycleScope.launch {
-            val result = NetworkClient.get(context, "/api/game/state/$gameId")
-            if (result is ApiResult.Success) {
-                val data = result.data
-                activeGameId = gameId
-                val white = data["white"] as? String ?: ""
-                val black = data["black"] as? String ?: ""
-                val fen = data["fen"] as? String ?: ""
-                val statusStr = data["status"] as? String ?: ""
-                
-                myUsername = SecurePrefs.getUsername(context)
-                myColor = if (white.equals(myUsername, ignoreCase = true)) Color.WHITE else Color.BLACK
-                opponentUsername = if (myColor == Color.WHITE) black else white
-                
-                // Automatically flip board if we are Black
-                if (myColor == Color.BLACK && !isFlipped) {
-                    flipBoard()
-                } else if (myColor == Color.WHITE && isFlipped) {
-                    flipBoard()
-                }
-                
-                // Load FEN
-                PuzzleDatabase.loadPuzzleFen(game, fen)
-                
-                // Reconstruct move history
-                val moves = data["moves"] as? List<Map<String, Any?>> ?: emptyList()
-                game.sanHistory.clear()
-                moves.forEach { m ->
-                    val san = m["san"] as? String
-                    if (san != null) game.sanHistory.add(san)
-                }
-                
-                // Set last move indicators
-                if (moves.isNotEmpty()) {
-                    val lastM = moves.last()
-                    val from = lastM["from"] as? String ?: ""
-                    val to = lastM["to"] as? String ?: ""
-                    if (from.length >= 2 && to.length >= 2) {
-                        val fromPos = Pos(8 - from[1].digitToInt(), from[0] - 'a')
-                        val toPos = Pos(8 - to[1].digitToInt(), to[0] - 'a')
-                        boardView.setLastMove(fromPos, toPos, false)
-                    }
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) {
+            boardView.refreshTheme()
+            if (isFriendMode) {
+                (activity as? MainActivity)?.updateStatusBadge("P2P")
+                if (activeGameId == "p2p_game") {
+                    p2pSetupLayout.visibility = View.GONE
+                    p2pHostLayout.visibility = View.GONE
+                    p2pConnectedLayout.visibility = View.VISIBLE
+                } else if (p2pHostLayout.visibility == View.VISIBLE) {
+                    // Keep host waiting layout
                 } else {
-                    boardView.setLastMove(null, null, false)
-                }
-                
-                renderBoard()
-                updateUI()
-                
-                if (statusStr != "active") {
-                    SettingsManager.setActiveGameId(context, null)
-                    activeGameId = null
+                    p2pSetupLayout.visibility = View.VISIBLE
+                    p2pHostLayout.visibility = View.GONE
+                    p2pConnectedLayout.visibility = View.GONE
                 }
             } else {
-                SettingsManager.setActiveGameId(context, null)
-                activeGameId = null
+                (activity as? MainActivity)?.updateStatusBadge("OFFLINE")
             }
         }
     }
 
-    private fun startEventCollection() {
-        sseCollectionJob?.cancel()
-        sseCollectionJob = viewLifecycleOwner.lifecycleScope.launch {
-            SSEService.eventBus.collect { event ->
-                handleSseEvent(event)
-            }
-        }
+    private fun showP2PSetup() {
+        p2pSetupLayout.visibility = View.VISIBLE
+        p2pHostLayout.visibility = View.GONE
+        p2pConnectedLayout.visibility = View.GONE
+        (activity as? MainActivity)?.updateStatusBadge("P2P")
+        initP2PWebView()
     }
 
-    private fun handleSseEvent(event: SseEvent) {
+    private fun hideP2P() {
+        activity?.runOnUiThread {
+            p2pWebView.loadUrl("javascript:disconnect()")
+        }
+        SettingsManager.clearOverrides()
+        boardView.refreshTheme()
+        p2pSetupLayout.visibility = View.GONE
+        p2pHostLayout.visibility = View.GONE
+        p2pConnectedLayout.visibility = View.GONE
+        (activity as? MainActivity)?.updateStatusBadge("OFFLINE")
+        
+        activeGameId = null
+        myColor = null
+        myUsername = null
+        opponentUsername = null
+        
+        nameBlack.text = if (isAIMode) "ChessOmania Engine" else "Player 2 (Black)"
+        nameWhite.text = "You (White)"
+        newGame()
+    }
+
+    private fun initP2PWebView() {
+        if (isWebViewInited) return
+        if (context == null) return
+        p2pWebView.settings.javaScriptEnabled = true
+        p2pWebView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                isWebViewInited = true
+            }
+        }
+        p2pWebView.addJavascriptInterface(ChessP2PInterface(this), "Android")
+        p2pWebView.loadUrl("file:///android_asset/peer_bridge.html")
+    }
+
+    private fun generateShortRoomCode(): String {
+        val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        val code = StringBuilder()
+        for (i in 0 until 6) {
+            code.append(chars[(chars.indices).random()])
+        }
+        return code.toString()
+    }
+
+    fun onRoomCreated(code: String) {
+        textP2pRoomCode.text = code
+        p2pSetupLayout.visibility = View.GONE
+        p2pHostLayout.visibility = View.VISIBLE
+        p2pConnectedLayout.visibility = View.GONE
+    }
+
+    fun onConnected(isHost: Boolean, boardTheme: String, pieceTheme: String, soundTheme: String) {
         val context = context ?: return
-        when (event.type) {
-            "connected" -> {
-                Toast.makeText(context, "Connected to online lobby!", Toast.LENGTH_SHORT).show()
+        
+        if (boardTheme.isNotEmpty()) {
+            SettingsManager.overrideBoardTheme = SettingsManager.mapBoardTheme(boardTheme)
+        }
+        if (pieceTheme.isNotEmpty()) {
+            SettingsManager.overridePieceTheme = pieceTheme
+        }
+        if (soundTheme.isNotEmpty()) {
+            SettingsManager.overrideSoundTheme = SettingsManager.mapSoundTheme(soundTheme)
+        }
+        boardView.refreshTheme()
+        activeGameId = "p2p_game"
+        myColor = if (isHost) Color.WHITE else Color.BLACK
+        opponentUsername = if (isHost) "Friend (Black)" else "Friend (White)"
+        myUsername = if (isHost) "You (White)" else "You (Black)"
+
+        nameWhite.text = if (isHost) "You (White)" else "Friend (White)"
+        nameBlack.text = if (isHost) "Friend (Black)" else "You (Black)"
+
+        if (myColor == Color.BLACK && !isFlipped) {
+            flipBoard()
+        } else if (myColor == Color.WHITE && isFlipped) {
+            flipBoard()
+        }
+
+        isAIThinking = false
+        boardView.isInteractive = true
+        engineProgress.visibility = View.GONE
+        engineText.visibility = View.GONE
+        game.setupInitialPosition()
+        boardView.setLastMove(null, null, false)
+        boardView.clearSelection()
+
+        p2pSetupLayout.visibility = View.GONE
+        p2pHostLayout.visibility = View.GONE
+        p2pConnectedLayout.visibility = View.VISIBLE
+        textP2pStatus.text = "✓ Connected! You play as " + (if (isHost) "White" else "Black")
+        updateP2PTurnInfo()
+
+        Toast.makeText(context, "Game started! You are ${if (isHost) "white" else "black"}", Toast.LENGTH_SHORT).show()
+        renderBoard()
+        updateUI()
+    }
+
+    private fun updateP2PTurnInfo() {
+        val turnColor = game.currentTurn
+        val isMyTurn = (myColor == turnColor)
+        textP2pTurnInfo.text = if (isMyTurn) "🟢 Your turn!" else "⌛ Opponent is thinking..."
+        textP2pTurnInfo.setTextColor(if (isMyTurn) 0xFF34d399.toInt() else 0xFFaba399.toInt())
+    }
+
+    fun onMoveReceived(from: String, to: String, promotion: String) {
+        val context = context ?: return
+        if (activeGameId == "p2p_game") {
+            val fromPos = Pos(8 - from[1].digitToInt(), from[0] - 'a')
+            val toPos = Pos(8 - to[1].digitToInt(), to[0] - 'a')
+            
+            val legal = game.getLegalMoves(fromPos)
+            val promoType = when(promotion) {
+                "q" -> PieceType.QUEEN
+                "r" -> PieceType.ROOK
+                "b" -> PieceType.BISHOP
+                "n" -> PieceType.KNIGHT
+                else -> null
             }
-            "friend_request" -> {
-                Toast.makeText(context, "New friend request from ${event.from}!", Toast.LENGTH_LONG).show()
-            }
-            "friend_accepted" -> {
-                Toast.makeText(context, "${event.by} accepted your friend request!", Toast.LENGTH_LONG).show()
-            }
-            "challenge_incoming" -> {
-                incomingChallenges.removeAll { it.challengeId == event.challengeId }
-                incomingChallenges.add(event)
-                Toast.makeText(context, "Challenge received from ${event.from}!", Toast.LENGTH_LONG).show()
-            }
-            "challenge_declined" -> {
-                Toast.makeText(context, "${event.by} declined your challenge.", Toast.LENGTH_LONG).show()
-            }
-            "challenge_expired" -> {
-                incomingChallenges.removeAll { it.challengeId == event.challengeId }
-                Toast.makeText(context, "Challenge expired.", Toast.LENGTH_SHORT).show()
-            }
-            "game_start" -> {
-                val white = event.white ?: ""
-                val black = event.black ?: ""
-                val gId = event.gameId ?: ""
-                
-                activeGameId = gId
-                SettingsManager.setActiveGameId(context, gId)
-                myUsername = SecurePrefs.getUsername(context)
-                myColor = if (white.equals(myUsername, ignoreCase = true)) Color.WHITE else Color.BLACK
-                opponentUsername = if (myColor == Color.WHITE) black else white
-                
-                // Automatically flip board if we are Black
-                if (myColor == Color.BLACK && !isFlipped) {
-                    flipBoard()
-                } else if (myColor == Color.WHITE && isFlipped) {
-                    flipBoard()
-                }
-                
-                // Initialize board
-                isAIThinking = false
-                boardView.isInteractive = true
-                engineProgress.visibility = View.GONE
-                engineText.visibility = View.GONE
-                game.setupInitialPosition()
-                boardView.setLastMove(null, null, false)
+            val move = legal.find { it.to == toPos && (promoType == null || it.promotion == promoType) }
+                ?: legal.find { it.to == toPos }
+
+            if (move != null) {
+                game.applyMove(move)
+                boardView.setLastMove(fromPos, toPos)
                 boardView.clearSelection()
-                
-                // Dismiss open BottomSheet
-                val sheet = childFragmentManager.findFragmentByTag("FriendsBottomSheet") as? BottomSheetDialogFragment
-                sheet?.dismiss()
-                
-                Toast.makeText(context, "Game started! You are ${myColor.toString().lowercase()}", Toast.LENGTH_LONG).show()
                 renderBoard()
                 updateUI()
-            }
-            "game_move" -> {
-                if (event.gameId == activeGameId) {
-                    val from = event.from ?: return
-                    val to = event.to ?: return
-                    val fromPos = Pos(8 - from[1].digitToInt(), from[0] - 'a')
-                    val toPos = Pos(8 - to[1].digitToInt(), to[0] - 'a')
-                    
-                    val legal = game.getLegalMoves(fromPos)
-                    val promoType = when(event.promotion) {
-                        "q" -> PieceType.QUEEN
-                        "r" -> PieceType.ROOK
-                        "b" -> PieceType.BISHOP
-                        "n" -> PieceType.KNIGHT
-                        else -> null
-                    }
-                    val move = legal.find { it.to == toPos && (promoType == null || it.promotion == promoType) }
-                        ?: legal.find { it.to == toPos }
-
-                    if (move != null) {
-                        game.applyMove(move)
-                        boardView.setLastMove(fromPos, toPos)
-                        boardView.clearSelection()
-                        renderBoard()
-                        updateUI()
-                        
-                        // Play sound and check for states
-                        val status = game.gameStatus
-                        val isCapture = move.capturedPiece != null || move.isEnPassant
-                        val soundName = if (isCapture) "Capture" else "Move"
-                        SettingsManager.playSound(context, soundName)
-                        if (status == ChessGame.GameStatus.CHECK || status == ChessGame.GameStatus.CHECKMATE) {
-                            SettingsManager.playSound(context, "GenericNotify")
-                        }
-                        if (status == ChessGame.GameStatus.CHECKMATE || status == ChessGame.GameStatus.STALEMATE || status == ChessGame.GameStatus.DRAW) {
-                            showGameOverDialog(status)
-                        }
-                    } else {
-                        // Desync fallback loading FEN
-                        event.fen?.let { fen ->
-                            PuzzleDatabase.loadPuzzleFen(game, fen)
-                            boardView.setLastMove(fromPos, toPos)
-                            boardView.clearSelection()
-                            renderBoard()
-                            updateUI()
-                        }
-                    }
+                updateP2PTurnInfo()
+                
+                val status = game.gameStatus
+                val isCapture = move.capturedPiece != null || move.isEnPassant
+                val soundName = if (isCapture) "Capture" else "Move"
+                SettingsManager.playSound(context, soundName)
+                if (status == ChessGame.GameStatus.CHECK || status == ChessGame.GameStatus.CHECKMATE) {
+                    SettingsManager.playSound(context, "GenericNotify")
+                }
+                if (status == ChessGame.GameStatus.CHECKMATE || status == ChessGame.GameStatus.STALEMATE || status == ChessGame.GameStatus.DRAW) {
+                    showGameOverDialog(status)
                 }
             }
-            "game_ended" -> {
-                if (event.gameId == activeGameId) {
-                    val reasonText = when (event.status) {
-                        "resigned" -> "${event.loser} resigned. Winner: ${event.winner}"
-                        "abandoned" -> "${event.loser} abandoned. Winner: ${event.winner}"
-                        "draw" -> "Match drawn."
-                        else -> "${event.winner} wins by checkmate!"
-                    }
-                    
-                    val dialog = Dialog(requireContext())
-                    dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-                    dialog.setContentView(R.layout.dialog_game_over)
-                    dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+        }
+    }
 
-                    val icon = dialog.findViewById<ImageView>(R.id.dialog_icon)
-                    val titleText = dialog.findViewById<TextView>(R.id.dialog_title)
-                    val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
-                    val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
-                    val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+    fun onResignReceived() {
+        val context = context ?: return
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_game_over)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
 
-                    icon.setImageResource(R.drawable.ic_sword)
-                    titleText.text = "Game Ended"
-                    subtitleText.text = reasonText
+        val icon = dialog.findViewById<ImageView>(R.id.dialog_icon)
+        val titleText = dialog.findViewById<TextView>(R.id.dialog_title)
+        val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
+        val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
+        val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
 
-                    btnPositive.text = "OK"
-                    btnNegative.visibility = View.GONE
+        icon.setImageResource(R.drawable.ic_sword)
+        titleText.text = "Game Ended"
+        subtitleText.text = "Opponent resigned. You win!"
+        btnPositive.text = "OK"
+        btnNegative.visibility = View.GONE
+        btnPositive.setOnClickListener { dialog.dismiss() }
+        dialog.show()
 
-                    btnPositive.setOnClickListener {
-                        dialog.dismiss()
-                    }
-                    dialog.show()
-                        
-                    activeGameId = null
-                    SettingsManager.setActiveGameId(context, null)
-                    updateUI()
-                }
+        activeGameId = null
+        updateUI()
+    }
+
+    fun onRematchReceived() {
+        val context = context ?: return
+        myColor = if (myColor == Color.WHITE) Color.BLACK else Color.WHITE
+        val isHost = (myColor == Color.WHITE)
+        opponentUsername = if (isHost) "Friend (Black)" else "Friend (White)"
+        myUsername = if (isHost) "You (White)" else "You (Black)"
+
+        nameWhite.text = if (isHost) "You (White)" else "Friend (White)"
+        nameBlack.text = if (isHost) "Friend (Black)" else "You (Black)"
+
+        if (myColor == Color.BLACK && !isFlipped) {
+            flipBoard()
+        } else if (myColor == Color.WHITE && isFlipped) {
+            flipBoard()
+        }
+
+        isAIThinking = false
+        boardView.isInteractive = true
+        game.setupInitialPosition()
+        boardView.setLastMove(null, null, false)
+        boardView.clearSelection()
+
+        p2pSetupLayout.visibility = View.GONE
+        p2pHostLayout.visibility = View.GONE
+        p2pConnectedLayout.visibility = View.VISIBLE
+        textP2pStatus.text = "✓ Rematch! You play as " + (if (isHost) "White" else "Black")
+        updateP2PTurnInfo()
+
+        Toast.makeText(context, "Rematch started!", Toast.LENGTH_SHORT).show()
+        renderBoard()
+        updateUI()
+    }
+
+    fun onLeaveReceived() {
+        if (activeGameId == null) return
+        val context = context ?: return
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_game_over)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        val icon = dialog.findViewById<ImageView>(R.id.dialog_icon)
+        val titleText = dialog.findViewById<TextView>(R.id.dialog_title)
+        val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
+        val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
+        val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+
+        icon.setImageResource(R.drawable.ic_sword)
+        icon.setColorFilter(ContextCompat.getColor(context, R.color.red))
+        titleText.text = "Opponent Left"
+        subtitleText.text = "Your opponent has left the game."
+        btnPositive.text = "OK"
+        btnNegative.visibility = View.GONE
+        btnPositive.setOnClickListener { dialog.dismiss() }
+        dialog.show()
+
+        hideP2P()
+        showP2PSetup()
+    }
+
+    fun onDisconnected() {
+        if (activeGameId == null) return
+        val context = context ?: return
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_game_over)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        val icon = dialog.findViewById<ImageView>(R.id.dialog_icon)
+        val titleText = dialog.findViewById<TextView>(R.id.dialog_title)
+        val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
+        val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
+        val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+
+        icon.setImageResource(R.drawable.ic_sword)
+        icon.setColorFilter(ContextCompat.getColor(context, R.color.red))
+        titleText.text = "Disconnected"
+        subtitleText.text = "Opponent disconnected."
+        btnPositive.text = "OK"
+        btnNegative.visibility = View.GONE
+        btnPositive.setOnClickListener { dialog.dismiss() }
+        dialog.show()
+
+        hideP2P()
+        showP2PSetup()
+    }
+
+    fun onError(errorMsg: String) {
+        val context = context ?: return
+        Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+        hideP2P()
+        showP2PSetup()
+    }
+
+    class ChessP2PInterface(private val fragment: PlayFragment) {
+        @JavascriptInterface
+        fun onRoomCreated(code: String) {
+            fragment.activity?.runOnUiThread {
+                fragment.onRoomCreated(code)
             }
-            "opponent_disconnected" -> {
-                if (event.gameId == activeGameId) {
-                    Toast.makeText(context, "Opponent disconnected. Claiming victory in 5 mins if offline.", Toast.LENGTH_LONG).show()
-                }
+        }
+
+        @JavascriptInterface
+        fun onConnected(isHost: Boolean, boardTheme: String?, pieceTheme: String?, soundTheme: String?) {
+            fragment.activity?.runOnUiThread {
+                fragment.onConnected(isHost, boardTheme ?: "", pieceTheme ?: "", soundTheme ?: "")
             }
-            "opponent_reconnected" -> {
-                if (event.gameId == activeGameId) {
-                    Toast.makeText(context, "Opponent reconnected.", Toast.LENGTH_SHORT).show()
-                }
+        }
+
+        @JavascriptInterface
+        fun onMoveReceived(from: String, to: String, promotion: String) {
+            fragment.activity?.runOnUiThread {
+                fragment.onMoveReceived(from, to, promotion)
+            }
+        }
+
+        @JavascriptInterface
+        fun onResignReceived() {
+            fragment.activity?.runOnUiThread {
+                fragment.onResignReceived()
+            }
+        }
+
+        @JavascriptInterface
+        fun onLeaveReceived() {
+            fragment.activity?.runOnUiThread {
+                fragment.onLeaveReceived()
+            }
+        }
+
+        @JavascriptInterface
+        fun onRematchReceived() {
+            fragment.activity?.runOnUiThread {
+                fragment.onRematchReceived()
+            }
+        }
+
+        @JavascriptInterface
+        fun onDisconnected() {
+            fragment.activity?.runOnUiThread {
+                fragment.onDisconnected()
+            }
+        }
+
+        @JavascriptInterface
+        fun onError(errorMsg: String) {
+            fragment.activity?.runOnUiThread {
+                fragment.onError(errorMsg)
             }
         }
     }

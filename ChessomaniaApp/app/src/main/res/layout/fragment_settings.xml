@@ -151,76 +151,7 @@
                     android:popupBackground="@color/panel" />
             </LinearLayout>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/border"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="12dp"/>
 
-            <!-- Server URL setting row -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="4dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Multiplayer Server URL"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:layout_marginBottom="6dp" />
-
-                <TextView
-                    android:id="@+id/text_server_url"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:background="@drawable/card_bg"
-                    android:gravity="center_vertical"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_primary"
-                    android:singleLine="true" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="8dp">
-
-                    <Button
-                        android:id="@+id/btn_share_url"
-                        style="@style/Widget.Chessomania.Button.Primary"
-                        android:layout_width="0dp"
-                        android:layout_height="36dp"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="4dp"
-                        android:text="Share"
-                        android:textSize="11sp" />
-
-                    <Button
-                        android:id="@+id/btn_paste_url"
-                        style="@style/Widget.Chessomania.Button.Secondary"
-                        android:layout_width="0dp"
-                        android:layout_height="36dp"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="4dp"
-                        android:text="Paste"
-                        android:textSize="11sp" />
-
-                    <Button
-                        android:id="@+id/btn_reset_url"
-                        style="@style/Widget.Chessomania.Button.Danger"
-                        android:layout_width="0dp"
-                        android:layout_height="36dp"
-                        android:layout_weight="1"
-                        android:text="Reset"
-                        android:textSize="11sp" />
-                </LinearLayout>
-            </LinearLayout>
 
         </LinearLayout>
 

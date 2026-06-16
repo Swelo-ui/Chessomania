@@ -6,6 +6,37 @@ import java.net.NetworkInterface
 import java.util.Collections
 
 object SettingsManager {
+    var overrideBoardTheme: String? = null
+    var overridePieceTheme: String? = null
+    var overrideSoundTheme: String? = null
+
+    fun clearOverrides() {
+        overrideBoardTheme = null
+        overridePieceTheme = null
+        overrideSoundTheme = null
+    }
+
+    fun mapBoardTheme(rawTheme: String): String {
+        if (boardImageThemes.containsKey(rawTheme)) return rawTheme
+        for (key in boardImageThemes.keys) {
+            if (key.equals(rawTheme, ignoreCase = true)) return key
+        }
+        val normalized = rawTheme.replace("-", " ").trim()
+        for (key in boardImageThemes.keys) {
+            if (key.equals(normalized, ignoreCase = true)) return key
+        }
+        val solids = listOf("Classic", "Ocean", "Tournament", "Charcoal", "Ice", "Purple (Solid)", "Cherry", "Wood (Solid)", "Forest", "Midnight")
+        for (key in solids) {
+            if (key.equals(normalized, ignoreCase = true)) return key
+        }
+        return rawTheme
+    }
+
+    fun mapSoundTheme(rawTheme: String): String {
+        if (rawTheme.isEmpty() || rawTheme.equals("silent", ignoreCase = true)) return "Silent"
+        return rawTheme.lowercase()
+    }
+
     private const val PREFS_NAME = "chessomania_prefs"
     private const val KEY_SOUND_ENABLED = "sound_enabled"
     private const val KEY_SOUND_THEME = "sound_theme"
@@ -111,6 +142,7 @@ object SettingsManager {
     }
 
     fun getSoundTheme(context: Context): String {
+        overrideSoundTheme?.let { return it }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getString(KEY_SOUND_THEME, "standard") ?: "standard"
     }
@@ -121,6 +153,7 @@ object SettingsManager {
     }
 
     fun getBoardTheme(context: Context): String {
+        overrideBoardTheme?.let { return it }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getString(KEY_BOARD_THEME, "Classic") ?: "Classic"
     }
@@ -131,6 +164,7 @@ object SettingsManager {
     }
 
     fun getPieceTheme(context: Context): String {
+        overridePieceTheme?.let { return it }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getString(KEY_PIECE_THEME, "cburnett") ?: "cburnett"
     }

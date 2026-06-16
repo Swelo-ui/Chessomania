@@ -150,4 +150,11 @@ class CoordinatesFragment : Fragment() {
         super.onResume()
         boardView.refreshTheme()
     }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) {
+            boardView.refreshTheme()
+        }
+    }
 }

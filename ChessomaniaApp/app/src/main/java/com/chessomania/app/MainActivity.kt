@@ -14,6 +14,11 @@ import com.chessomania.app.ui.SettingsFragment
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private var playFragment: PlayFragment? = null
+    private var puzzleFragment: PuzzleFragment? = null
+    private var coordinatesFragment: CoordinatesFragment? = null
+    private var settingsFragment: SettingsFragment? = null
+    private var activeFragment: Fragment? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,35 +30,90 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Load default fragment
+        // Initialize fragments
         if (savedInstanceState == null) {
-            loadFragment(PlayFragment())
+            val playFrag = PlayFragment()
+            playFragment = playFrag
+            activeFragment = playFrag
+            supportFragmentManager.beginTransaction()
+                .add(R.id.fragment_container, playFrag, "play")
+                .commit()
+        } else {
+            playFragment = supportFragmentManager.findFragmentByTag("play") as? PlayFragment
+            puzzleFragment = supportFragmentManager.findFragmentByTag("puzzle") as? PuzzleFragment
+            coordinatesFragment = supportFragmentManager.findFragmentByTag("coord") as? CoordinatesFragment
+            settingsFragment = supportFragmentManager.findFragmentByTag("settings") as? SettingsFragment
+            
+            // Find active fragment
+            activeFragment = supportFragmentManager.fragments.find { it.isVisible }
         }
 
         // Bottom nav listener
         binding.bottomNav.setOnItemSelectedListener { item ->
-            val fragment: Fragment = when (item.itemId) {
-                R.id.nav_play -> PlayFragment()
-                R.id.nav_puzzle -> PuzzleFragment()
-                R.id.nav_coord -> CoordinatesFragment()
-                R.id.nav_settings -> SettingsFragment()
-                else -> PlayFragment()
+            val tag = when (item.itemId) {
+                R.id.nav_play -> "play"
+                R.id.nav_puzzle -> "puzzle"
+                R.id.nav_coord -> "coord"
+                R.id.nav_settings -> "settings"
+                else -> "play"
             }
-            loadFragment(fragment)
+            switchFragment(tag)
             true
         }
     }
 
-    private fun loadFragment(fragment: Fragment) {
-        supportFragmentManager.beginTransaction()
+    private fun switchFragment(tag: String) {
+        val fm = supportFragmentManager
+        val active = activeFragment
+        
+        val target = when (tag) {
+            "play" -> {
+                if (playFragment == null) playFragment = PlayFragment()
+                playFragment!!
+            }
+            "puzzle" -> {
+                if (puzzleFragment == null) puzzleFragment = PuzzleFragment()
+                puzzleFragment!!
+            }
+            "coord" -> {
+                if (coordinatesFragment == null) coordinatesFragment = CoordinatesFragment()
+                coordinatesFragment!!
+            }
+            "settings" -> {
+                if (settingsFragment == null) settingsFragment = SettingsFragment()
+                settingsFragment!!
+            }
+            else -> {
+                if (playFragment == null) playFragment = PlayFragment()
+                playFragment!!
+            }
+        }
+
+        if (target == active) return
+
+        val transaction = fm.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-            .replace(R.id.fragment_container, fragment)
-            .commit()
+
+        if (active != null) {
+            transaction.hide(active)
+        }
+
+        if (!target.isAdded) {
+            transaction.add(R.id.fragment_container, target, tag)
+        } else {
+            transaction.show(target)
+        }
+
+        transaction.commit()
+        activeFragment = target
+    }
+
+    fun updateStatusBadge(text: String) {
+        binding.badgeStatus.text = text
     }
 
     override fun onBackPressed() {
-        // If on play fragment, ask before exit; otherwise go to play
-        val currentFrag = supportFragmentManager.findFragmentById(R.id.fragment_container)
+        val currentFrag = activeFragment
         if (currentFrag is PlayFragment) {
             super.onBackPressed()
         } else {

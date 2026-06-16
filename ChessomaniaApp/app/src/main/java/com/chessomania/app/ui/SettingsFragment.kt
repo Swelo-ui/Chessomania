@@ -128,50 +128,6 @@ class SettingsFragment : Fragment() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        // 5. Server URL
-        val textServerUrl = view.findViewById<TextView>(R.id.text_server_url)
-        val btnShareUrl = view.findViewById<android.widget.Button>(R.id.btn_share_url)
-        val btnPasteUrl = view.findViewById<android.widget.Button>(R.id.btn_paste_url)
-        val btnResetUrl = view.findViewById<android.widget.Button>(R.id.btn_reset_url)
 
-        fun updateUrlText() {
-            textServerUrl.text = SettingsManager.getServerUrl(context)
-        }
-        updateUrlText()
-
-        btnShareUrl.setOnClickListener {
-            val url = SettingsManager.getServerUrl(context)
-            val sendIntent = android.content.Intent().apply {
-                action = android.content.Intent.ACTION_SEND
-                putExtra(android.content.Intent.EXTRA_TEXT, url)
-                type = "text/plain"
-            }
-            val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Multiplayer Server URL")
-            context.startActivity(shareIntent)
-        }
-
-        btnPasteUrl.setOnClickListener {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            val clip = clipboard.primaryClip
-            if (clip != null && clip.itemCount > 0) {
-                val pastedText = clip.getItemAt(0).text?.toString()?.trim() ?: ""
-                if (pastedText.startsWith("http://") || pastedText.startsWith("https://")) {
-                    SettingsManager.setServerUrl(context, pastedText)
-                    updateUrlText()
-                    Toast.makeText(context, "Server URL updated!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Invalid server URL pasted", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        btnResetUrl.setOnClickListener {
-            val defaultUrl = SettingsManager.getDefaultServerUrl(requireContext())
-            SettingsManager.setServerUrl(context, defaultUrl)
-            updateUrlText()
-            Toast.makeText(context, "Server URL reset to default!", Toast.LENGTH_SHORT).show()
-        }
     }
 }

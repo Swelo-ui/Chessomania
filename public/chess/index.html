@@ -6,6 +6,7 @@
 <title>ChessOmania</title>
 <link rel="icon" href="/favicon.ico"/>
 <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/peerjs@1/dist/peerjs.min.js"></script>
 <style>
 /* ── LOCAL FONTS ─────────────────────────────────────────────────── */
 @font-face{font-family:'Noto';src:url('/font/noto-sans-latin.woff2') format('woff2');font-display:swap}
@@ -360,7 +361,7 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
   <button class="tab-btn" onclick="goTab('analysis')" id="tb-analysis"><i data-lucide="search"></i> Analysis</button>
   <button class="tab-btn" onclick="goTab('settings')" id="tb-settings"><i data-lucide="settings"></i> Settings</button>
   <div class="nav-right">
-    <span class="nav-pill"><i data-lucide="wifi-off" style="width:12px;height:12px;margin-right:4px;"></i> OFFLINE</span>
+    <span class="nav-pill" id="nav-status-pill"><i data-lucide="wifi-off" style="width:12px;height:12px;margin-right:4px;"></i> OFFLINE</span>
   </div>
 </nav>
 
@@ -383,6 +384,52 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
       <div class="card-b" style="padding:7px 9px">
         <button class="modeb on" id="mb-ai" onclick="setMode('ai')"><i data-lucide="bot"></i> vs ChessOmania Engine</button>
         <button class="modeb" id="mb-hum" onclick="setMode('human')"><i data-lucide="users"></i> vs Human (Local)</button>
+        <button class="modeb" id="mb-friend" onclick="setMode('friend')"><i data-lucide="wifi"></i> vs Friend (P2P)</button>
+      </div>
+    </div>
+
+    <!-- Quick Room Friend Panel -->
+    <div class="card" id="p2p-card" style="display:none">
+      <div class="card-h"><i data-lucide="wifi" style="width:12px;height:12px;vertical-align:middle;margin-right:4px"></i> Play vs Friend</div>
+      <div class="card-b" style="font-size:.78rem;padding:10px">
+
+        <!-- Step 1: Choose action -->
+        <div id="p2p-join-panel">
+          <button class="btn btn-a" style="width:100%;margin-bottom:8px;font-size:.8rem" onclick="p2pHost()">
+            <i data-lucide="plus-circle" style="width:13px;height:13px"></i> Create Room (Host)
+          </button>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <input id="p2p-code-input" type="text" maxlength="6" placeholder="ENTER CODE" autocapitalize="characters"
+              style="flex:1;min-width:0;padding:8px;background:var(--panel2);border:1.5px solid var(--border);border-radius:6px;color:var(--text);font-family:'Noto',sans-serif;font-size:.9rem;font-weight:800;letter-spacing:3px;text-align:center;outline:none;text-transform:uppercase"
+              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z2-9]/g,'')"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+              onkeydown="if(event.key==='Enter')p2pJoin()">
+            <button class="btn btn-g" style="font-size:.8rem;white-space:nowrap;flex-shrink:0" onclick="p2pJoin()">
+              <i data-lucide="arrow-right" style="width:13px;height:13px"></i> Join
+            </button>
+          </div>
+        </div>
+
+        <!-- Host waiting: show code -->
+        <div id="p2p-host-panel" style="display:none">
+          <div style="color:var(--text2);margin-bottom:6px;font-size:.72rem;text-align:center">Share this code with your friend:</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div id="p2p-room-code" style="flex:1;font-size:1.6rem;font-weight:900;color:var(--accent);letter-spacing:6px;padding:10px 6px;background:var(--panel2);border:2px solid var(--border);border-radius:8px;text-align:center">------</div>
+            <button class="btn btn-h" style="padding:8px 11px;flex-shrink:0" onclick="p2pCopyCode()" title="Copy code">
+              <i data-lucide="copy" style="width:13px;height:13px"></i>
+            </button>
+          </div>
+          <div id="p2p-host-status" style="color:var(--text2);font-size:.72rem;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px">
+            <span class="spin" style="display:inline-block;width:8px;height:8px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span>
+            Waiting for friend to join...
+          </div>
+          <button class="btn btn-h" style="width:100%;margin-top:8px;font-size:.72rem" onclick="p2pDestroy();setMode('ai')">Cancel</button>
+        </div>
+
+        <!-- Connected status -->
+        <div id="p2p-connected-status" style="display:none;color:#34d399;font-size:.72rem;text-align:center;padding:7px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:6px;font-weight:700"></div>
+        <div id="p2p-turn-info" style="display:none;font-size:.72rem;color:var(--text2);text-align:center;margin-top:6px;font-weight:600"></div>
+        <button id="p2p-leave-btn" class="btn btn-r" style="display:none;width:100%;margin-top:8px;font-size:.72rem" onclick="p2pLeave()"><i data-lucide="log-out" style="width:12px;height:12px;margin-right:4px;"></i> Leave Game</button>
       </div>
     </div>
 
@@ -443,7 +490,10 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
       </div>
     </div>
     <div class="card" style="flex:1">
-      <div class="card-h">Move History</div>
+      <div class="card-h" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Move History</span>
+        <button class="btn btn-h" style="padding:3px 8px;font-size:.68rem;font-weight:700;letter-spacing:.5px" onclick="bCopyHistory()"><i data-lucide="copy" style="width:11px;height:11px"></i> COPY</button>
+      </div>
       <div class="mlist card-b" id="mlist" style="padding:4px 6px"></div>
     </div>
   </div>
@@ -707,6 +757,22 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
   </div>
 </div>
 
+<!-- P2P Room Overlay -->
+<div id="p2p-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:150;align-items:center;justify-content:center;backdrop-filter:blur(6px)">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:32px 36px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.7)">
+    <div style="font-size:2rem;margin-bottom:8px">⚔️</div>
+    <div id="p2p-ov-title" style="font-size:1.2rem;font-weight:800;margin-bottom:6px">Connecting...</div>
+    <div id="p2p-ov-sub" style="font-size:.84rem;color:var(--text2);margin-bottom:20px">Please wait while we establish a connection.</div>
+    <div style="width:100%;height:4px;background:var(--panel2);border-radius:2px;overflow:hidden;margin-bottom:20px">
+      <div id="p2p-ov-bar" style="height:100%;width:30%;background:var(--accent);border-radius:2px;animation:p2pbar 1.2s ease-in-out infinite alternate"></div>
+    </div>
+    <button class="btn btn-h" onclick="p2pCancelOverlay()" style="font-size:.78rem">Cancel</button>
+  </div>
+</div>
+<style>
+@keyframes p2pbar{from{width:10%;margin-left:0}to{width:60%;margin-left:40%}}
+</style>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
 <script>
 'use strict';
@@ -895,7 +961,12 @@ function bRender() {
   bUpdStatus(); bUpdMoves(); bUpdCap(); bUpdInfo(); bUpdEval(null);
 }
 function bOnSq(sq){
-  if(bOver)return; if(bMode==='ai'&&bChess.turn()==='b')return;
+  if(bOver)return;
+  if(bMode==='ai'&&bChess.turn()==='b')return;
+  if(bMode==='friend'){
+    if(!p2pConn||!p2pConn.open){alert('Not connected! Create or join a room first.');return;}
+    if(bChess.turn()!==p2pMyColor){p2pUpdTurnInfo();return;}
+  }
   const p=bChess.get(sq);
   if(bSel){
     if(bSel===sq){bSel=null;bRender();return;}
@@ -911,6 +982,11 @@ function bDoMove(mv){
   if(r.captured)snd('Capture'); else snd('Move');
   if(bChess.in_check())setTimeout(()=>snd('GenericNotify'),60);
   bRender(); bChkOver();
+  if(bMode==='friend'){
+    if(p2pConn&&p2pConn.open)p2pConn.send({type:'move',from:r.from,to:r.to,promotion:r.promotion||undefined});
+    p2pUpdTurnInfo();
+    return;
+  }
   if(!bOver&&bMode==='ai'&&bChess.turn()==='b'){bShowAI();setTimeout(bAskSF,100);}
 }
 function bShowPromo(from,to,color){
@@ -950,6 +1026,13 @@ function bUpdCap(){
   document.getElementById('cap-b').textContent=bc.join('');
 }
 function bUpdInfo(){
+  if(bMode==='friend'){
+    document.getElementById('i-mode').textContent='P2P vs Friend';
+    document.getElementById('i-diff').textContent=p2pMyColor==='w'?'You=White':'You=Black';
+    document.getElementById('i-turn').textContent=bChess.turn()==='w'?'White':'Black';
+    document.getElementById('i-mvs').textContent=Math.floor(bHist.length/2);
+    return;
+  }
   document.getElementById('i-mode').textContent=bMode==='ai'?'vs Engine':'vs Human';
   document.getElementById('i-diff').textContent=bMode==='ai'?bDiff:'N/A';
   document.getElementById('i-turn').textContent=bChess.turn()==='w'?'White':'Black';
@@ -960,13 +1043,381 @@ function bUpdEval(cp){
   const pct=Math.max(5,Math.min(95,50+cp*0.8));
   document.getElementById('evalfill').style.height=pct+'%';
 }
-function newB(){bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];document.getElementById('go-overlay').classList.remove('on');bRender();}
-function undoB(){if(bOver)return;bChess.undo();if(bMode==='ai')bChess.undo();if(bHist.length){bHist.pop();if(bMode==='ai'&&bHist.length)bHist.pop();}bSel=null;bLastMv=null;bRender();}
+function bCopyHistory(){
+  if(!bHist.length){alert('No moves to copy!');return;}
+  let text='';
+  for(let i=0;i<bHist.length;i+=2){
+    const moveNum=Math.floor(i/2)+1;
+    text+=moveNum+'. '+bHist[i];
+    if(bHist[i+1])text+=' '+bHist[i+1];
+    text+='\n';
+  }
+  navigator.clipboard.writeText(text.trim()).then(()=>{
+    const btn=document.querySelector('[onclick="bCopyHistory()"]');
+    if(btn){const orig=btn.innerHTML;btn.innerHTML='✓ Copied!';setTimeout(()=>{btn.innerHTML=orig;lucide.createIcons();},1500);}
+  }).catch(()=>alert(text.trim()));
+}
+function newB(){
+  if(bMode==='friend'){p2pNewGame();return;}
+  bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];
+  document.getElementById('go-overlay').classList.remove('on');
+  bRender();
+}
+function undoB(){
+  if(bMode==='friend'){alert('Cannot undo in P2P game!');return;}
+  if(bOver)return;
+  bChess.undo();
+  if(bMode==='ai')bChess.undo();
+  if(bHist.length){bHist.pop();if(bMode==='ai'&&bHist.length)bHist.pop();}
+  bSel=null;bLastMv=null;bRender();
+}
 function flipB(){bFlipped=!bFlipped;bSel=null;bRender();}
-function resignB(){if(bOver)return;const w=bChess.turn()==='w'?'Black':'White';bEndGame('Resigned',`${w} wins!`,'flag');}
-function setMode(m){bMode=m;document.getElementById('mb-ai').classList.toggle('on',m==='ai');document.getElementById('mb-hum').classList.toggle('on',m==='human');document.getElementById('diff-card').style.opacity=m==='ai'?'1':'0.4';document.getElementById('name-b').textContent=m==='ai'?'ChessOmania Engine':'Player 2';document.getElementById('offline-badge').style.display=m==='ai'?'':'none';if(m==='ai')initSF();newB();}
-function setDiff(btn,d,name,skill){bDepth=d;bDiff=name;document.querySelectorAll('.segb').forEach(b=>b.classList.remove('on'));btn.classList.add('on');if(sf){sf.postMessage('stop');sf.postMessage('setoption name Skill Level value '+skill);}bUpdInfo();}
-document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')undoB();if(e.key==='n'||e.key==='N')newB();if(e.key==='f'||e.key==='F')flipB();});
+function resignB(){
+  if(bOver)return;
+  if(bMode==='friend'&&p2pConn){
+    p2pConn.send({type:'resign'});
+    const myColor=p2pIsHost?'w':'b';
+    bEndGame('Resigned',`${myColor==='w'?'Black':'White'} wins!`,'flag');
+    return;
+  }
+  const w=bChess.turn()==='w'?'Black':'White';
+  bEndGame('Resigned',`${w} wins!`,'flag');
+}
+function setMode(m){
+  const prev=bMode;
+  bMode=m;
+  document.getElementById('mb-ai').classList.toggle('on',m==='ai');
+  document.getElementById('mb-hum').classList.toggle('on',m==='human');
+  document.getElementById('mb-friend').classList.toggle('on',m==='friend');
+  document.getElementById('diff-card').style.opacity=m==='ai'?'1':'0.4';
+  document.getElementById('p2p-card').style.display=m==='friend'?'':'none';
+  if(m!=='friend'){
+    document.getElementById('name-b').textContent=m==='ai'?'ChessOmania Engine':'Player 2';
+    document.getElementById('offline-badge').style.display=m==='ai'?'':'none';
+  }
+  if(prev==='friend')p2pDestroy();
+  if(m==='ai')initSF();
+  if(m!=='friend'){bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];document.getElementById('go-overlay').classList.remove('on');bRender();}
+}
+function setDiff(btn,d,name,skill){
+  bDepth=d;bDiff=name;
+  document.querySelectorAll('.segb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  if(sf){sf.postMessage('stop');sf.postMessage('setoption name Skill Level value '+skill);}
+  bUpdInfo();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')undoB();
+  if((e.key==='n'||e.key==='N')&&bMode!=='friend')newB();
+  if(e.key==='f'||e.key==='F')flipB();
+});
+
+// ══════════════════════════════════════════════════════════════════
+// P2P MULTIPLAYER (PeerJS — no server needed for game moves)
+// ══════════════════════════════════════════════════════════════════
+let p2pPeer=null, p2pConn=null, p2pIsHost=false, p2pMyColor='w', p2pRoomCode='';
+let p2pBackupSettings=null;
+
+function mapIncomingTheme(theme) {
+  if (!theme) return theme;
+  const lower = theme.toLowerCase();
+  if (lower === 'classic' || lower === 'wood (solid)') return 'brown';
+  if (lower === 'ocean' || lower === 'ice') return 'blue';
+  if (lower === 'tournament' || lower === 'forest') return 'green';
+  if (lower === 'charcoal' || lower === 'midnight') return 'ic';
+  if (lower === 'purple (solid)') return 'purple';
+  if (lower === 'cherry') return 'pink-pyramid';
+  if (lower === 'blue marble') return 'blue-marble';
+  if (lower === 'green plastic') return 'green-plastic';
+  if (lower === 'pink pyramid') return 'pink-pyramid';
+  if (lower === 'purple diag') return 'purple-diag';
+  if (lower === 'canvas') return 'canvas2';
+  if (IMG_BOARDS.includes(lower) || CSS_BOARDS[lower]) return lower;
+  return lower;
+}
+
+function mapIncomingSoundTheme(theme) {
+  if (!theme || theme.toLowerCase() === 'silent') return '';
+  return theme.toLowerCase();
+}
+
+function generateShortCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for(let i=0; i<6; i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
+function p2pDestroy(){
+  if(p2pConn){try{p2pConn.close();}catch(e){}p2pConn=null;}
+  if(p2pPeer){try{p2pPeer.destroy();}catch(e){}p2pPeer=null;}
+  // Reset panels
+  document.getElementById('p2p-host-panel').style.display='none';
+  document.getElementById('p2p-join-panel').style.display='';
+  document.getElementById('p2p-connected-status').style.display='none';
+  document.getElementById('p2p-turn-info').style.display='none';
+  document.getElementById('p2p-leave-btn').style.display='none';
+  document.getElementById('p2p-code-input').value='';
+  
+  if (p2pBackupSettings) {
+    G.boardTheme = p2pBackupSettings.boardTheme;
+    G.pieceSet = p2pBackupSettings.pieceSet;
+    G.soundTheme = p2pBackupSettings.soundTheme;
+    applyBoardTheme(G.boardTheme);
+    p2pBackupSettings = null;
+    bRender();
+  }
+
+  // Reset nav pill to OFFLINE
+  const pill=document.getElementById('nav-status-pill');
+  if(pill){
+    pill.style.background='';pill.style.color='';pill.style.border='';
+    pill.innerHTML='<i data-lucide="wifi-off" style="width:12px;height:12px;margin-right:4px;"></i> OFFLINE';
+    lucide.createIcons();
+  }
+}
+
+function p2pShowOverlay(title,sub){
+  document.getElementById('p2p-ov-title').textContent=title;
+  document.getElementById('p2p-ov-sub').textContent=sub;
+  document.getElementById('p2p-overlay').style.display='flex';
+}
+function p2pHideOverlay(){
+  document.getElementById('p2p-overlay').style.display='none';
+}
+function p2pCancelOverlay(){
+  p2pHideOverlay();
+  p2pDestroy();
+}
+
+function p2pHost(){
+  p2pDestroy();
+  p2pIsHost=true;
+  p2pMyColor='w';
+  p2pRoomCode=generateShortCode();
+  p2pShowOverlay('Creating Room...','Registering code '+p2pRoomCode+'...');
+  
+  p2pPeer = new Peer(p2pRoomCode, {
+    debug: 1,
+    config: {'iceServers': [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]}
+  });
+
+  p2pPeer.on('open',(id)=>{
+    p2pHideOverlay();
+    document.getElementById('p2p-join-panel').style.display='none';
+    document.getElementById('p2p-host-panel').style.display='';
+    document.getElementById('p2p-room-code').textContent=id;
+    document.getElementById('p2p-host-status').textContent='Waiting for friend to join...';
+    document.getElementById('name-b').textContent='Waiting...';
+    document.getElementById('offline-badge').style.display='none';
+  });
+  p2pPeer.on('connection',(conn)=>{
+    p2pConn=conn;
+    p2pSetupConn();
+    document.getElementById('p2p-host-status').textContent='Friend connected! Starting...';
+    // Host starts game as White
+    bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];
+    bFlipped=false;
+    document.getElementById('go-overlay').classList.remove('on');
+    bRender();
+    conn.on('open',()=>{
+      conn.send({
+        type:'start',
+        color:'b',
+        boardTheme: G.boardTheme,
+        pieceTheme: G.pieceSet,
+        soundTheme: G.soundTheme
+      });
+      p2pOnConnected('w');
+    });
+  });
+  p2pPeer.on('error',(err)=>{
+    p2pHideOverlay();
+    if(err.type === 'unavailable-id') {
+      p2pHost(); // Retry with a new generated code
+    } else {
+      alert('P2P Host Error: '+err.type+'. Try again.');
+      p2pDestroy();
+    }
+  });
+}
+
+function p2pJoin(){
+  const code=document.getElementById('p2p-code-input').value.trim().toUpperCase();
+  if(!code){alert('Please enter a room code!');return;}
+  p2pDestroy();
+  p2pIsHost=false;
+  p2pMyColor='b';
+  p2pRoomCode=code;
+  p2pShowOverlay('Joining Room...','Connecting to peer '+code+'...');
+  p2pPeer=new Peer(undefined, {
+    debug: 1,
+    config: {'iceServers': [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]}
+  });
+  p2pPeer.on('open',()=>{
+    const conn=p2pPeer.connect(code,{reliable:true});
+    p2pConn=conn;
+    p2pSetupConn();
+    conn.on('open',()=>{
+      p2pHideOverlay();
+      document.getElementById('p2p-join-panel').style.display='none';
+      document.getElementById('p2p-host-panel').style.display='none';
+      document.getElementById('p2p-connected-status').style.display='';
+      document.getElementById('p2p-connected-status').textContent='Connected! Waiting for host to start...';
+    });
+    conn.on('error',(err)=>{
+      p2pHideOverlay();
+      alert('Connection error: '+err);
+      p2pDestroy();
+    });
+  });
+  p2pPeer.on('error',(err)=>{
+    p2pHideOverlay();
+    alert('P2P Join Error: '+err.type+'. Make sure the room code is correct!');
+    p2pDestroy();
+  });
+}
+
+function p2pSetupConn(){
+  if(!p2pConn)return;
+  p2pConn.on('data',(data)=>{
+    if(data.type==='start'){
+      // Guest receives their color and theme config
+      p2pMyColor=data.color;
+      
+      if (!p2pBackupSettings) {
+        p2pBackupSettings = {
+          boardTheme: G.boardTheme,
+          pieceSet: G.pieceSet,
+          soundTheme: G.soundTheme
+        };
+      }
+      
+      if (data.boardTheme) G.boardTheme = mapIncomingTheme(data.boardTheme);
+      if (data.pieceTheme) G.pieceSet = data.pieceTheme.toLowerCase();
+      if (data.soundTheme !== undefined) G.soundTheme = mapIncomingSoundTheme(data.soundTheme);
+      applyBoardTheme(G.boardTheme);
+      
+      bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];
+      bFlipped=(data.color==='b'); // Guest plays as Black, flip board
+      document.getElementById('go-overlay').classList.remove('on');
+      bRender();
+      p2pOnConnected(data.color);
+    } else if(data.type==='move'){
+      const r=bChess.move({from:data.from,to:data.to,promotion:data.promotion});
+      if(r){
+        bLastMv={from:r.from,to:r.to};bSel=null;
+        bHist.push(r.san);
+        if(r.captured)snd('Capture');else snd('Move');
+        if(bChess.in_check())setTimeout(()=>snd('GenericNotify'),60);
+        bRender();
+        p2pUpdTurnInfo();
+        bChkOver();
+      }
+    } else if(data.type==='resign'){
+      const winner=p2pMyColor==='w'?'You (White)':'You (Black)';
+      bEndGame('Opponent Resigned',`${winner} wins!`,'trophy');
+    } else if(data.type==='leave'){
+      p2pOnOpponentLeft();
+    } else if(data.type==='newgame'){
+      // Swap colors on new game
+      p2pMyColor=p2pMyColor==='w'?'b':'w';
+      bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];
+      bFlipped=(p2pMyColor==='b');
+      document.getElementById('go-overlay').classList.remove('on');
+      bRender();
+      p2pOnConnected(p2pMyColor);
+    }
+  });
+  p2pConn.on('close',()=>{
+    if(bMode==='friend'){
+      p2pOnOpponentLeft();
+    }
+  });
+}
+
+function p2pLeave() {
+  if (confirm("Are you sure you want to leave the game?")) {
+    if (p2pConn && p2pConn.open) {
+      p2pConn.send({ type: 'leave' });
+    }
+    p2pDestroy();
+    setMode('human');
+    bEndGame('Left Game', 'You left the game.', 'log-out');
+  }
+}
+
+function p2pOnOpponentLeft() {
+  p2pDestroy();
+  setMode('human');
+  bEndGame('Opponent Left', 'Your friend left the game.', 'wifi-off');
+}
+
+function p2pOnConnected(myColor){
+  document.getElementById('p2p-join-panel').style.display='none';
+  document.getElementById('p2p-host-panel').style.display = p2pIsHost?'':'none';
+  document.getElementById('p2p-connected-status').style.display='';
+  document.getElementById('p2p-connected-status').textContent=
+    '✓ P2P Connected! You play as '+(myColor==='w'?'White ♔':'Black ♚');
+  document.getElementById('p2p-turn-info').style.display='';
+  document.getElementById('p2p-leave-btn').style.display='';
+  const oppName=p2pIsHost?'Friend (Black)':'Friend (White)';
+  document.getElementById('name-b').textContent=p2pIsHost?'Friend (Black)':'You (Black)';
+  if(!p2pIsHost){
+    document.querySelector('#box-w .pname').textContent='Friend (White)';
+  } else {
+    document.querySelector('#box-w .pname').textContent='You (White)';
+    document.querySelector('#box-b .pname').textContent='Friend (Black)';
+  }
+  document.getElementById('offline-badge').style.display='none';
+  // Update nav pill to show P2P status
+  const pill=document.getElementById('nav-status-pill');
+  if(pill){
+    pill.style.background='rgba(52,211,153,.12)';
+    pill.style.color='#34d399';
+    pill.style.border='1px solid rgba(52,211,153,.3)';
+    pill.innerHTML='<i data-lucide="wifi" style="width:12px;height:12px;margin-right:4px;"></i> P2P';
+    lucide.createIcons();
+  }
+  p2pUpdTurnInfo();
+}
+
+function p2pUpdTurnInfo(){
+  const myTurn=(bChess.turn()===p2pMyColor);
+  const el=document.getElementById('p2p-turn-info');
+  el.textContent=myTurn?'🟢 Your turn!':'⌛ Opponent is thinking...';
+  el.style.color=myTurn?'#34d399':'var(--text2)';
+}
+
+function p2pNewGame(){
+  if(!p2pConn||!p2pConn.open){
+    alert('Not connected to a friend. Please create or join a room first.');
+    return;
+  }
+  // Swap colors for fairness
+  p2pMyColor=p2pMyColor==='w'?'b':'w';
+  bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];
+  bFlipped=(p2pMyColor==='b');
+  document.getElementById('go-overlay').classList.remove('on');
+  bRender();
+  p2pConn.send({type:'newgame'});
+  p2pOnConnected(p2pMyColor);
+}
+
+function p2pCopyCode(){
+  const code=document.getElementById('p2p-room-code').textContent;
+  navigator.clipboard.writeText(code).then(()=>{
+    const btn=document.querySelector('[onclick="p2pCopyCode()"]');
+    if(btn){const orig=btn.innerHTML;btn.innerHTML='✓';setTimeout(()=>{btn.innerHTML=orig;lucide.createIcons();},1500);}
+  }).catch(()=>alert('Room code: '+code));
+}
+
 
 // ══════════════════════════════════════════════════════════════════
 // PUZZLE PAGE
