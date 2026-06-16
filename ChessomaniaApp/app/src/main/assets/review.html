@@ -382,7 +382,7 @@
   'use strict';
   
   const FILES = ['a','b','c','d','e','f','g','h'];
-  const RANKS = ['8','7','6','5','4','3','2','1'];
+  const RANKS = [8,7,6,5,4,3,2,1];
   
   let chess = new Chess();
   let hist = [];
@@ -395,6 +395,7 @@
   let isFlipped = false;
   let showBest = false;
   let lastMove = null;
+  let revPieces = 'cburnett';
 
   // IndexedDB Caching
   const DB_NAME = 'ChessReviewCacheLocal';
@@ -439,7 +440,7 @@
   }
 
   function pImg(color, type) {
-    return 'pieces/cburnett/' + color + type.toUpperCase() + '.png';
+    return 'pieces/' + revPieces + '/' + color + type.toUpperCase() + '.svg';
   }
 
   function callAndroid(method, ...args) {
@@ -448,8 +449,12 @@
     }
   }
 
-  window.startReview = function(base64Moves) {
+  window.startReview = function(base64Moves, pieceTheme, lightColor, darkColor) {
     try {
+      if (pieceTheme) revPieces = pieceTheme;
+      if (lightColor) document.documentElement.style.setProperty('--sq-l', lightColor);
+      if (darkColor) document.documentElement.style.setProperty('--sq-d', darkColor);
+
       const decoded = atob(base64Moves);
       hist = decoded.split(',').map(m => m.trim()).filter(m => m.length > 0);
       moveIdx = 0;

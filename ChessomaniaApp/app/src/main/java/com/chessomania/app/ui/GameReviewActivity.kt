@@ -13,6 +13,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import com.chessomania.app.R
+import com.chessomania.app.SettingsManager
 
 class GameReviewActivity : AppCompatActivity() {
 
@@ -67,9 +68,15 @@ class GameReviewActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // When page finishes, start the review by passing Base64 moves
+                // When page finishes, start the review by passing Base64 moves, piece theme, and board colors
                 if (movesBase64.isNotEmpty()) {
-                    webView.evaluateJavascript("startReview('$movesBase64')", null)
+                    val pieceTheme = SettingsManager.getPieceTheme(this@GameReviewActivity)
+                    val boardTheme = SettingsManager.getBoardTheme(this@GameReviewActivity)
+                    val colors = SettingsManager.getBoardColors(boardTheme)
+                    webView.evaluateJavascript(
+                        "startReview('$movesBase64', '$pieceTheme', '${colors.light}', '${colors.dark}')",
+                        null
+                    )
                 }
             }
         }
