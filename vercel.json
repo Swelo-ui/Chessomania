@@ -1,14 +1,26 @@
 {
   "builds": [
     {
-      "src": "public/chess/**/*",
+      "src": "public/**/*",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
-      "dest": "public/chess/$1"
+      "src": "^/index\\.html$",
+      "dest": "public/chess/index.html"
+    },
+    {
+      "src": "^/chessomania\\.apk$",
+      "dest": "public/chess/chessomania.apk"
+    },
+    {
+      "src": "^/$",
+      "dest": "public/chess/index.html"
+    },
+    {
+      "src": "^/(.*)$",
+      "dest": "public/$1"
     }
   ]
 }
