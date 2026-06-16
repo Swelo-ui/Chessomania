@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>ChessOmania</title>
 <link rel="icon" href="/favicon.ico"/>
 <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
@@ -889,6 +889,16 @@ function initMobileBlocker() {
   if (blocker) {
     blocker.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    
+    // Hide all sibling elements of mobile-blocker to prevent the mobile browser from zooming out
+    const children = document.body.children;
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      if (child.id !== 'mobile-blocker' && child.tagName !== 'SCRIPT') {
+        child.style.display = 'none';
+      }
+    }
+    
     if (window.lucide) {
       lucide.createIcons();
     }
