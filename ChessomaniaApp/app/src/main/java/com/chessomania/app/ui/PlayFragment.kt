@@ -1,6 +1,9 @@
 package com.chessomania.app.ui
 
 import android.app.AlertDialog
+import android.app.Dialog
+import android.view.Window
+import android.graphics.drawable.ColorDrawable
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -422,6 +425,17 @@ class PlayFragment : Fragment() {
 
     private fun showGameOverDialog(status: ChessGame.GameStatus) {
         if (!isAdded) return
+        val dialog = Dialog(requireContext())
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_game_over)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        val icon = dialog.findViewById<ImageView>(R.id.dialog_icon)
+        val titleText = dialog.findViewById<TextView>(R.id.dialog_title)
+        val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
+        val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
+        val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+
         val title = when(status) {
             ChessGame.GameStatus.CHECKMATE -> "Checkmate!"
             ChessGame.GameStatus.STALEMATE -> "Stalemate!"
@@ -429,17 +443,30 @@ class PlayFragment : Fragment() {
             else -> "Game Over"
         }
         val msg = when(status) {
-            ChessGame.GameStatus.CHECKMATE -> if (game.currentTurn == Color.WHITE) "⚫ Black wins!" else "⚪ White wins!"
+            ChessGame.GameStatus.CHECKMATE -> if (game.currentTurn == Color.WHITE) "Black wins!" else "White wins!"
             ChessGame.GameStatus.STALEMATE -> "No legal moves available."
             ChessGame.GameStatus.DRAW -> "50-move rule reached."
             else -> ""
         }
-        AlertDialog.Builder(requireContext())
-            .setTitle("♟ $title")
-            .setMessage(msg)
-            .setPositiveButton("Play Again") { _, _ -> newGame() }
-            .setNegativeButton("Close", null)
-            .show()
+
+        // Match UI/UX robot icon for AI, sword icon for other modes
+        if (isAIMode) {
+            icon.setImageResource(R.drawable.ic_robot)
+        } else {
+            icon.setImageResource(R.drawable.ic_sword)
+        }
+
+        titleText.text = title
+        subtitleText.text = msg
+
+        btnPositive.setOnClickListener {
+            dialog.dismiss()
+            newGame()
+        }
+        btnNegative.setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun flipBoard() {
@@ -467,23 +494,43 @@ class PlayFragment : Fragment() {
     }
 
     private fun resign() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Resign?")
-            .setMessage("Are you sure you want to resign?")
-            .setPositiveButton("Yes") { _, _ ->
-                if (isFriendMode) {
-                    val gId = activeGameId
-                    if (gId != null) {
-                        lifecycleScope.launch {
-                            NetworkClient.post(requireContext(), "/api/game/resign", mapOf("gameId" to gId))
-                        }
+        val dialog = Dialog(requireContext())
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_game_over)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        val icon = dialog.findViewById<ImageView>(R.id.dialog_icon)
+        val titleText = dialog.findViewById<TextView>(R.id.dialog_title)
+        val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
+        val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
+        val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+
+        icon.setImageResource(R.drawable.ic_sword)
+        icon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.red))
+        titleText.text = "Resign?"
+        subtitleText.text = "Are you sure you want to resign?"
+
+        btnPositive.text = "Yes"
+        btnPositive.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.red)
+        btnNegative.text = "No"
+
+        btnPositive.setOnClickListener {
+            dialog.dismiss()
+            if (isFriendMode) {
+                val gId = activeGameId
+                if (gId != null) {
+                    lifecycleScope.launch {
+                        NetworkClient.post(requireContext(), "/api/game/resign", mapOf("gameId" to gId))
                     }
-                } else {
-                    showGameOverDialog(ChessGame.GameStatus.CHECKMATE)
                 }
+            } else {
+                showGameOverDialog(ChessGame.GameStatus.CHECKMATE)
             }
-            .setNegativeButton("No", null)
-            .show()
+        }
+        btnNegative.setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun newGame() {
@@ -844,11 +891,28 @@ class PlayFragment : Fragment() {
                         else -> "${event.winner} wins by checkmate!"
                     }
                     
-                    AlertDialog.Builder(context)
-                        .setTitle("♟ Game Ended")
-                        .setMessage(reasonText)
-                        .setPositiveButton("OK", null)
-                        .show()
+                    val dialog = Dialog(requireContext())
+                    dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+                    dialog.setContentView(R.layout.dialog_game_over)
+                    dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+                    val icon = dialog.findViewById<ImageView>(R.id.dialog_icon)
+                    val titleText = dialog.findViewById<TextView>(R.id.dialog_title)
+                    val subtitleText = dialog.findViewById<TextView>(R.id.dialog_subtitle)
+                    val btnPositive = dialog.findViewById<Button>(R.id.btn_positive)
+                    val btnNegative = dialog.findViewById<Button>(R.id.btn_negative)
+
+                    icon.setImageResource(R.drawable.ic_sword)
+                    titleText.text = "Game Ended"
+                    subtitleText.text = reasonText
+
+                    btnPositive.text = "OK"
+                    btnNegative.visibility = View.GONE
+
+                    btnPositive.setOnClickListener {
+                        dialog.dismiss()
+                    }
+                    dialog.show()
                         
                     activeGameId = null
                     SettingsManager.setActiveGameId(context, null)

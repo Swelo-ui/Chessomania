@@ -1,0 +1,35 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Antenna -->
+  <path
+      android:fillColor="@color/accent"
+      android:pathData="M11,2 L13,2 L13,5 L11,5 Z" />
+  <path
+      android:fillColor="@color/accent"
+      android:pathData="M12,2A1,1 0,1 1,12,0A1,1 0,1 1,12,2" />
+  <!-- Head -->
+  <path
+      android:fillColor="@color/accent"
+      android:pathData="M4,9 C4,7.34 5.34,6 7,6 L17,6 C18.66,6 20,7.34 20,9 L20,18 C20,19.66 18.66,21 17,21 L7,21 C5.34,21 4,19.66 4,18 Z" />
+  <!-- Ears -->
+  <path
+      android:fillColor="@color/accent"
+      android:pathData="M2,11 C2,10.45 2.45,10 3,10 L4,10 L4,17 L3,17 C2.45,17 2,16.55 2,16 Z" />
+  <path
+      android:fillColor="@color/accent"
+      android:pathData="M20,10 L21,10 C21.55,10 22,10.45 22,11 L22,16 C22,16.55 21.55,17 21,17 L20,17 Z" />
+  <!-- Eyes -->
+  <path
+      android:fillColor="@color/panel2"
+      android:pathData="M8,11 A1.5,1.5 0,1 1,8,8 A1.5,1.5 0,1 1,8,11" />
+  <path
+      android:fillColor="@color/panel2"
+      android:pathData="M16,11 A1.5,1.5 0,1 1,16,8 A1.5,1.5 0,1 1,16,11" />
+  <!-- Mouth -->
+  <path
+      android:fillColor="@color/panel2"
+      android:pathData="M8,15 L16,15 L16,17 L8,17 Z" />
+</vector>
