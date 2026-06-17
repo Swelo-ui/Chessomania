@@ -4222,9 +4222,9 @@ async function runGameAnalysis() {
       await Promise.all(workerPromises);
     }
 
-    // Pass 2: High-depth re-verification (depth 13) in parallel
-    const depth13Tasks = [];
-    const depth13Verified = new Array(revFens.length).fill(false);
+    // Pass 2: High-depth re-verification (depth 12) in parallel
+    const depth12Tasks = [];
+    const depth12Verified = new Array(revFens.length).fill(false);
     for (let i = 0; i < revHist.length; i++) {
       if (!revEvals[i] || !revEvals[i+1]) continue;
       
@@ -4236,45 +4236,48 @@ async function runGameAnalysis() {
       const movingPlayerEvalAfter = turn === 'w' ? evalAfter : -evalAfter;
       const loss = movingPlayerEvalBefore - movingPlayerEvalAfter;
 
-      if (loss > 100 && !forcedFlags[i] && revEvals[i].bestMove !== uciMoves[i]) {
-        // Collect indices to evaluate at depth 13
-        if (!depth13Verified[i]) {
+      const isEvalFlip = (movingPlayerEvalBefore >= 150 && movingPlayerEvalAfter <= 50) || 
+                         (movingPlayerEvalBefore > 0 && movingPlayerEvalAfter <= -100);
+
+      if ((loss > 200 || isEvalFlip || revEvals[i].mate !== null || revEvals[i+1].mate !== null) && !forcedFlags[i] && revEvals[i].bestMove !== uciMoves[i]) {
+        // Collect indices to evaluate at depth 12
+        if (!depth12Verified[i]) {
           const tempCheck = new Chess();
           for (let k = 0; k < i; k++) tempCheck.move(revHist[k]);
           if (!tempCheck.game_over()) {
-            depth13Tasks.push({ fen: revFens[i], index: i });
-            depth13Verified[i] = true;
+            depth12Tasks.push({ fen: revFens[i], index: i });
+            depth12Verified[i] = true;
           }
         }
-        if (!depth13Verified[i+1] && i+1 < revFens.length) {
+        if (!depth12Verified[i+1] && i+1 < revFens.length) {
           const tempCheck = new Chess();
           for (let k = 0; k < i + 1; k++) tempCheck.move(revHist[k]);
           if (!tempCheck.game_over()) {
-            depth13Tasks.push({ fen: revFens[i+1], index: i+1 });
-            depth13Verified[i+1] = true;
+            depth12Tasks.push({ fen: revFens[i+1], index: i+1 });
+            depth12Verified[i+1] = true;
           }
         }
       }
     }
 
-    if (depth13Tasks.length > 0) {
-      let nextD13TaskIdx = 0;
-      let finishedD13Count = 0;
+    if (depth12Tasks.length > 0) {
+      let nextD12TaskIdx = 0;
+      let finishedD12Count = 0;
       
-      const d13Promises = revWorkers.map(async (worker) => {
-        while (nextD13TaskIdx < depth13Tasks.length) {
-          const taskIdx = nextD13TaskIdx++;
-          const task = depth13Tasks[taskIdx];
+      const d12Promises = revWorkers.map(async (worker) => {
+        while (nextD12TaskIdx < depth12Tasks.length) {
+          const taskIdx = nextD12TaskIdx++;
+          const task = depth12Tasks[taskIdx];
           
-          const res = await evaluatePositionWithWorker(worker, task.fen, 13);
+          const res = await evaluatePositionWithWorker(worker, task.fen, 12);
           revEvals[task.index] = res;
           
-          finishedD13Count++;
-          txt.textContent = `Refining move ${finishedD13Count} / ${depth13Tasks.length}...`;
-          fill.style.width = `${Math.round((finishedD13Count / depth13Tasks.length) * 100)}%`;
+          finishedD12Count++;
+          txt.textContent = `Refining move ${finishedD12Count} / ${depth12Tasks.length}...`;
+          fill.style.width = `${Math.round((finishedD12Count / depth12Tasks.length) * 100)}%`;
         }
       });
-      await Promise.all(d13Promises);
+      await Promise.all(d12Promises);
     }
 
     // Pass 3: Final pass classification
@@ -4382,7 +4385,7 @@ function drawEvaluationGraph() {
   for (let i = 0; i < revEvals.length; i++) {
     const x = N === 0 ? 250 : (i / N) * 460 + 20;
     const turn = i % 2 === 0 ? 'w' : 'b';
-    let evalVal = getWhitePerspectiveEval(revEvals[i], turn) / 100;
+    let evalVal = revEvals[i] ? (getWhitePerspectiveEval(revEvals[i], turn) / 100) : 0;
     evalVal = Math.max(-8, Math.min(8, evalVal));
     const y = 60 - (evalVal / 8) * 50;
     points.push({ x, y });
