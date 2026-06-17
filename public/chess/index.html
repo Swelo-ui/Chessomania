@@ -7,6 +7,7 @@
 <link rel="icon" href="/favicon.ico"/>
 <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
 <script src="https://unpkg.com/peerjs@1/dist/peerjs.min.js"></script>
+<script src="js/bg-music.js"></script>
 <style>
 /* ── LOCAL FONTS ─────────────────────────────────────────────────── */
 @font-face{font-family:'Noto';src:url('/font/noto-sans-latin.woff2') format('woff2');font-display:swap}
@@ -987,6 +988,19 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
         </div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-h">Background Ambient Music</div>
+      <div class="card-b" style="padding: 12px; display: flex; flex-direction: column; gap: 12px;">
+        <div class="sound-btns" style="display: flex; gap: 8px;">
+          <button id="music-btn-on" class="snd-btn" onclick="toggleWebMusic(true)">Enabled</button>
+          <button id="music-btn-off" class="snd-btn" onclick="toggleWebMusic(false)">Disabled</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 0.8rem; color: var(--text2); min-width: 50px;">Volume</span>
+          <input type="range" id="music-vol-slider" min="0" max="100" value="25" style="flex: 1; accent-color: var(--accent); cursor: pointer;" oninput="changeWebMusicVolume(this.value)">
+        </div>
+      </div>
+    </div>
     <div class="card card-wide" style="grid-column: 1 / -1;">
       <div class="card-h" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <span>About & Rules</span>
@@ -1168,6 +1182,19 @@ function goTab(id) {
   if (id==='puzzle' && !puzzleInited) initPuzzle();
   if (id==='review' && !revInited) initReview();
   if (id==='settings') initSettings();
+
+  // Handle Background Ambient Music Transitions
+  if (id === 'puzzle') {
+    playWebMusicTrack('puzzle');
+  } else if (id === 'play') {
+    if (!bOver && bHist.length > 0) {
+      playWebMusicTrack('gameplay');
+    } else {
+      playWebMusicTrack('menu');
+    }
+  } else {
+    playWebMusicTrack('menu');
+  }
 }
 
 // ── SOUNDS ───────────────────────────────────────────────────────────
@@ -1247,6 +1274,49 @@ function updateHapticUI() {
     }
   }
 }
+function playWebMusicTrack(category) {
+  if (category === 'menu') {
+    bgMusic.play('sound/music/sonic289-game-music_-soundtrack_main-theme-_-menu-screen-1-372767.mp3');
+  } else if (category === 'gameplay') {
+    bgMusic.play('sound/music/sonic289-game-music_-soundtrack_exploration-_-peaceful-area-372769.mp3');
+  } else if (category === 'puzzle') {
+    bgMusic.play('sound/music/sonic289-gametown-_-village-theme-373822.mp3');
+  } else if (category === 'victory') {
+    bgMusic.play('sound/music/u_ng6e91f4wa-bg-499851.mp3', false);
+  } else if (category === 'defeat') {
+    bgMusic.play('sound/music/u_o0a9yfwhsr-aviator-music-394813.mp3', false);
+  }
+}
+function toggleWebMusic(enabled) {
+  bgMusic.setEnabled(enabled);
+  updateMusicUI();
+}
+function changeWebMusicVolume(val) {
+  const vol = val / 100;
+  bgMusic.setVolume(vol);
+}
+function updateMusicUI() {
+  const btnOn = document.getElementById('music-btn-on');
+  const btnOff = document.getElementById('music-btn-off');
+  const slider = document.getElementById('music-vol-slider');
+  if (btnOn && btnOff) {
+    if (bgMusic.isEnabled) {
+      btnOn.classList.add('on');
+      btnOff.classList.remove('on');
+    } else {
+      btnOn.classList.remove('on');
+      btnOff.classList.add('on');
+    }
+  }
+  if (slider) {
+    slider.value = Math.round(bgMusic.volume * 100);
+  }
+}
+document.addEventListener('click', () => {
+  if (bgMusic.isEnabled && !bgMusic.audio && bgMusic.currentTrack === null) {
+    playWebMusicTrack('menu');
+  }
+}, { once: true });
 
 // ── BOARD THEME APPLY ────────────────────────────────────────────────
 function applyBoardTheme(theme) {
@@ -1414,6 +1484,26 @@ function bEndGame(t,s,i){
   } else {
     triggerWebHaptic('draw');
   }
+
+  // Play game end music track (victory/defeat)
+  let track = 'victory';
+  if (bChess.in_checkmate()) {
+    if (bMode === 'friend') {
+      track = (bChess.turn() === p2pMyColor) ? 'defeat' : 'victory';
+    } else if (bMode === 'ai') {
+      track = (bChess.turn() === 'w') ? 'defeat' : 'victory';
+    }
+  } else if (t === 'Resigned') {
+    if (bMode === 'friend') {
+      const lost = (p2pMyColor === 'w' && s.includes('Black wins')) || (p2pMyColor === 'b' && s.includes('White wins'));
+      track = lost ? 'defeat' : 'victory';
+    } else {
+      track = 'defeat';
+    }
+  } else if (t === 'Opponent Resigned') {
+    track = 'victory';
+  }
+  playWebMusicTrack(track);
 }
 function bUpdStatus(){
   const bar=document.getElementById('sbar'),txt=document.getElementById('stxt');
@@ -1477,6 +1567,7 @@ function newB(){
   document.getElementById('go-overlay').classList.remove('on');
   bRender();
   triggerWebHaptic('start');
+  playWebMusicTrack('gameplay');
 }
 function undoB(){
   if(bMode==='friend'){alert('Cannot undo in P2P game!');return;}
@@ -1515,6 +1606,7 @@ function setMode(m){
   if(m!=='friend'){
     bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];document.getElementById('go-overlay').classList.remove('on');bRender();
     triggerWebHaptic('start');
+    playWebMusicTrack('gameplay');
   }
 }
 function setDiff(btn,d,name,skill){
@@ -1814,6 +1906,7 @@ function p2pOnConnected(myColor){
   }
   p2pUpdTurnInfo();
   triggerWebHaptic('start');
+  playWebMusicTrack('gameplay');
 }
 
 function p2pUpdTurnInfo(){
@@ -4036,10 +4129,11 @@ function initSettings(){
   ALL_SOUNDS.forEach(s=>{
     const b=document.createElement('button'); b.className='snd-btn'+(s===G.soundTheme?' on':'');
     b.textContent=SND_LABELS[s]||s||'Silent';
-    b.onclick=()=>{ G.soundTheme=s; document.querySelectorAll('.snd-btn').forEach(x=>x.classList.remove('on')); b.classList.add('on'); snd('Move'); };
+    b.onclick=()=>{ G.soundTheme=s; document.querySelectorAll('#snd-grid .snd-btn').forEach(x=>x.classList.remove('on')); b.classList.add('on'); snd('Move'); };
     sg.appendChild(b);
   });
   updateHapticUI();
+  updateMusicUI();
   lucide.createIcons();
 }
 function switchAboutTab(tab) {

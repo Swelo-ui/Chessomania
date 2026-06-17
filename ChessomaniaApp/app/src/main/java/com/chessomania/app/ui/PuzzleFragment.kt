@@ -39,8 +39,14 @@ class PuzzleFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_puzzle, container, false)
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        com.chessomania.app.audio.BgMusicManager.getInstance(requireContext()).play(com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE)
 
         boardView = view.findViewById(R.id.puzzle_board)
         messageText = view.findViewById(R.id.puz_message)

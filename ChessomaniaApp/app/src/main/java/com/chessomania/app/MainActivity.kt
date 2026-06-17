@@ -60,6 +60,13 @@ class MainActivity : AppCompatActivity() {
             switchFragment(tag)
             true
         }
+        // Initialize background music
+        val bgMusic = com.chessomania.app.audio.BgMusicManager.getInstance(this)
+        bgMusic.isEnabled = com.chessomania.app.net.SecurePrefs.isMusicEnabled(this)
+        bgMusic.musicVolume = com.chessomania.app.net.SecurePrefs.getMusicVolume(this)
+        if (savedInstanceState == null) {
+            bgMusic.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
+        }
     }
 
     private fun switchFragment(tag: String) {
@@ -106,6 +113,26 @@ class MainActivity : AppCompatActivity() {
 
         transaction.commit()
         activeFragment = target
+
+        // Transition music when switching tabs
+        val music = com.chessomania.app.audio.BgMusicManager.getInstance(this)
+        when (tag) {
+            "play" -> {
+                // If in active game, play gameplay, else play menu
+                val playFrag = playFragment
+                if (playFrag != null && playFrag.isInActiveGame()) {
+                    music.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY)
+                } else {
+                    music.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
+                }
+            }
+            "puzzle" -> {
+                music.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE)
+            }
+            else -> {
+                music.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
+            }
+        }
     }
 
     fun updateStatusBadge(text: String) {
@@ -119,5 +146,23 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.bottomNav.selectedItemId = R.id.nav_play
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val bgMusic = com.chessomania.app.audio.BgMusicManager.getInstance(this)
+        bgMusic.isEnabled = com.chessomania.app.net.SecurePrefs.isMusicEnabled(this)
+        bgMusic.musicVolume = com.chessomania.app.net.SecurePrefs.getMusicVolume(this)
+        bgMusic.resume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        com.chessomania.app.audio.BgMusicManager.getInstance(this).pause()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        com.chessomania.app.audio.BgMusicManager.getInstance(this).release()
     }
 }

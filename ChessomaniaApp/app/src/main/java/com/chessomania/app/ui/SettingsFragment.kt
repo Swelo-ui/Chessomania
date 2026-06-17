@@ -157,6 +157,62 @@ class SettingsFragment : Fragment() {
                 editDebugCode.text.clear()
             }
         }
+
+        setupMusicControls(view, context)
+    }
+
+    private fun setupMusicControls(view: View, context: Context) {
+        val musicToggle = view.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.music_toggle)
+        val volumeSlider = view.findViewById<android.widget.SeekBar>(R.id.music_volume_slider)
+        val themeSpinner = view.findViewById<android.widget.Spinner>(R.id.music_theme_spinner)
+
+        // Load saved preferences
+        musicToggle.isChecked = com.chessomania.app.net.SecurePrefs.isMusicEnabled(context)
+        volumeSlider.progress = (com.chessomania.app.net.SecurePrefs.getMusicVolume(context) * 100).toInt()
+
+        // Music toggle listener
+        musicToggle.setOnCheckedChangeListener { _, isChecked ->
+            com.chessomania.app.net.SecurePrefs.setMusicEnabled(context, isChecked)
+            val bgMusic = com.chessomania.app.audio.BgMusicManager.getInstance(context)
+            bgMusic.isEnabled = isChecked
+            if (isChecked) {
+                bgMusic.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
+            } else {
+                bgMusic.stop()
+            }
+        }
+
+        // Volume slider listener
+        volumeSlider.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                val volume = progress / 100f
+                com.chessomania.app.net.SecurePrefs.setMusicVolume(context, volume)
+                com.chessomania.app.audio.BgMusicManager.getInstance(context).musicVolume = volume
+            }
+            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
+        })
+
+        // Theme selector spinner
+        val themes = arrayOf("Calm Piano", "Ambient Synth", "Classical", "Nature Sounds", "Focus Mode")
+        val adapter = android.widget.ArrayAdapter(
+            context,
+            R.layout.spinner_item,
+            themes
+        )
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        themeSpinner.adapter = adapter
+        themeSpinner.setSelection(com.chessomania.app.net.SecurePrefs.getMusicThemeIndex(context))
+        
+        themeSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val oldPos = com.chessomania.app.net.SecurePrefs.getMusicThemeIndex(context)
+                if (position != oldPos) {
+                    com.chessomania.app.net.SecurePrefs.setMusicThemeIndex(context, position)
+                }
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
     }
 
     private fun showRuleBookDialog() {

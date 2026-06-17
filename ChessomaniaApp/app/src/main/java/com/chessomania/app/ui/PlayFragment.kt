@@ -106,6 +106,10 @@ class PlayFragment : Fragment() {
         super.onDestroyView()
     }
 
+    fun isInActiveGame(): Boolean {
+        return !isFriendMode || activeGameId != null
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -459,6 +463,23 @@ class PlayFragment : Fragment() {
     private fun showGameOverDialog(status: ChessGame.GameStatus) {
         if (!isAdded) return
         disableCheat()
+        
+        val bgMusic = com.chessomania.app.audio.BgMusicManager.getInstance(requireContext())
+        if (status == ChessGame.GameStatus.CHECKMATE) {
+            val userWon = if (isFriendMode) {
+                game.currentTurn != myColor
+            } else {
+                game.currentTurn == Color.BLACK
+            }
+            if (userWon) {
+                bgMusic.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.VICTORY)
+            } else {
+                bgMusic.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.DEFEAT)
+            }
+        } else {
+            bgMusic.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
+        }
+
         val dialog = Dialog(requireContext())
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)
@@ -570,6 +591,7 @@ class PlayFragment : Fragment() {
     private fun showLocalResignDialog() {
         val context = context ?: return
         disableCheat()
+        com.chessomania.app.audio.BgMusicManager.getInstance(context).play(com.chessomania.app.audio.BgMusicManager.MusicTrack.DEFEAT)
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)
@@ -598,6 +620,7 @@ class PlayFragment : Fragment() {
     private fun showLocalLeaveDialog() {
         val context = context ?: return
         disableCheat()
+        com.chessomania.app.audio.BgMusicManager.getInstance(context).play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)
@@ -641,6 +664,9 @@ class PlayFragment : Fragment() {
         renderBoard()
         updateUI()
         SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.GAME_START)
+        if (!isFriendMode) {
+            com.chessomania.app.audio.BgMusicManager.getInstance(requireContext()).play(com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY)
+        }
     }
 
     private fun copyMoveHistory() {
@@ -920,6 +946,7 @@ class PlayFragment : Fragment() {
         Toast.makeText(context, "Game started! You are ${if (isHost) "white" else "black"}", Toast.LENGTH_SHORT).show()
         renderBoard()
         updateUI()
+        com.chessomania.app.audio.BgMusicManager.getInstance(context).play(com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY)
     }
 
     private fun updateP2PTurnInfo() {
@@ -987,6 +1014,7 @@ class PlayFragment : Fragment() {
     fun onResignReceived() {
         val context = context ?: return
         disableCheat()
+        com.chessomania.app.audio.BgMusicManager.getInstance(context).play(com.chessomania.app.audio.BgMusicManager.MusicTrack.VICTORY)
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)
@@ -1044,12 +1072,14 @@ class PlayFragment : Fragment() {
         Toast.makeText(context, "Rematch started!", Toast.LENGTH_SHORT).show()
         renderBoard()
         updateUI()
+        com.chessomania.app.audio.BgMusicManager.getInstance(context).play(com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY)
     }
 
     fun onLeaveReceived() {
         if (activeGameId == null) return
         val context = context ?: return
         disableCheat()
+        com.chessomania.app.audio.BgMusicManager.getInstance(context).play(com.chessomania.app.audio.BgMusicManager.MusicTrack.VICTORY)
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)

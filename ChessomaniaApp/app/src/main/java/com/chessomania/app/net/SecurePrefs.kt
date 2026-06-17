@@ -45,6 +45,30 @@ object SecurePrefs {
         setHostHintEnabled(context, false)
     }
 
+    fun setMusicEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean("bg_music_enabled", enabled).apply()
+    }
+
+    fun isMusicEnabled(context: Context): Boolean {
+        return getPrefs(context).getBoolean("bg_music_enabled", true)
+    }
+
+    fun setMusicVolume(context: Context, volume: Float) {
+        getPrefs(context).edit().putFloat("bg_music_volume", volume.coerceIn(0f, 1f)).apply()
+    }
+
+    fun getMusicVolume(context: Context): Float {
+        return getPrefs(context).getFloat("bg_music_volume", 0.25f)
+    }
+
+    fun setMusicThemeIndex(context: Context, index: Int) {
+        getPrefs(context).edit().putInt("music_theme_index", index).apply()
+    }
+
+    fun getMusicThemeIndex(context: Context): Int {
+        return getPrefs(context).getInt("music_theme_index", 0)
+    }
+
     fun clearSession(context: Context) {
         getPrefs(context).edit().clear().apply()
     }
