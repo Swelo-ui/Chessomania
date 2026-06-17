@@ -208,6 +208,15 @@ body{
 .sq.bt   {background:rgba(20,160,240,.32) !important;
           outline:2px solid rgba(20,160,240,.9);
           outline-offset:-2px;}
+.sq.selected-sq {background:rgba(181,136,99,0.6) !important;
+                 outline:3px solid rgba(181,136,99,0.9);
+                 outline-offset:-3px;}
+.sq.dest-sq::after{content:'';
+                   width:14px;height:14px;
+                   background:rgba(0,0,0,0.18);
+                   border-radius:50%;
+                   position:absolute;
+                   pointer-events:none;}
 
 /* Piece images */
 .piece{
@@ -292,6 +301,8 @@ body{
 .cls-inaccuracy{background:#fbbf24;color:#1e1c19;}
 .cls-mistake{background:#f97316;color:#fff;}
 .cls-blunder{background:#ef4444;color:#fff;}
+.cls-brilliant{background:#12b6ad;color:#fff;}
+.cls-missed{background:#ff7043;color:#fff;}
 
 /* Accuracy boxes */
 .acc-row{display:flex;gap:10px;margin-bottom:11px;}
@@ -353,6 +364,8 @@ body{
 .mb-inaccuracy{background:#fbbf24;color:#1e1c19;}
 .mb-mistake{background:#f97316;}
 .mb-blunder{background:#ef4444;}
+.mb-brilliant{background:#12b6ad;}
+.mb-missed{background:#ff7043;}
 </style>
 </head>
 <body>
@@ -361,6 +374,12 @@ body{
 
   <!-- Error banner -->
   <div id="error-banner"></div>
+
+  <!-- Practice banner -->
+  <div id="practice-banner" style="display:none;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);border-radius:8px;padding:9px 12px;margin-bottom:10px;text-align:center;">
+    <span style="font-size:0.75rem;font-weight:700;color:#38bdf8;margin-right:8px;">Practice Mode: Explore variations</span>
+    <button class="btn btn-accent" style="padding:4px 9px;font-size:0.68rem;" onclick="exitPractice()">Return to Review</button>
+  </div>
 
   <!-- Progress & Timer (with clear gap below) -->
   <div id="status-bar">
@@ -439,12 +458,14 @@ body{
       <table class="sum-tbl">
         <thead><tr><th>Type</th><th>White</th><th>Black</th></tr></thead>
         <tbody>
+          <tr><td style="color:#12b6ad;font-weight:700">Brilliant</td><td id="s-bril-w">—</td><td id="s-bril-b">—</td></tr>
           <tr><td>Best / Forced</td><td id="s-best-w">—</td><td id="s-best-b">—</td></tr>
           <tr><td>Excellent</td><td id="s-exc-w">—</td><td id="s-exc-b">—</td></tr>
           <tr><td>Good</td><td id="s-gd-w">—</td><td id="s-gd-b">—</td></tr>
           <tr><td style="color:#fbbf24">Inaccuracy</td><td id="s-inac-w">—</td><td id="s-inac-b">—</td></tr>
           <tr><td style="color:#f97316">Mistake</td><td id="s-mist-w">—</td><td id="s-mist-b">—</td></tr>
           <tr><td style="color:#ef4444;font-weight:700">Blunder</td><td id="s-blun-w">—</td><td id="s-blun-b">—</td></tr>
+          <tr><td style="color:#ff7043;font-weight:700">Missed Win</td><td id="s-miss-w">—</td><td id="s-miss-b">—</td></tr>
         </tbody>
       </table>
     </div>
@@ -478,6 +499,9 @@ let moveIdx   = 0;
 let lastMove  = null;
 let pTheme    = 'cburnett';
 let analyzing = false;
+let selectedSq = null;
+let practiceMode = false;
+let practiceChess = null;
 
 /* ── Workers ── */
 const WORKERS   = 3;
@@ -493,6 +517,42 @@ let tStart      = 0;
 function android(fn, ...a) {
   if (window.Android && typeof window.Android[fn] === 'function') {
     try { window.Android[fn](...a); } catch(e) {}
+  }
+}
+
+/* ─── Sound & Haptic Helpers ─── */
+const sfxCache = {};
+function snd(name) {
+  const theme = 'standard';
+  const k = theme + '/' + name;
+  if (!sfxCache[k]) {
+    let folder = (name === 'Check' || name === 'Checkmate') ? 'sfx' : 'standard';
+    const a = new Audio('sounds/' + folder + '/' + name + '.mp3');
+    a.volume = 0.7;
+    sfxCache[k] = a;
+  }
+  sfxCache[k].currentTime = 0;
+  sfxCache[k].play().catch(() => {});
+}
+
+function haptic(type) {
+  if (window.Android && typeof window.Android.vibrate === 'function') {
+    try {
+      if (type === 'blunder') {
+        window.Android.vibrate(250);
+      } else if (type === 'mistake') {
+        window.Android.vibrate(100);
+      } else if (type === 'inaccuracy') {
+        window.Android.vibrate(55);
+      } else if (type === 'brilliant') {
+        window.Android.vibrate(80);
+        setTimeout(() => window.Android.vibrate(80), 180);
+      } else if (type === 'missed') {
+        window.Android.vibrate(120);
+      } else if (type === 'best' || type === 'excellent' || type === 'forced') {
+        window.Android.vibrate(35);
+      }
+    } catch(e) {}
   }
 }
 
@@ -828,14 +888,36 @@ function turnAt(i) {
   return i % 2 === 0 ? 'w' : 'b';
 }
 
+/* ─── Material value mapping ─── */
+function getMaterialValue(fen) {
+  const t = new Chess(fen);
+  let wVal = 0, bVal = 0;
+  for (let ri = 0; ri < 8; ri++) {
+    for (let fi = 0; fi < 8; fi++) {
+      const sq = FILES[fi] + RANKS[ri];
+      const p = t.get(sq);
+      if (p) {
+        let val = 100;
+        if (p.type === 'n') val = 300;
+        else if (p.type === 'b') val = 320;
+        else if (p.type === 'r') val = 500;
+        else if (p.type === 'q') val = 900;
+        
+        if (p.color === 'w') wVal += val;
+        else bVal += val;
+      }
+    }
+  }
+  return { wVal, bVal };
+}
+
 /* ─── Move classification ─── */
 function classifyMove(i, forced) {
   if (forced) return 'forced';
 
   const played = uciMoves[i];
   const best   = evals[i]?.bestMove;
-  if (played && best && played === best) return 'best';
-
+  
   const turn  = turnAt(i);
   const nextT = turn === 'w' ? 'b' : 'w';
   const wBef  = toWhite(evals[i],   turn);
@@ -845,6 +927,25 @@ function classifyMove(i, forced) {
   const pAft  = turn === 'w' ? wAft : -wAft;
   const loss  = pBef - pAft;
 
+  // 1. Brilliant move detection (!!)
+  if (played && best && (played === best || loss <= 10) && pAft >= -100) {
+    const matBef = getMaterialValue(fens[i]);
+    const matAft = getMaterialValue(fens[i+1]);
+    const matDiff = turn === 'w' ? 
+      (matBef.wVal - matBef.bVal) - (matAft.wVal - matAft.bVal) :
+      (matBef.bVal - matBef.wVal) - (matAft.bVal - matAft.wVal);
+    if (matDiff < 0) {
+      return 'brilliant';
+    }
+  }
+
+  // 2. Missed Win detection (miss)
+  const hadMate = evals[i]?.mate !== null && ((turn === 'w' && evals[i].mate > 0) || (turn === 'b' && evals[i].mate < 0));
+  if ((pBef >= 250 || hadMate) && loss > 150 && pAft < 150) {
+    return 'missed';
+  }
+
+  if (played && best && played === best) return 'best';
   if (loss <= 0) return 'best';
 
   const flip = (pBef >= 150 && pAft <= 50) || (pBef > 0 && pAft <= -100);
@@ -858,7 +959,7 @@ function classifyMove(i, forced) {
 /* ─── Stats + Accuracy ─── */
 function calcStats() {
   const init = () => ({
-    best:0,excellent:0,good:0,inaccuracy:0,mistake:0,blunder:0,forced:0,
+    brilliant:0,best:0,excellent:0,good:0,inaccuracy:0,mistake:0,blunder:0,forced:0,missed:0,
     lossSum:0,cnt:0
   });
   const s = { w: init(), b: init() };
@@ -906,12 +1007,14 @@ function calcStats() {
   if (accB !== null) { bEl.textContent = accB + '%'; bEl.style.color = accColor(accB); }
 
   const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('s-bril-w',  s.w.brilliant);       set('s-bril-b',  s.b.brilliant);
   set('s-best-w',  s.w.best+s.w.forced); set('s-best-b',  s.b.best+s.b.forced);
   set('s-exc-w',   s.w.excellent);       set('s-exc-b',   s.b.excellent);
   set('s-gd-w',    s.w.good);            set('s-gd-b',    s.b.good);
   set('s-inac-w',  s.w.inaccuracy);      set('s-inac-b',  s.b.inaccuracy);
   set('s-mist-w',  s.w.mistake);         set('s-mist-b',  s.b.mistake);
   set('s-blun-w',  s.w.blunder);         set('s-blun-b',  s.b.blunder);
+  set('s-miss-w',  s.w.missed);          set('s-miss-b',  s.b.missed);
 }
 
 /* ─── Eval graph ─── */
@@ -989,18 +1092,27 @@ function renderBoard() {
     }
   }
 
+  const currentChess = practiceMode ? practiceChess : chess;
+  const legalMovesFromSelected = selectedSq ? currentChess.moves({ square: selectedSq, verbose: true }) : [];
+  const destSquares = legalMovesFromSelected.map(m => m.to);
+
   for (let ri = 0; ri < 8; ri++) {
     for (let fi = 0; fi < 8; fi++) {
       const file = dF[fi], rank = dR[ri], sq = file + rank;
-      const piece = chess.get(sq);
+      const piece = currentChess.get(sq);
       const isL   = (FILES.indexOf(file) + rank) % 2 === 1;
 
       const div = document.createElement('div');
       div.className = 'sq ' + (isL ? 'light' : 'dark');
+      div.dataset.sq = sq;
+
       if (lastMove?.from === sq) div.classList.add('lf');
       if (lastMove?.to   === sq) div.classList.add('lt');
       if (bFrom === sq) div.classList.add('bf');
       if (bTo   === sq) div.classList.add('bt');
+
+      if (selectedSq === sq) div.classList.add('selected-sq');
+      if (destSquares.includes(sq)) div.classList.add('dest-sq');
 
       if (piece) {
         const img = document.createElement('img');
@@ -1017,6 +1129,7 @@ function renderBoard() {
 
 /* ─── Eval bar update ─── */
 function updEvalBar() {
+  if (practiceMode) return;
   const scoreEl = document.getElementById('eval-score');
   const fillEl  = document.getElementById('eval-fill');
 
@@ -1155,11 +1268,13 @@ function updQualityPanel() {
 const BADGE = {
   best:      ['mb-best',      '✓'],
   forced:    ['mb-forced',    '✓'],
+  brilliant: ['mb-brilliant', '!!'],
   excellent: ['mb-excellent', '!'],
   good:      ['mb-good',      '↗'],
   inaccuracy:['mb-inaccuracy','?!'],
   mistake:   ['mb-mistake',   '?'],
   blunder:   ['mb-blunder',   '??'],
+  missed:    ['mb-missed',    '✗'],
 };
 function badge(cls) {
   if (!cls) return '';
@@ -1214,17 +1329,156 @@ function render() {
 }
 
 /* ─── Navigation ─── */
-function jumpStart() { moveIdx = 0;               showBest=false; render(); }
-function prevMove()  { if(moveIdx>0){ moveIdx--;  showBest=false; render(); } }
-function nextMove()  { if(moveIdx<hist.length){ moveIdx++; showBest=false; render(); } }
-function jumpEnd()   { moveIdx = hist.length;      showBest=false; render(); }
-function jumpTo(i)   { moveIdx=Math.max(0,Math.min(hist.length,i)); showBest=false; render(); }
+function jumpStart() { exitPractice(); moveIdx = 0;               showBest=false; render(); }
+function prevMove()  { exitPractice(); if(moveIdx>0){ moveIdx--;  showBest=false; render(); playNavFeedback(); } }
+function nextMove()  { exitPractice(); if(moveIdx<hist.length){ moveIdx++; showBest=false; render(); playNavFeedback(); } }
+function jumpEnd()   { exitPractice(); moveIdx = hist.length;      showBest=false; render(); playNavFeedback(); }
+function jumpTo(i)   { exitPractice(); moveIdx=Math.max(0,Math.min(hist.length,i)); showBest=false; render(); playNavFeedback(); }
 function flipBoard() { flipped=!flipped; renderBoard(); }
 
 function toggleBest() {
   if (moveIdx === 0) return;
   showBest = !showBest;
   render();
+}
+
+/* ─── Square clicking & Interactive Practice Mode ─── */
+function handleSquareClick(sq) {
+  if (analyzing && !practiceMode) return;
+
+  const currentChess = practiceMode ? practiceChess : chess;
+  const piece = currentChess.get(sq);
+
+  if (selectedSq === sq) {
+    selectedSq = null;
+    renderBoard();
+    return;
+  }
+
+  if (selectedSq) {
+    const moves = currentChess.moves({ verbose: true });
+    const legalMove = moves.find(m => m.from === selectedSq && m.to === sq);
+
+    if (legalMove) {
+      let promotion = undefined;
+      const pieceType = currentChess.get(selectedSq)?.type;
+      if (pieceType === 'p' && (sq[1] === '8' || sq[1] === '1')) {
+        promotion = 'q';
+      }
+
+      const playedMove = currentChess.move({
+        from: selectedSq,
+        to: sq,
+        promotion: promotion
+      });
+
+      if (playedMove) {
+        selectedSq = null;
+
+        let soundName = 'Move';
+        if (playedMove.captured) soundName = 'Capture';
+        else if (currentChess.in_check()) {
+          soundName = currentChess.in_checkmate() ? 'Checkmate' : 'Check';
+        }
+        snd(soundName);
+
+        if (!practiceMode) {
+          const expectedUci = uciMoves[moveIdx];
+          const actualUci = playedMove.from + playedMove.to + (playedMove.promotion || '');
+
+          if (actualUci === expectedUci) {
+            moveIdx++;
+            render();
+            const cls = clsArr[moveIdx - 1];
+            if (cls) haptic(cls);
+            return;
+          } else {
+            practiceMode = true;
+            practiceChess = new Chess(fens[moveIdx]);
+            practiceChess.move(playedMove);
+          }
+        }
+
+        showPracticeBanner();
+        renderBoard();
+        evalPracticeMove();
+        return;
+      }
+    }
+  }
+
+  if (piece && piece.color === currentChess.turn()) {
+    selectedSq = sq;
+    renderBoard();
+  } else {
+    selectedSq = null;
+    renderBoard();
+  }
+}
+
+function exitPractice() {
+  practiceMode = false;
+  practiceChess = null;
+  selectedSq = null;
+  document.getElementById('practice-banner').style.display = 'none';
+  render();
+}
+
+function showPracticeBanner() {
+  document.getElementById('practice-banner').style.display = 'block';
+}
+
+async function evalPracticeMove() {
+  if (!practiceChess) return;
+  const fen = practiceChess.fen();
+
+  const scoreEl = document.getElementById('eval-score');
+  scoreEl.textContent = '...';
+
+  await initWorkers();
+  if (sfW.length > 0) {
+    const res = await evalPos(sfW[0], fen, 8);
+    updatePracticeEvalBar(res, practiceChess.turn());
+  }
+}
+
+function updatePracticeEvalBar(ev, turn) {
+  const scoreEl = document.getElementById('eval-score');
+  const fillEl  = document.getElementById('eval-fill');
+
+  const wVal = toWhite(ev, turn);
+
+  let pct, txt;
+  if (ev.mate !== null) {
+    const wMating = wVal > 0;
+    pct = wMating ? 96 : 4;
+    const mN = Math.abs(ev.mate);
+    txt = wMating ? `M+${mN}` : `M-${mN}`;
+    scoreEl.style.color = wMating ? '#f0d9b5' : '#8a8178';
+  } else {
+    const clampedCp = Math.max(-800, Math.min(800, wVal));
+    pct = Math.max(4, Math.min(96, 50 + (clampedCp / 800) * 46));
+    const v = wVal / 100;
+    txt = (v >= 0 ? '+' : '') + v.toFixed(1);
+    scoreEl.style.color = wVal >= 0 ? '#f0d9b5' : '#9a9590';
+  }
+
+  fillEl.style.width  = pct + '%';
+  scoreEl.textContent = txt;
+}
+
+function playNavFeedback() {
+  if (moveIdx > 0 && hist[moveIdx - 1]) {
+    const san = hist[moveIdx - 1];
+    let sndName = 'Move';
+    if (san.includes('#')) sndName = 'Checkmate';
+    else if (san.includes('+')) sndName = 'Check';
+    else if (san.includes('x')) sndName = 'Capture';
+    snd(sndName);
+
+    const cls = clsArr[moveIdx - 1];
+    if (cls) haptic(cls);
+  }
 }
 
 /* ─── Keyboard ─── */
@@ -1240,8 +1494,14 @@ document.addEventListener('keydown', e => {
 /* ─── Util ─── */
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-/* ─── Initial empty board ─── */
+/* ─── Initial empty board & Listeners ─── */
 renderBoard();
+document.getElementById('chessboard').addEventListener('click', e => {
+  const sqEl = e.target.closest('.sq');
+  if (!sqEl) return;
+  const sq = sqEl.dataset.sq;
+  if (sq) handleSquareClick(sq);
+});
 android('onReviewLoaded');
 </script>
 </body>

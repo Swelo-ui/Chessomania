@@ -1,6 +1,10 @@
 package com.chessomania.app.ui
 
 import android.os.Bundle
+import android.content.Context
+import android.os.Vibrator
+import android.os.VibrationEffect
+import android.os.Build
 import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -126,6 +130,23 @@ class GameReviewActivity : AppCompatActivity() {
         @JavascriptInterface
         fun onReviewLoaded() {
             // Callback confirming the WebView UI was initialized successfully
+        }
+
+        @JavascriptInterface
+        fun vibrate(duration: Long) {
+            runOnUiThread {
+                try {
+                    val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator.vibrate(duration)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
     }
 }

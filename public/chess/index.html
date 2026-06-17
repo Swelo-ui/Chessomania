@@ -422,6 +422,8 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
 .badge.excellent{background:#38bdf8}
 .badge.best{background:#629924}
 .badge.book{background:#a855f7}
+.badge.brilliant{background:#12b6ad}
+.badge.missed{background:#ff7043}
 
 .graph-container{width:min(480px,calc(100vw - 550px));height:100px;background:var(--panel2);
   border:1px solid var(--border);border-radius:6px;position:relative;margin-top:5px;overflow:hidden}
@@ -837,6 +839,11 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
                 <td id="rev-acc-b" style="font-weight:bold;color:var(--green)">—</td>
               </tr>
               <tr>
+                <td>Brilliant <span class="badge brilliant" style="background:#12b6ad">!!</span></td>
+                <td id="rev-bril-w" style="color:#12b6ad;font-weight:bold">0</td>
+                <td id="rev-bril-b" style="color:#12b6ad;font-weight:bold">0</td>
+              </tr>
+              <tr>
                 <td>Best Move <span class="badge best">✓</span></td>
                 <td id="rev-best-w">0</td>
                 <td id="rev-best-b">0</td>
@@ -866,6 +873,11 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
                 <td id="rev-blun-w" style="color:#ef4444;font-weight:bold">0</td>
                 <td id="rev-blun-b" style="color:#ef4444;font-weight:bold">0</td>
               </tr>
+              <tr>
+                <td>Missed Win <span class="badge missed" style="background:#ff7043">✗</span></td>
+                <td id="rev-miss-w" style="color:#ff7043;font-weight:bold">0</td>
+                <td id="rev-miss-b" style="color:#ff7043;font-weight:bold">0</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -886,6 +898,12 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
       <div style="width:100%;height:6px;background:var(--panel2);border-radius:3px;overflow:hidden">
         <div class="progress-bar-fill" id="rev-progress-fill"></div>
       </div>
+    </div>
+    
+    <!-- Practice banner -->
+    <div id="rev-practice-banner" style="display:none;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);border-radius:6px;padding:8px 12px;margin-bottom:8px;text-align:center;width:min(480px,calc(100vw - 550px))">
+      <span style="font-size:0.75rem;font-weight:700;color:#38bdf8;margin-right:8px;">Practice Mode: Explore variations</span>
+      <button class="btn" style="padding:2px 8px;font-size:0.68rem;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;" onclick="exitRevPractice()">Return to Review</button>
     </div>
     
     <div class="eval-bar-h" style="width:min(480px,calc(100vw - 550px))"><div class="eval-fill-h" id="rev-fillh"></div></div>
@@ -3942,6 +3960,7 @@ let revInited = false;
 let revChess = new Chess();
 let revHist = [];
 let revFens = [];
+let revUciMoves = [];
 let revEvals = [];
 let revClassifications = [];
 let revMoveIdx = 0;
@@ -3950,6 +3969,8 @@ let revWorkers = [];
 let revWorkersReady = [];
 let revWorkerURL = null;
 let revIsAnalyzing = false;
+let revPracticeMode = false;
+let revPracticeChess = null;
 let revFlipped = false;
 let revLastMv = null;
 let revSel = null;
@@ -4102,22 +4123,71 @@ function turnAt(i) {
   return i % 2 === 0 ? 'w' : 'b';
 }
 
-function classifyMove(prev, curr, turn, playedUci, bestUci, isForced) {
+/* ─── Material value mapping ─── */
+function getMaterialValue(fen) {
+  const t = new Chess(fen);
+  let wVal = 0, bVal = 0;
+  for (let ri = 0; ri < 8; ri++) {
+    for (let fi = 0; fi < 8; fi++) {
+      const sq = FILES[fi] + RANKS[ri];
+      const p = t.get(sq);
+      if (p) {
+        let val = 100;
+        if (p.type === 'n') val = 300;
+        else if (p.type === 'b') val = 320;
+        else if (p.type === 'r') val = 500;
+        else if (p.type === 'q') val = 900;
+        
+        if (p.color === 'w') wVal += val;
+        else bVal += val;
+      }
+    }
+  }
+  return { wVal, bVal };
+}
+
+function classifyMove(i, isForced) {
   if (isForced) return 'forced';
-  if (playedUci === bestUci) return 'best';
   
-  const evalBefore = getWhitePerspectiveEval(prev, turn);
-  const evalAfter = getWhitePerspectiveEval(curr, turn === 'w' ? 'b' : 'w');
+  const prev = revEvals[i];
+  const curr = revEvals[i+1];
+  if (!prev || !curr) return 'good';
 
-  const movingPlayerEvalBefore = turn === 'w' ? evalBefore : -evalBefore;
-  const movingPlayerEvalAfter = turn === 'w' ? evalAfter : -evalAfter;
-
-  const loss = movingPlayerEvalBefore - movingPlayerEvalAfter;
+  const played = revUciMoves[i];
+  const best   = prev.bestMove;
   
+  const turn  = turnAt(i);
+  const nextT = turn === 'w' ? 'b' : 'w';
+  const wBef  = getWhitePerspectiveEval(prev, turn);
+  const wAft  = getWhitePerspectiveEval(curr, nextT);
+
+  const pBef  = turn === 'w' ? wBef : -wBef;
+  const pAft  = turn === 'w' ? wAft : -wAft;
+  const loss  = pBef - pAft;
+
+  // 1. Brilliant move detection (!!)
+  if (played && best && (played === best || loss <= 10) && pAft >= -100) {
+    const matBef = getMaterialValue(revFens[i]);
+    const matAft = getMaterialValue(revFens[i+1]);
+    const matDiff = turn === 'w' ? 
+      (matBef.wVal - matBef.bVal) - (matAft.wVal - matAft.bVal) :
+      (matBef.bVal - matBef.wVal) - (matAft.bVal - matAft.wVal);
+    if (matDiff < 0) {
+      return 'brilliant';
+    }
+  }
+
+  // 2. Missed Win detection (miss)
+  const hadMate = prev.mate !== null && ((turn === 'w' && prev.mate > 0) || (turn === 'b' && prev.mate < 0));
+  if ((pBef >= 250 || hadMate) && loss > 150 && pAft < 150) {
+    return 'missed';
+  }
+  
+  if (played && best && played === best) return 'best';
   if (loss <= 0) return 'best';
-  
-  const isEvalFlip = (movingPlayerEvalBefore >= 150 && movingPlayerEvalAfter <= 50) || 
-                     (movingPlayerEvalBefore > 0 && movingPlayerEvalAfter <= -100);
+
+  const isEvalFlip = (pBef >= 150 && pAft <= 50) || 
+                     (pBef > 0 && pAft <= -100);
 
   if (loss > 300 || isEvalFlip) return 'blunder';
   if (loss > 100) return 'mistake';
@@ -4162,7 +4232,7 @@ async function runGameAnalysis() {
     // Set up chess context to generate FENs
     const temp = new Chess();
     revFens = [temp.fen()];
-    const uciMoves = [];
+    revUciMoves = [];
     const forcedFlags = [];
     
     for (let i = 0; i < revHist.length; i++) {
@@ -4171,7 +4241,7 @@ async function runGameAnalysis() {
       const r = temp.move(revHist[i]);
       if (r) {
         revFens.push(temp.fen());
-        uciMoves.push(r.from + r.to + (r.promotion || ''));
+        revUciMoves.push(r.from + r.to + (r.promotion || ''));
       }
     }
 
@@ -4247,7 +4317,7 @@ async function runGameAnalysis() {
       const isEvalFlip = (movingPlayerEvalBefore >= 150 && movingPlayerEvalAfter <= 50) || 
                          (movingPlayerEvalBefore > 0 && movingPlayerEvalAfter <= -100);
 
-      if ((loss > 200 || isEvalFlip || revEvals[i].mate !== null || revEvals[i+1].mate !== null) && !forcedFlags[i] && revEvals[i].bestMove !== uciMoves[i]) {
+      if ((loss > 200 || isEvalFlip || revEvals[i].mate !== null || revEvals[i+1].mate !== null) && !forcedFlags[i] && revEvals[i].bestMove !== revUciMoves[i]) {
         // Collect indices to evaluate at depth 12
         if (!depth12Verified[i]) {
           const tempCheck = new Chess();
@@ -4292,8 +4362,7 @@ async function runGameAnalysis() {
     revClassifications = [];
     for (let i = 0; i < revHist.length; i++) {
       if (!revEvals[i] || !revEvals[i+1]) { revClassifications.push('good'); continue; }
-      const turn = turnAt(i);
-      const cls = classifyMove(revEvals[i], revEvals[i+1], turn, uciMoves[i], revEvals[i].bestMove, forcedFlags[i]);
+      const cls = classifyMove(i, forcedFlags[i]);
       revClassifications.push(cls);
     }
 
@@ -4324,8 +4393,8 @@ async function runGameAnalysis() {
 
 function calculateReviewStats() {
   const stats = {
-    w: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, forced: 0, lossSum: 0, count: 0 },
-    b: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, forced: 0, lossSum: 0, count: 0 }
+    w: { brilliant: 0, best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, forced: 0, missed: 0, lossSum: 0, count: 0 },
+    b: { brilliant: 0, best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, forced: 0, missed: 0, lossSum: 0, count: 0 }
   };
   
   for (let i = 0; i < revHist.length; i++) {
@@ -4334,13 +4403,15 @@ function calculateReviewStats() {
     const stat = stats[turn];
     stat.count++;
     
-    if (cls === 'best') stat.best++;
+    if (cls === 'brilliant') stat.brilliant++;
+    else if (cls === 'best') stat.best++;
     else if (cls === 'excellent') stat.excellent++;
     else if (cls === 'good') stat.good++;
     else if (cls === 'inaccuracy') stat.inaccuracy++;
     else if (cls === 'mistake') stat.mistake++;
     else if (cls === 'blunder') stat.blunder++;
     else if (cls === 'forced') stat.forced++;
+    else if (cls === 'missed') stat.missed++;
     
     if (revEvals[i] && revEvals[i+1] && cls !== 'forced') {
       const evalBefore = getWhitePerspectiveEval(revEvals[i], turn);
@@ -4355,6 +4426,8 @@ function calculateReviewStats() {
   }
 
   // Update UI stats table
+  document.getElementById('rev-bril-w').textContent = stats.w.brilliant;
+  document.getElementById('rev-bril-b').textContent = stats.b.brilliant;
   document.getElementById('rev-best-w').textContent = stats.w.best + stats.w.forced;
   document.getElementById('rev-best-b').textContent = stats.b.best + stats.b.forced;
   document.getElementById('rev-exc-w').textContent = stats.w.excellent;
@@ -4367,6 +4440,8 @@ function calculateReviewStats() {
   document.getElementById('rev-mist-b').textContent = stats.b.mistake;
   document.getElementById('rev-blun-w').textContent = stats.w.blunder;
   document.getElementById('rev-blun-b').textContent = stats.b.blunder;
+  document.getElementById('rev-miss-w').textContent = stats.w.missed;
+  document.getElementById('rev-miss-b').textContent = stats.b.missed;
 
   function acplToAcc(acpl) {
     return Math.max(0, Math.min(100,
@@ -4447,24 +4522,28 @@ function drawEvaluationGraph() {
 function revRender() {
   const effectiveMoveIdx = (revShowBest && revMoveIdx > 0) ? (revMoveIdx - 1) : revMoveIdx;
   
-  revChess = new Chess();
-  for (let i = 0; i < effectiveMoveIdx; i++) {
-    revChess.move(revHist[i]);
-  }
-  
-  revLastMv = null;
-  if (effectiveMoveIdx > 0 && revHist.length > 0) {
-    const temp = new Chess();
-    for (let i = 0; i < effectiveMoveIdx - 1; i++) {
-      temp.move(revHist[i]);
+  if (!revPracticeMode) {
+    revChess = new Chess();
+    for (let i = 0; i < effectiveMoveIdx; i++) {
+      revChess.move(revHist[i]);
     }
-    const r = temp.move(revHist[effectiveMoveIdx - 1]);
-    if (r) revLastMv = { from: r.from, to: r.to };
+    
+    revLastMv = null;
+    if (effectiveMoveIdx > 0 && revHist.length > 0) {
+      const temp = new Chess();
+      for (let i = 0; i < effectiveMoveIdx - 1; i++) {
+        temp.move(revHist[i]);
+      }
+      const r = temp.move(revHist[effectiveMoveIdx - 1]);
+      if (r) revLastMv = { from: r.from, to: r.to };
+    }
   }
 
   revRenderBoard();
   revUpdMoveList();
   revUpdRecommendation();
+  
+  if (revPracticeMode) return;
   
   const evalChess = new Chess();
   for (let i = 0; i < revMoveIdx; i++) {
@@ -4508,7 +4587,8 @@ function revRenderBoard() {
   document.getElementById('rev-rlbls').innerHTML = dR.map(r=>`<span>${r}</span>`).join('');
   document.getElementById('rev-flbls').innerHTML = dF.map(f=>`<span>${f}</span>`).join('');
   
-  const dests = revSel ? revChess.moves({ square: revSel, verbose: true }).map(m=>m.to) : [];
+  const currentChess = revPracticeMode ? revPracticeChess : revChess;
+  const dests = revSel ? currentChess.moves({ square: revSel, verbose: true }).map(m=>m.to) : [];
   
   let showBestFrom = null;
   let showBestTo = null;
@@ -4523,7 +4603,7 @@ function revRenderBoard() {
   for (let ri = 0; ri < 8; ri++) {
     for (let fi = 0; fi < 8; fi++) {
       const f = dF[fi], r = dR[ri], sq = f+r;
-      const p = revChess.get(sq);
+      const p = currentChess.get(sq);
       const isL = (FILES.indexOf(f) + r) % 2 === 1;
       
       const d = document.createElement('div');
@@ -4551,26 +4631,53 @@ function revRenderBoard() {
       }
       
       d.addEventListener('click', () => {
-        if (revIsAnalyzing) return;
-        const piece = revChess.get(sq);
+        if (revIsAnalyzing && !revPracticeMode) return;
+        const currentChess = revPracticeMode ? revPracticeChess : revChess;
+        const piece = currentChess.get(sq);
         if (revSel) {
           if (revSel === sq) { revSel = null; revRenderBoard(); return; }
-          const mvs = revChess.moves({ square: revSel, verbose: true });
+          const mvs = currentChess.moves({ square: revSel, verbose: true });
           const mv = mvs.find(m => m.to === sq);
           if (mv) {
-            const res = revChess.move({ from: revSel, to: sq, promotion: 'q' });
+            let promotion = undefined;
+            const pieceType = currentChess.get(revSel)?.type;
+            if (pieceType === 'p' && (sq[1] === '8' || sq[1] === '1')) {
+              promotion = 'q';
+            }
+            const res = currentChess.move({ from: revSel, to: sq, promotion: promotion });
             if (res) {
-              revHist = revHist.slice(0, revMoveIdx);
-              revHist.push(res.san);
-              revEvals = [];
-              revClassifications = [];
-              revMoveIdx++;
               revSel = null;
-              runGameAnalysis();
+              
+              let soundName = 'Move';
+              if (res.captured) soundName = 'Capture';
+              else if (currentChess.in_check()) {
+                soundName = currentChess.in_checkmate() ? 'Checkmate' : 'Check';
+              }
+              snd(soundName);
+
+              if (!revPracticeMode) {
+                const expectedUci = revUciMoves[revMoveIdx];
+                const actualUci = res.from + res.to + (res.promotion || '');
+                if (actualUci === expectedUci) {
+                  revMoveIdx++;
+                  revRender();
+                  const cls = revClassifications[revMoveIdx - 1];
+                  if (cls) browserVibrate(cls);
+                  return;
+                } else {
+                  revPracticeMode = true;
+                  revPracticeChess = new Chess(revFens[revMoveIdx]);
+                  revPracticeChess.move(res);
+                }
+              }
+              
+              document.getElementById('rev-practice-banner').style.display = 'block';
+              revRenderBoard();
+              evalRevPracticeMove();
               return;
             }
           }
-          if (piece && piece.color === revChess.turn()) {
+          if (piece && piece.color === currentChess.turn()) {
             revSel = sq;
             revRenderBoard();
             return;
@@ -4578,7 +4685,7 @@ function revRenderBoard() {
           revSel = null;
           revRenderBoard();
         } else {
-          if (piece && piece.color === revChess.turn()) {
+          if (piece && piece.color === currentChess.turn()) {
             revSel = sq;
             revRenderBoard();
           }
@@ -4587,6 +4694,64 @@ function revRenderBoard() {
       
       board.appendChild(d);
     }
+  }
+}
+
+function browserVibrate(cls) {
+  if (navigator.vibrate) {
+    if (cls === 'blunder') {
+      navigator.vibrate(250);
+    } else if (cls === 'mistake') {
+      navigator.vibrate(100);
+    } else if (cls === 'inaccuracy') {
+      navigator.vibrate(55);
+    } else if (cls === 'brilliant') {
+      navigator.vibrate([80, 100, 80]);
+    } else if (cls === 'missed') {
+      navigator.vibrate(120);
+    } else if (cls === 'best' || cls === 'excellent' || cls === 'forced') {
+      navigator.vibrate(35);
+    }
+  }
+}
+
+function exitRevPractice() {
+  revPracticeMode = false;
+  revPracticeChess = null;
+  revSel = null;
+  document.getElementById('rev-practice-banner').style.display = 'none';
+  revRender();
+}
+
+async function evalRevPracticeMove() {
+  if (!revPracticeChess) return;
+  const fen = revPracticeChess.fen();
+  const scoreEl = document.getElementById('rev-played-desc');
+  scoreEl.textContent = 'Evaluating move...';
+  
+  await initRevSF();
+  if (revWorkers.length > 0) {
+    const res = await evaluatePositionWithWorker(revWorkers[0], fen, 8);
+    const turn = revPracticeChess.turn();
+    const wVal = getWhitePerspectiveEval(res, turn);
+    
+    let txt = '';
+    if (res.mate !== null) {
+      txt = (wVal > 0 ? 'M+' : 'M-') + Math.abs(res.mate);
+    } else {
+      const v = wVal / 100;
+      txt = (v >= 0 ? '+' : '') + v.toFixed(2);
+    }
+    scoreEl.textContent = `Practice Move Eval: ${txt}`;
+    
+    const fillEl = document.getElementById('rev-fillh');
+    let pct = 50;
+    if (res.mate !== null) {
+      pct = wVal > 0 ? 95 : 5;
+    } else {
+      pct = Math.max(5, Math.min(95, 50 + (wVal / 100) * 8));
+    }
+    fillEl.style.width = pct + '%';
   }
 }
 
@@ -4707,37 +4872,60 @@ function revUpdRecommendation() {
 }
 
 function jumpReviewStart() {
+  exitRevPractice();
   revMoveIdx = 0;
   revShowBest = false;
   revRender();
 }
 
 function prevReviewMove() {
+  exitRevPractice();
   if (revMoveIdx > 0) {
     revMoveIdx--;
     revShowBest = false;
     revRender();
+    playRevNavFeedback();
   }
 }
 
 function nextReviewMove() {
+  exitRevPractice();
   if (revMoveIdx < revHist.length) {
     revMoveIdx++;
     revShowBest = false;
     revRender();
+    playRevNavFeedback();
   }
 }
 
 function jumpReviewEnd() {
+  exitRevPractice();
   revMoveIdx = revHist.length;
   revShowBest = false;
   revRender();
+  playRevNavFeedback();
 }
 
 function jumpToReviewMove(idx) {
+  exitRevPractice();
   revMoveIdx = idx;
   revShowBest = false;
   revRender();
+  playRevNavFeedback();
+}
+
+function playRevNavFeedback() {
+  if (revMoveIdx > 0 && revHist[revMoveIdx - 1]) {
+    const san = revHist[revMoveIdx - 1];
+    let sndName = 'Move';
+    if (san.includes('#')) sndName = 'Checkmate';
+    else if (san.includes('+')) sndName = 'Check';
+    else if (san.includes('x')) sndName = 'Capture';
+    snd(sndName);
+
+    const cls = revClassifications[revMoveIdx - 1];
+    if (cls) browserVibrate(cls);
+  }
 }
 
 function revFlip() {
