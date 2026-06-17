@@ -472,8 +472,9 @@ let fens      = [];
 let evals     = [];
 let clsArr    = [];
 let moveIdx   = 0;
-let sfWorker  = null;
-let sfReady   = false;
+const WORKER_COUNT = 3;
+let sfWorkers = [];
+let sfWorkersReady = [];
 let analyzing = false;
 let flipped   = false;
 let showBest  = false;
@@ -527,42 +528,38 @@ async function cacheSet(k, v) {
 
 /* ─── Stockfish worker ──────────────────────────── */
 function initSF() {
-  if (sfWorker) return;
-  try {
-    sfWorker = new Worker('stockfish.js');
-    sfWorker.onerror = (e) => {
-      console.error('SF Worker error:', e);
-      sfWorker = null;
-      sfReady = false;
-      showError('Engine failed to load. Showing basic board only.');
-    };
-    sfWorker.postMessage('uci');
-    sfWorker.postMessage('setoption name Hash value 16');
-    sfWorker.postMessage('setoption name Threads value 1');
-    sfWorker.postMessage('isready');
-    sfWorker.addEventListener('message', function onReady(e) {
-      if (e.data === 'readyok') {
-        sfReady = true;
-        sfWorker.removeEventListener('message', onReady);
-      }
-    });
-  } catch(e) {
-    console.error('Cannot create SF worker:', e);
-    sfWorker = null;
-    sfReady = false;
-    showError('Engine not available. Board view only.');
+  if (sfWorkers.length > 0) return;
+  for (let i = 0; i < WORKER_COUNT; i++) {
+    try {
+      const w = new Worker('stockfish.js');
+      const idx = i;
+      w.onerror = (e) => {
+        console.error(`SF Worker ${idx} error:`, e);
+      };
+      w.postMessage('uci');
+      w.postMessage('setoption name Hash value 16');
+      w.postMessage('setoption name Threads value 1');
+      w.postMessage('isready');
+      w.addEventListener('message', function onReady(e) {
+        if (e.data === 'readyok') {
+          sfWorkersReady[idx] = true;
+          w.removeEventListener('message', onReady);
+        }
+      });
+      sfWorkers.push(w);
+      sfWorkersReady.push(false);
+    } catch (e) {
+      console.error(`Cannot create SF worker ${i}:`, e);
+      showError('Engine not available. Board view only.');
+    }
   }
 }
 
-function evalPos(fen, depth) {
+function evalPosWithWorker(worker, fen, depth) {
   return new Promise(resolve => {
-    if (!sfWorker) {
-      resolve({ cp: 0, mate: null, bestMove: '(none)' });
-      return;
-    }
     let cp = 0, mate = null, bestMove = '(none)';
     const timeout = setTimeout(() => {
-      sfWorker.removeEventListener('message', onMsg);
+      worker.removeEventListener('message', onMsg);
       resolve({ cp, mate, bestMove });
     }, 8000); // 8s timeout per position
 
@@ -576,13 +573,13 @@ function evalPos(fen, depth) {
         clearTimeout(timeout);
         const parts = line.split(' ');
         bestMove = parts[1] || '(none)';
-        sfWorker.removeEventListener('message', onMsg);
+        worker.removeEventListener('message', onMsg);
         resolve({ cp, mate, bestMove });
       }
     }
-    sfWorker.addEventListener('message', onMsg);
-    sfWorker.postMessage('position fen ' + fen);
-    sfWorker.postMessage('go depth ' + depth);
+    worker.addEventListener('message', onMsg);
+    worker.postMessage('position fen ' + fen);
+    worker.postMessage('go depth ' + depth);
   });
 }
 
@@ -662,12 +659,14 @@ async function runAnalysis() {
     }
 
     initSF();
-    // Wait a moment for SF to init if it just started
-    if (!sfReady && sfWorker) {
+    
+    // Wait a moment for SF to init if any are not ready
+    let anyReady = sfWorkersReady.some(r => r);
+    if (!anyReady && sfWorkers.length > 0) {
       await new Promise(res => setTimeout(res, 1500));
     }
 
-    if (!sfWorker) {
+    if (sfWorkers.length === 0) {
       analyzing = false;
       setProgress(false, '', 0);
       moveIdx = hist.length;
@@ -675,29 +674,46 @@ async function runAnalysis() {
       return;
     }
 
-    // Pass 1: Bulk scan at depth 8
-    evals = [];
+    // Pass 1: Bulk scan at depth 8 in parallel
+    evals = new Array(fens.length);
+    const activeTasks = [];
     const temp3 = new Chess();
     for (let i = 0; i < fens.length; i++) {
-      setProgress(true, `Analyzing ${i} / ${fens.length - 1}`, Math.round((i / fens.length) * 100));
-      
       if (temp3.game_over()) {
         if (temp3.in_checkmate()) {
-          evals.push({ cp: 0, mate: 0, bestMove: '(none)' });
+          evals[i] = { cp: 0, mate: 0, bestMove: '(none)' };
         } else {
-          evals.push({ cp: 0, mate: null, bestMove: '(none)' });
+          evals[i] = { cp: 0, mate: null, bestMove: '(none)' };
         }
       } else {
-        const res = await evalPos(fens[i], 8);
-        evals.push(res);
+        activeTasks.push({ fen: fens[i], index: i });
       }
-      
       if (i < hist.length) {
         temp3.move(hist[i]);
       }
     }
 
-    // Pass 2: High-depth re-verification (depth 13) for large swings (> 100 cp loss)
+    if (activeTasks.length > 0) {
+      let nextTaskIdx = 0;
+      let finishedCount = fens.length - activeTasks.length;
+
+      const workerPromises = sfWorkers.map(async (worker) => {
+        while (nextTaskIdx < activeTasks.length) {
+          const taskIdx = nextTaskIdx++;
+          const task = activeTasks[taskIdx];
+          
+          const res = await evalPosWithWorker(worker, task.fen, 8);
+          evals[task.index] = res;
+          
+          finishedCount++;
+          setProgress(true, `Analyzing ${finishedCount} / ${fens.length - 1}`, Math.round((finishedCount / fens.length) * 100));
+        }
+      });
+      await Promise.all(workerPromises);
+    }
+
+    // Pass 2: High-depth re-verification (depth 13) in parallel
+    const depth13Tasks = [];
     const depth13Verified = new Array(fens.length).fill(false);
     for (let i = 0; i < hist.length; i++) {
       if (!evals[i] || !evals[i+1]) continue;
@@ -711,25 +727,43 @@ async function runAnalysis() {
       const loss = movingPlayerEvalBefore - movingPlayerEvalAfter;
 
       if (loss > 100 && !forcedFlags[i] && evals[i].bestMove !== uciMoves[i]) {
-        setProgress(true, `Refining move ${i+1} / ${hist.length}...`, Math.round((i / hist.length) * 100));
-        
-        // Re-verify position before the move
-        const tempCheck = new Chess();
-        for (let k = 0; k < i; k++) tempCheck.move(hist[k]);
-        if (!tempCheck.game_over() && !depth13Verified[i]) {
-          evals[i] = await evalPos(fens[i], 13);
-          depth13Verified[i] = true;
+        // Collect indices to evaluate at depth 13
+        if (!depth13Verified[i]) {
+          const tempCheck = new Chess();
+          for (let k = 0; k < i; k++) tempCheck.move(hist[k]);
+          if (!tempCheck.game_over()) {
+            depth13Tasks.push({ fen: fens[i], index: i });
+            depth13Verified[i] = true;
+          }
         }
-
-        // Re-verify position after the move
-        if (i < hist.length) {
-          tempCheck.move(hist[i]);
-          if (!tempCheck.game_over() && !depth13Verified[i+1]) {
-            evals[i+1] = await evalPos(fens[i+1], 13);
+        if (!depth13Verified[i+1] && i+1 < fens.length) {
+          const tempCheck = new Chess();
+          for (let k = 0; k < i + 1; k++) tempCheck.move(hist[k]);
+          if (!tempCheck.game_over()) {
+            depth13Tasks.push({ fen: fens[i+1], index: i+1 });
             depth13Verified[i+1] = true;
           }
         }
       }
+    }
+
+    if (depth13Tasks.length > 0) {
+      let nextD13TaskIdx = 0;
+      let finishedD13Count = 0;
+      
+      const d13Promises = sfWorkers.map(async (worker) => {
+        while (nextD13TaskIdx < depth13Tasks.length) {
+          const taskIdx = nextD13TaskIdx++;
+          const task = depth13Tasks[taskIdx];
+          
+          const res = await evalPosWithWorker(worker, task.fen, 13);
+          evals[task.index] = res;
+          
+          finishedD13Count++;
+          setProgress(true, `Refining move ${finishedD13Count} / ${depth13Tasks.length}...`, Math.round((finishedD13Count / depth13Tasks.length) * 100));
+        }
+      });
+      await Promise.all(d13Promises);
     }
 
     // Pass 3: Final pass classification

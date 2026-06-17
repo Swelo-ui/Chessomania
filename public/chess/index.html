@@ -3945,7 +3945,8 @@ let revFens = [];
 let revEvals = [];
 let revClassifications = [];
 let revMoveIdx = 0;
-let revWorker = null;
+const WORKER_COUNT = 3;
+let revWorkers = [];
 let revIsAnalyzing = false;
 let revFlipped = false;
 let revLastMv = null;
@@ -4007,37 +4008,34 @@ function initReview() {
 }
 
 function initRevSF() {
-  if (revWorker) return;
-  try {
-    revWorker = new Worker('/npm/stockfish.js/stockfish.js');
-    revWorker.onerror = (e) => {
-      console.error('Review SF worker error:', e);
-      revWorker = null;
-    };
-    revWorker.postMessage('uci');
-    revWorker.postMessage('setoption name Hash value 32');
-    revWorker.postMessage('setoption name Threads value 1');
-    revWorker.postMessage('isready');
-  } catch (e) {
-    console.error('Failed to init Stockfish for Review:', e);
-    revWorker = null;
+  if (revWorkers.length > 0) return;
+  for (let i = 0; i < WORKER_COUNT; i++) {
+    try {
+      const w = new Worker('/npm/stockfish.js/stockfish.js');
+      const idx = i;
+      w.onerror = (e) => {
+        console.error(`Review SF Worker ${idx} error:`, e);
+      };
+      w.postMessage('uci');
+      w.postMessage('setoption name Hash value 32');
+      w.postMessage('setoption name Threads value 1');
+      w.postMessage('isready');
+      revWorkers.push(w);
+    } catch (e) {
+      console.error(`Failed to init Stockfish worker ${i} for Review:`, e);
+    }
   }
 }
 
-function evaluatePosition(fen, depth) {
+function evaluatePositionWithWorker(worker, fen, depth) {
   return new Promise((resolve) => {
-    initRevSF();
-    if (!revWorker) {
-      resolve({ cp: 0, mate: null, bestMove: '(none)' });
-      return;
-    }
     let bestMove = '(none)';
     let cp = 0;
     let mate = null;
     
     // Timeout per position to prevent hanging
     const timer = setTimeout(() => {
-      revWorker.removeEventListener('message', onMsg);
+      worker.removeEventListener('message', onMsg);
       resolve({ cp, mate, bestMove });
     }, 10000);
 
@@ -4051,14 +4049,14 @@ function evaluatePosition(fen, depth) {
         clearTimeout(timer);
         const parts = line.split(' ');
         bestMove = parts[1] || '(none)';
-        revWorker.removeEventListener('message', onMsg);
+        worker.removeEventListener('message', onMsg);
         resolve({ cp, mate, bestMove });
       }
     };
     
-    revWorker.addEventListener('message', onMsg);
-    revWorker.postMessage(`position fen ${fen}`);
-    revWorker.postMessage(`go depth ${depth}`);
+    worker.addEventListener('message', onMsg);
+    worker.postMessage(`position fen ${fen}`);
+    worker.postMessage(`go depth ${depth}`);
   });
 }
 
@@ -4146,9 +4144,8 @@ async function runGameAnalysis() {
     }
 
     initRevSF();
-    revEvals = [];
     
-    if (!revWorker) {
+    if (revWorkers.length === 0) {
       revIsAnalyzing = false;
       progContainer.style.display = 'none';
       revMoveIdx = revHist.length;
@@ -4156,29 +4153,47 @@ async function runGameAnalysis() {
       return;
     }
     
-    // Pass 1: Bulk scan at depth 8
+    // Pass 1: Bulk scan at depth 8 in parallel
+    revEvals = new Array(revFens.length);
+    const activeTasks = [];
     const temp3 = new Chess();
     for (let i = 0; i < revFens.length; i++) {
-      txt.textContent = `Analyzing position ${i} / ${revFens.length - 1}...`;
-      fill.style.width = `${Math.round((i / revFens.length) * 100)}%`;
-      
       if (temp3.game_over()) {
         if (temp3.in_checkmate()) {
-          revEvals.push({ cp: 0, mate: 0, bestMove: '(none)' });
+          revEvals[i] = { cp: 0, mate: 0, bestMove: '(none)' };
         } else {
-          revEvals.push({ cp: 0, mate: null, bestMove: '(none)' });
+          revEvals[i] = { cp: 0, mate: null, bestMove: '(none)' };
         }
       } else {
-        const res = await evaluatePosition(revFens[i], 8);
-        revEvals.push(res);
+        activeTasks.push({ fen: revFens[i], index: i });
       }
-      
       if (i < revHist.length) {
         temp3.move(revHist[i]);
       }
     }
 
-    // Pass 2: High-depth re-verification (depth 13) for large swings (> 100 cp loss)
+    if (activeTasks.length > 0) {
+      let nextTaskIdx = 0;
+      let finishedCount = revFens.length - activeTasks.length;
+
+      const workerPromises = revWorkers.map(async (worker) => {
+        while (nextTaskIdx < activeTasks.length) {
+          const taskIdx = nextTaskIdx++;
+          const task = activeTasks[taskIdx];
+          
+          const res = await evaluatePositionWithWorker(worker, task.fen, 8);
+          revEvals[task.index] = res;
+          
+          finishedCount++;
+          txt.textContent = `Analyzing position ${finishedCount} / ${revFens.length - 1}...`;
+          fill.style.width = `${Math.round((finishedCount / revFens.length) * 100)}%`;
+        }
+      });
+      await Promise.all(workerPromises);
+    }
+
+    // Pass 2: High-depth re-verification (depth 13) in parallel
+    const depth13Tasks = [];
     const depth13Verified = new Array(revFens.length).fill(false);
     for (let i = 0; i < revHist.length; i++) {
       if (!revEvals[i] || !revEvals[i+1]) continue;
@@ -4192,24 +4207,44 @@ async function runGameAnalysis() {
       const loss = movingPlayerEvalBefore - movingPlayerEvalAfter;
 
       if (loss > 100 && !forcedFlags[i] && revEvals[i].bestMove !== uciMoves[i]) {
-        txt.textContent = `Refining move ${i+1} / ${revHist.length}...`;
-        fill.style.width = `${Math.round((i / revHist.length) * 100)}%`;
-        
-        const tempCheck = new Chess();
-        for (let k = 0; k < i; k++) tempCheck.move(revHist[k]);
-        if (!tempCheck.game_over() && !depth13Verified[i]) {
-          revEvals[i] = await evaluatePosition(revFens[i], 13);
-          depth13Verified[i] = true;
+        // Collect indices to evaluate at depth 13
+        if (!depth13Verified[i]) {
+          const tempCheck = new Chess();
+          for (let k = 0; k < i; k++) tempCheck.move(revHist[k]);
+          if (!tempCheck.game_over()) {
+            depth13Tasks.push({ fen: revFens[i], index: i });
+            depth13Verified[i] = true;
+          }
         }
-
-        if (i < revHist.length) {
-          tempCheck.move(revHist[i]);
-          if (!tempCheck.game_over() && !depth13Verified[i+1]) {
-            revEvals[i+1] = await evaluatePosition(revFens[i+1], 13);
+        if (!depth13Verified[i+1] && i+1 < revFens.length) {
+          const tempCheck = new Chess();
+          for (let k = 0; k < i + 1; k++) tempCheck.move(revHist[k]);
+          if (!tempCheck.game_over()) {
+            depth13Tasks.push({ fen: revFens[i+1], index: i+1 });
             depth13Verified[i+1] = true;
           }
         }
       }
+    }
+
+    if (depth13Tasks.length > 0) {
+      let nextD13TaskIdx = 0;
+      let finishedD13Count = 0;
+      
+      const d13Promises = revWorkers.map(async (worker) => {
+        while (nextD13TaskIdx < depth13Tasks.length) {
+          const taskIdx = nextD13TaskIdx++;
+          const task = depth13Tasks[taskIdx];
+          
+          const res = await evaluatePositionWithWorker(worker, task.fen, 13);
+          revEvals[task.index] = res;
+          
+          finishedD13Count++;
+          txt.textContent = `Refining move ${finishedD13Count} / ${depth13Tasks.length}...`;
+          fill.style.width = `${Math.round((finishedD13Count / depth13Tasks.length) * 100)}%`;
+        }
+      });
+      await Promise.all(d13Promises);
     }
 
     // Pass 3: Final pass classification
