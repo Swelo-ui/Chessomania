@@ -176,7 +176,16 @@ class SettingsFragment : Fragment() {
             val bgMusic = com.chessomania.app.audio.BgMusicManager.getInstance(context)
             bgMusic.isEnabled = isChecked
             if (isChecked) {
-                bgMusic.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
+                val position = themeSpinner.selectedItemPosition
+                val track = when (position) {
+                    0 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+                    1 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY
+                    2 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE
+                    3 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.VICTORY
+                    4 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.DEFEAT
+                    else -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+                }
+                bgMusic.play(track)
             } else {
                 bgMusic.stop()
             }

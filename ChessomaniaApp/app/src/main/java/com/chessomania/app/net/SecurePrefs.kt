@@ -58,7 +58,7 @@ object SecurePrefs {
     }
 
     fun getMusicVolume(context: Context): Float {
-        return getPrefs(context).getFloat("bg_music_volume", 0.25f)
+        return getPrefs(context).getFloat("bg_music_volume", 0.50f)
     }
 
     fun setMusicThemeIndex(context: Context, index: Int) {

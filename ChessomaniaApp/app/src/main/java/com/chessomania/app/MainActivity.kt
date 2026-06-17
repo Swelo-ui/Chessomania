@@ -153,7 +153,25 @@ class MainActivity : AppCompatActivity() {
         val bgMusic = com.chessomania.app.audio.BgMusicManager.getInstance(this)
         bgMusic.isEnabled = com.chessomania.app.net.SecurePrefs.isMusicEnabled(this)
         bgMusic.musicVolume = com.chessomania.app.net.SecurePrefs.getMusicVolume(this)
-        bgMusic.resume()
+        if (bgMusic.isEnabled) {
+            if (bgMusic.currentTrack == null) {
+                val track = when (activeFragment?.tag) {
+                    "puzzle" -> com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE
+                    "play" -> {
+                        val playFrag = playFragment
+                        if (playFrag != null && playFrag.isInActiveGame()) {
+                            com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY
+                        } else {
+                            com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+                        }
+                    }
+                    else -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+                }
+                bgMusic.play(track)
+            } else {
+                bgMusic.resume()
+            }
+        }
     }
 
     override fun onPause() {

@@ -6,7 +6,7 @@ class BgMusicManager {
     constructor() {
         this.audio = null;
         this.isEnabled = localStorage.getItem('chess_bg_music') !== 'false';
-        this.volume = parseFloat(localStorage.getItem('chess_music_volume')) || 0.25;
+        this.volume = parseFloat(localStorage.getItem('chess_music_volume')) || 0.50;
         
         this.currentTrack = null;
         this.targetTrack = null;

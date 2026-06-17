@@ -997,7 +997,7 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 0.8rem; color: var(--text2); min-width: 50px;">Volume</span>
-          <input type="range" id="music-vol-slider" min="0" max="100" value="25" style="flex: 1; accent-color: var(--accent); cursor: pointer;" oninput="changeWebMusicVolume(this.value)">
+          <input type="range" id="music-vol-slider" min="0" max="100" value="50" style="flex: 1; accent-color: var(--accent); cursor: pointer;" oninput="changeWebMusicVolume(this.value)">
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 0.8rem; color: var(--text2); min-width: 50px;">Style</span>
@@ -1300,6 +1300,10 @@ function playWebMusicTrack(category) {
 function toggleWebMusic(enabled) {
   bgMusic.setEnabled(enabled);
   updateMusicUI();
+  if (enabled && !bgMusic.currentTrack) {
+    const style = localStorage.getItem('chess_music_style') || 'menu';
+    playWebMusicTrack(style);
+  }
 }
 function changeWebMusicVolume(val) {
   const vol = val / 100;
@@ -1339,6 +1343,13 @@ document.addEventListener('click', () => {
     playWebMusicTrack(style);
   }
 }, { once: true });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    bgMusic.pause();
+  } else {
+    bgMusic.resume();
+  }
+});
 
 // ── BOARD THEME APPLY ────────────────────────────────────────────────
 function applyBoardTheme(theme) {

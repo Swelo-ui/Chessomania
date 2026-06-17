@@ -27,7 +27,8 @@ class BgMusicManager private constructor(private val context: Context) {
     private var mediaPlayer: MediaPlayer? = null
 
     // Track states
-    private var currentTrack: MusicTrack? = null
+    var currentTrack: MusicTrack? = null
+        private set
     private var targetTrack: MusicTrack? = null
 
     // Volume states
@@ -45,7 +46,7 @@ class BgMusicManager private constructor(private val context: Context) {
     private val volumeStep: Float
         get() = if (musicVolume > 0f) (musicVolume / (fadeDurationMs / tickMs)).coerceAtLeast(0.005f) else 0.01f
 
-    var musicVolume: Float = 0.25f
+    var musicVolume: Float = 0.50f
         set(value) {
             field = value.coerceIn(0f, 1f)
             // If playing or fading to active volume, update the target
