@@ -351,7 +351,9 @@ function navSound(newIdx){
   else if(tmp.in_check())     snd('check');
   else if(hist[newIdx-1]?.includes('x')) snd('capture');
   else                        snd('move');
-  haptic(22);
+  const cls=clsArr[newIdx-1];
+  if(cls)hapticForCls(cls);
+  else haptic(22);
 }
 
 /* ═══════════ Timer ═══════════ */
@@ -899,50 +901,68 @@ function exitPractice(){
 }
 
 async function handleSquareClick(sq){
-  if(!practiceMode){
-    // Click a piece → auto-enter practice mode
-    const p=chess.get(sq);
-    if(p&&p.color===chess.turn()&&!chess.game_over()){
-      enterPractice();
-      selectedSq=sq;
-      legalTargets=chess.moves({square:sq,verbose:true}).map(m=>m.to);
-      renderBoard();
-    }
+  const currentChess = chess;
+  const piece = currentChess.get(sq);
+
+  if (selectedSq === sq) {
+    selectedSq = null;
+    renderBoard();
     return;
   }
-  // In practice mode
-  if(selectedSq&&legalTargets.includes(sq)){
-    const promo=(sq[1]==='8'||sq[1]==='1')?'q':undefined;
-    const r=chess.move({from:selectedSq,to:sq,promotion:promo});
-    if(r){
-      if(chess.in_checkmate())     {snd('checkmate');haptic(500);}
-      else if(chess.in_check())    {snd('check');haptic(100);}
-      else if(r.captured)          {snd('capture');haptic(50);}
-      else                         {snd('move');haptic(25);}
-      lastMove={from:r.from,to:r.to};
-      selectedSq=null;legalTargets=[];
-      renderBoard();
-      // Quick engine eval of new position
-      if(sfW.length&&sfReady.some(Boolean)&&!chess.game_over()){
-        const worker=sfW[sfReady.findIndex(Boolean)];
-        const ev=await evalPos(worker,chess.fen(),8);
-        setEvalFromCustom(ev,chess.turn());
-      }else if(chess.game_over()){
-        if(chess.in_checkmate()){
-          const wL=chess.turn()==='w';
-          document.getElementById('eval-fill').style.width=wL?'2%':'98%';
-          document.getElementById('eval-score').textContent=wL?'0-1':'1-0';
+
+  if (selectedSq && legalTargets.includes(sq)) {
+    const promo = (sq[1] === '8' || sq[1] === '1') ? 'q' : undefined;
+    const r = currentChess.move({ from: selectedSq, to: sq, promotion: promo });
+    if (r) {
+      if (currentChess.in_checkmate())     { snd('checkmate'); haptic(500); }
+      else if (currentChess.in_check())    { snd('check'); haptic(100); }
+      else if (r.captured)                 { snd('capture'); haptic(50); }
+      else                                 { snd('move'); haptic(25); }
+
+      lastMove = { from: r.from, to: r.to };
+      selectedSq = null; legalTargets = [];
+
+      if (!practiceMode) {
+        const expectedUci = uciMoves[moveIdx];
+        const actualUci = r.from + r.to + (r.promotion || '');
+        if (actualUci === expectedUci) {
+          moveIdx++;
+          render();
+          const cls = clsArr[moveIdx - 1];
+          if (cls) hapticForCls(cls);
+          return;
+        } else {
+          practiceMode = true;
+          practiceBase = moveIdx;
+          document.getElementById('practice-banner').style.display = 'flex';
+          updQualityPanel();
         }
       }
-    }else{selectedSq=null;legalTargets=[];renderBoard();}
-  }else{
-    const p=chess.get(sq);
-    if(p&&p.color===chess.turn()&&!chess.game_over()){
-      selectedSq=sq;
-      legalTargets=chess.moves({square:sq,verbose:true}).map(m=>m.to);
-    }else{selectedSq=null;legalTargets=[];}
-    renderBoard();
+
+      renderBoard();
+      // Quick engine eval of new position
+      if (sfW.length && sfReady.some(Boolean) && !currentChess.game_over()) {
+        const worker = sfW[sfReady.findIndex(Boolean)];
+        const ev = await evalPos(worker, currentChess.fen(), 8);
+        setEvalFromCustom(ev, currentChess.turn());
+      } else if (currentChess.game_over()) {
+        if (currentChess.in_checkmate()) {
+          const wL = currentChess.turn() === 'w';
+          document.getElementById('eval-fill').style.width = wL ? '2%' : '98%';
+          document.getElementById('eval-score').textContent = wL ? '0-1' : '1-0';
+        }
+      }
+      return;
+    }
   }
+
+  if (piece && piece.color === currentChess.turn() && !currentChess.game_over()) {
+    selectedSq = sq;
+    legalTargets = currentChess.moves({ square: sq, verbose: true }).map(m => m.to);
+  } else {
+    selectedSq = null; legalTargets = [];
+  }
+  renderBoard();
 }
 
 /* ═══════════ Navigation ═══════════ */
