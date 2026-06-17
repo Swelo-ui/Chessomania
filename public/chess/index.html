@@ -3947,6 +3947,8 @@ let revClassifications = [];
 let revMoveIdx = 0;
 const WORKER_COUNT = 3;
 let revWorkers = [];
+let revWorkersReady = [];
+let revWorkerURL = null;
 let revIsAnalyzing = false;
 let revFlipped = false;
 let revLastMv = null;
@@ -4007,11 +4009,26 @@ function initReview() {
   revRender();
 }
 
-function initRevSF() {
+async function initRevSF() {
   if (revWorkers.length > 0) return;
-  for (let i = 0; i < WORKER_COUNT; i++) {
-    try {
-      const w = new Worker('/npm/stockfish.js/stockfish.js');
+  try {
+    const res = await fetch('/npm/stockfish.js/stockfish.js');
+    const jsCode = await res.text();
+    
+    const prefix = window.location.origin + '/npm/stockfish.js/';
+    const blobCode = `
+self.Module = {
+  locateFile: function(path) {
+    return "${prefix}" + path;
+  }
+};
+` + jsCode;
+
+    const blob = new Blob([blobCode], { type: 'application/javascript' });
+    revWorkerURL = URL.createObjectURL(blob);
+
+    for (let i = 0; i < WORKER_COUNT; i++) {
+      const w = new Worker(revWorkerURL);
       const idx = i;
       w.onerror = (e) => {
         console.error(`Review SF Worker ${idx} error:`, e);
@@ -4020,10 +4037,17 @@ function initRevSF() {
       w.postMessage('setoption name Hash value 32');
       w.postMessage('setoption name Threads value 1');
       w.postMessage('isready');
+      w.addEventListener('message', function onReady(e) {
+        if (e.data === 'readyok') {
+          revWorkersReady[idx] = true;
+          w.removeEventListener('message', onReady);
+        }
+      });
       revWorkers.push(w);
-    } catch (e) {
-      console.error(`Failed to init Stockfish worker ${i} for Review:`, e);
+      revWorkersReady.push(false);
     }
+  } catch (e) {
+    console.error(`Failed to init Stockfish workers for Review:`, e);
   }
 }
 
@@ -4143,7 +4167,13 @@ async function runGameAnalysis() {
       }
     }
 
-    initRevSF();
+    await initRevSF();
+    
+    // Wait for at least one worker to be ready (up to 1.5 seconds)
+    let startTime = Date.now();
+    while (!revWorkersReady.some(r => r) && revWorkers.length > 0 && Date.now() - startTime < 1500) {
+      await new Promise(res => setTimeout(res, 100));
+    }
     
     if (revWorkers.length === 0) {
       revIsAnalyzing = false;
@@ -4399,18 +4429,20 @@ function drawEvaluationGraph() {
 }
 
 function revRender() {
+  const effectiveMoveIdx = (revShowBest && revMoveIdx > 0) ? (revMoveIdx - 1) : revMoveIdx;
+  
   revChess = new Chess();
-  for (let i = 0; i < revMoveIdx; i++) {
+  for (let i = 0; i < effectiveMoveIdx; i++) {
     revChess.move(revHist[i]);
   }
   
   revLastMv = null;
-  if (revMoveIdx > 0 && revHist.length > 0) {
+  if (effectiveMoveIdx > 0 && revHist.length > 0) {
     const temp = new Chess();
-    for (let i = 0; i < revMoveIdx - 1; i++) {
+    for (let i = 0; i < effectiveMoveIdx - 1; i++) {
       temp.move(revHist[i]);
     }
-    const r = temp.move(revHist[revMoveIdx - 1]);
+    const r = temp.move(revHist[effectiveMoveIdx - 1]);
     if (r) revLastMv = { from: r.from, to: r.to };
   }
 
@@ -4418,10 +4450,15 @@ function revRender() {
   revUpdMoveList();
   revUpdRecommendation();
   
+  const evalChess = new Chess();
+  for (let i = 0; i < revMoveIdx; i++) {
+    evalChess.move(revHist[i]);
+  }
+  
   if (revEvals.length > 0 && revEvals[revMoveIdx]) {
-    if (revChess.game_over()) {
-      if (revChess.in_checkmate()) {
-        const turn = revChess.turn();
+    if (evalChess.game_over()) {
+      if (evalChess.in_checkmate()) {
+        const turn = evalChess.turn();
         document.getElementById('rev-fillh').style.width = (turn === 'w') ? '0%' : '100%';
       } else {
         document.getElementById('rev-fillh').style.width = '50%';
@@ -4459,8 +4496,8 @@ function revRenderBoard() {
   
   let showBestFrom = null;
   let showBestTo = null;
-  if (revShowBest && revMoveIdx < revEvals.length - 1) {
-    const prevEv = revEvals[revMoveIdx];
+  if (revShowBest && revMoveIdx > 0 && revEvals[revMoveIdx - 1]) {
+    const prevEv = revEvals[revMoveIdx - 1];
     if (prevEv && prevEv.bestMove && prevEv.bestMove !== '(none)') {
       showBestFrom = prevEv.bestMove.slice(0, 2);
       showBestTo = prevEv.bestMove.slice(2, 4);

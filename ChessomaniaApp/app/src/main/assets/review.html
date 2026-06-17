@@ -526,12 +526,29 @@ async function cacheSet(k, v) {
   });
 }
 
-/* ─── Stockfish worker ──────────────────────────── */
-function initSF() {
+let workerURL = null;
+
+async function initSF() {
   if (sfWorkers.length > 0) return;
-  for (let i = 0; i < WORKER_COUNT; i++) {
-    try {
-      const w = new Worker('stockfish.js');
+  try {
+    setProgress(true, 'Initializing engine...', 0);
+    const res = await fetch('stockfish.js');
+    const jsCode = await res.text();
+    
+    const prefix = 'https://appassets.androidplatform.net/assets/';
+    const blobCode = `
+self.Module = {
+  locateFile: function(path) {
+    return "${prefix}" + path;
+  }
+};
+` + jsCode;
+
+    const blob = new Blob([blobCode], { type: 'application/javascript' });
+    workerURL = URL.createObjectURL(blob);
+
+    for (let i = 0; i < WORKER_COUNT; i++) {
+      const w = new Worker(workerURL);
       const idx = i;
       w.onerror = (e) => {
         console.error(`SF Worker ${idx} error:`, e);
@@ -548,10 +565,10 @@ function initSF() {
       });
       sfWorkers.push(w);
       sfWorkersReady.push(false);
-    } catch (e) {
-      console.error(`Cannot create SF worker ${i}:`, e);
-      showError('Engine not available. Board view only.');
     }
+  } catch (e) {
+    console.error('Cannot create SF workers:', e);
+    showError('Engine not available. Board view only.');
   }
 }
 
@@ -658,12 +675,12 @@ async function runAnalysis() {
       }
     }
 
-    initSF();
+    await initSF();
     
-    // Wait a moment for SF to init if any are not ready
-    let anyReady = sfWorkersReady.some(r => r);
-    if (!anyReady && sfWorkers.length > 0) {
-      await new Promise(res => setTimeout(res, 1500));
+    // Wait for at least one worker to be ready (up to 1.5 seconds)
+    let startTime = Date.now();
+    while (!sfWorkersReady.some(r => r) && sfWorkers.length > 0 && Date.now() - startTime < 1500) {
+      await new Promise(res => setTimeout(res, 100));
     }
 
     if (sfWorkers.length === 0) {
@@ -930,16 +947,18 @@ function drawGraph() {
 
 /* ─── Render ─────────────────────────────────────── */
 function render() {
-  // Rebuild chess state up to moveIdx
+  // Rebuild chess state up to moveIdx (or moveIdx - 1 if showBest is true)
+  const effectiveMoveIdx = (showBest && moveIdx > 0) ? (moveIdx - 1) : moveIdx;
+  
   chess = new Chess();
-  for (let i = 0; i < moveIdx; i++) chess.move(hist[i]);
+  for (let i = 0; i < effectiveMoveIdx; i++) chess.move(hist[i]);
 
   // Track last move for highlights
   lastMove = null;
-  if (moveIdx > 0) {
+  if (effectiveMoveIdx > 0) {
     const t = new Chess();
-    for (let i = 0; i < moveIdx - 1; i++) t.move(hist[i]);
-    const r = t.move(hist[moveIdx - 1]);
+    for (let i = 0; i < effectiveMoveIdx - 1; i++) t.move(hist[i]);
+    const r = t.move(hist[effectiveMoveIdx - 1]);
     if (r) lastMove = { from: r.from, to: r.to };
   }
 
@@ -1021,8 +1040,8 @@ function renderBoard() {
 
   // Best move arrows
   let bfrom = null, bto = null;
-  if (showBest && moveIdx < evals.length - 1 && evals[moveIdx]) {
-    const bm = evals[moveIdx].bestMove;
+  if (showBest && moveIdx > 0 && evals[moveIdx - 1]) {
+    const bm = evals[moveIdx - 1].bestMove;
     if (bm && bm !== '(none)' && bm.length >= 4) {
       bfrom = bm.slice(0, 2);
       bto   = bm.slice(2, 4);
