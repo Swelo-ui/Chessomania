@@ -4085,13 +4085,21 @@ function evaluatePositionWithWorker(worker, fen, depth) {
 }
 
 function getWhitePerspectiveEval(ev, sideToMove) {
-  let val = 0;
+  if (!ev) return 0;
+  if (ev.fixedWhite) return ev.cp;
+
+  let val;
   if (ev.mate !== null) {
-    val = ev.mate > 0 ? (10000 - ev.mate * 10) : (-10000 - ev.mate * 10);
+    val = ev.mate > 0 ? (30000 - ev.mate * 10) : (-30000 - ev.mate * 10);
   } else {
-    val = ev.cp;
+    val = Math.max(-3000, Math.min(3000, ev.cp));
   }
   return sideToMove === 'w' ? val : -val;
+}
+
+function turnAt(i) {
+  if (revFens[i]) return revFens[i].split(' ')[1] || (i % 2 === 0 ? 'w' : 'b');
+  return i % 2 === 0 ? 'w' : 'b';
 }
 
 function classifyMove(prev, curr, turn, playedUci, bestUci, isForced) {
@@ -4114,7 +4122,7 @@ function classifyMove(prev, curr, turn, playedUci, bestUci, isForced) {
   if (loss > 300 || isEvalFlip) return 'blunder';
   if (loss > 100) return 'mistake';
   if (loss > 50) return 'inaccuracy';
-  if (loss > 10) return 'good';
+  if (loss > 15) return 'good';
   return 'excellent';
 }
 
@@ -4131,7 +4139,7 @@ async function runGameAnalysis() {
   txt.textContent = 'Checking local cache...';
 
   // Check cache
-  const cacheKey = revHist.join(',') + '_depth10';
+  const cacheKey = revHist.join(',') + '_depth10_v4';
   try {
     const cached = await getCache(cacheKey);
     if (cached) {
@@ -4228,7 +4236,7 @@ async function runGameAnalysis() {
     for (let i = 0; i < revHist.length; i++) {
       if (!revEvals[i] || !revEvals[i+1]) continue;
       
-      const turn = i % 2 === 0 ? 'w' : 'b';
+      const turn = turnAt(i);
       const evalBefore = getWhitePerspectiveEval(revEvals[i], turn);
       const evalAfter = getWhitePerspectiveEval(revEvals[i+1], turn === 'w' ? 'b' : 'w');
 
@@ -4284,7 +4292,7 @@ async function runGameAnalysis() {
     revClassifications = [];
     for (let i = 0; i < revHist.length; i++) {
       if (!revEvals[i] || !revEvals[i+1]) { revClassifications.push('good'); continue; }
-      const turn = i % 2 === 0 ? 'w' : 'b';
+      const turn = turnAt(i);
       const cls = classifyMove(revEvals[i], revEvals[i+1], turn, uciMoves[i], revEvals[i].bestMove, forcedFlags[i]);
       revClassifications.push(cls);
     }
@@ -4322,7 +4330,7 @@ function calculateReviewStats() {
   
   for (let i = 0; i < revHist.length; i++) {
     const cls = revClassifications[i];
-    const turn = i % 2 === 0 ? 'w' : 'b';
+    const turn = turnAt(i);
     const stat = stats[turn];
     stat.count++;
     
@@ -4360,12 +4368,17 @@ function calculateReviewStats() {
   document.getElementById('rev-blun-w').textContent = stats.w.blunder;
   document.getElementById('rev-blun-b').textContent = stats.b.blunder;
 
-  // Lichess accuracy formula: Accuracy = Math.round(100 * exp(-0.007 * ACPL))
+  function acplToAcc(acpl) {
+    return Math.max(0, Math.min(100,
+      Math.round(103.1668 * Math.exp(-0.04354 * (acpl * 0.6)) - 3.1669)
+    ));
+  }
+
   const acplW = stats.w.count ? stats.w.lossSum / stats.w.count : 0;
   const acplB = stats.b.count ? stats.b.lossSum / stats.b.count : 0;
   
-  const accW = stats.w.count ? Math.round(100 * Math.exp(-0.007 * acplW)) : 100;
-  const accB = stats.b.count ? Math.round(100 * Math.exp(-0.007 * acplB)) : 100;
+  const accW = stats.w.count ? acplToAcc(acplW) : 100;
+  const accB = stats.b.count ? acplToAcc(acplB) : 100;
   
   document.getElementById('rev-acc-w').textContent = accW + '%';
   document.getElementById('rev-acc-b').textContent = accB + '%';
@@ -4384,7 +4397,7 @@ function drawEvaluationGraph() {
   const points = [];
   for (let i = 0; i < revEvals.length; i++) {
     const x = N === 0 ? 250 : (i / N) * 460 + 20;
-    const turn = i % 2 === 0 ? 'w' : 'b';
+    const turn = turnAt(i);
     let evalVal = revEvals[i] ? (getWhitePerspectiveEval(revEvals[i], turn) / 100) : 0;
     evalVal = Math.max(-8, Math.min(8, evalVal));
     const y = 60 - (evalVal / 8) * 50;
@@ -4468,7 +4481,7 @@ function revRender() {
       }
     } else {
       const ev = revEvals[revMoveIdx];
-      const turn = revMoveIdx % 2 === 0 ? 'w' : 'b';
+      const turn = turnAt(revMoveIdx);
       const whiteEval = getWhitePerspectiveEval(ev, turn);
       let pct = 50;
       if (ev.mate !== null) {
@@ -4638,7 +4651,7 @@ function revUpdRecommendation() {
   }
   
   const idx = revMoveIdx - 1;
-  const turn = idx % 2 === 0 ? 'White' : 'Black';
+  const turn = turnAt(idx) === 'w' ? 'White' : 'Black';
   const playedSan = revHist[idx];
   
   revPlayed.textContent = playedSan;

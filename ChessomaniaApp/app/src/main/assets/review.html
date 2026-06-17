@@ -2,459 +2,458 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>ChessOmania Game Review</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Game Review</title>
 <style>
-  :root {
-    --bg: #161512;
-    --panel: #1e1c19;
-    --panel2: #272421;
-    --border: #3a3630;
-    --accent: #b58863;
-    --accent2: #a07040;
-    --green: #629924;
-    --red: #c94f36;
-    --text: #d9d4cd;
-    --text2: #8a8178;
-    --sq-l: #f0d9b5;
-    --sq-d: #b58863;
-    --board-size: min(380px, 92vw);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Segoe UI', sans-serif;
-    font-size: 14px;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-  }
+/* ═══════════════════════════════════════════
+   ChessOmania Review – Complete Rebuild v4
+   All bugs fixed: eval bar, best move,
+   accuracy, classification, timer, spacing
+═══════════════════════════════════════════ */
+:root {
+  --bg:         #161512;
+  --panel:      #1e1c19;
+  --panel2:     #272421;
+  --border:     #3a3630;
+  --accent:     #b58863;
+  --accent2:    #8d6840;
+  --green:      #629924;
+  --red:        #c94f36;
+  --text:       #d9d4cd;
+  --text2:      #8a8178;
+  --sq-l:       #f0d9b5;
+  --sq-d:       #b58863;
+  --board-size: min(370px, 90vw);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
 
-  /* ── Scrollable content area ── */
-  #content {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 10px;
-    padding-bottom: 20px;
-  }
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;
+  font-size:14px;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
 
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin-bottom: 10px;
-    overflow: hidden;
-  }
-  .card-h {
-    padding: 7px 12px;
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    color: var(--text2);
-    border-bottom: 1px solid var(--border);
-  }
-  .card-b { padding: 10px; }
+/* Scrollable area */
+#content{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:10px 10px 28px;
+  -webkit-overflow-scrolling:touch;
+}
 
-  /* ── Board area ── */
-  .board-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 10px;
-  }
+/* ── Status / Timer / Progress ── */
+#status-bar{
+  display:none;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:9px 12px;
+  margin-bottom:14px;   /* clear gap below progress bar */
+}
+#status-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:6px;
+}
+#status-msg{
+  font-size:0.7rem;
+  color:var(--text2);
+  font-weight:600;
+}
+#timer-wrap{
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+#timer-icon{font-size:0.75rem;}
+#timer-val{
+  font-size:0.72rem;
+  font-weight:700;
+  color:var(--accent);
+  font-variant-numeric:tabular-nums;
+  min-width:38px;
+  text-align:right;
+}
+#timer-eta{
+  font-size:0.66rem;
+  color:var(--text2);
+}
+#prog-track{
+  height:4px;
+  background:var(--panel2);
+  border-radius:2px;
+  overflow:hidden;
+}
+#prog-fill{
+  height:100%;
+  background:var(--accent);
+  width:0%;
+  transition:width 0.3s ease;
+  border-radius:2px;
+}
 
-  /* Eval bar above board */
-  .eval-section {
-    width: var(--board-size);
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .eval-num {
-    font-size: 1rem;
-    font-weight: 700;
-    min-width: 46px;
-    text-align: center;
-    color: var(--text);
-  }
-  .eval-track {
-    flex: 1;
-    height: 7px;
-    background: #333;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .eval-fill {
-    height: 100%;
-    background: #e8e4df;
-    width: 50%;
-    transition: width 0.3s ease;
-    border-radius: 4px;
-  }
+/* Error banner */
+#error-banner{
+  display:none;
+  background:rgba(201,79,54,0.12);
+  border:1px solid rgba(201,79,54,0.35);
+  border-radius:8px;
+  padding:8px 12px;
+  font-size:0.72rem;
+  color:#f97316;
+  margin-bottom:10px;
+  text-align:center;
+}
 
-  /* Board with rank/file labels */
-  .board-wrap {
-    display: flex;
-    align-items: flex-start;
-  }
-  .rlbls {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    margin-right: 3px;
-    height: var(--board-size);
-    color: var(--text2);
-    font-size: 0.6rem;
-    font-weight: 700;
-    user-select: none;
-  }
-  .rlbls span { display: flex; align-items: center; justify-content: center; height: calc(var(--board-size) / 8); }
-  .board-col { display: flex; flex-direction: column; }
-  #rboard {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    grid-template-rows: repeat(8, 1fr);
-    width: var(--board-size);
-    height: var(--board-size);
-    border-radius: 3px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,.65);
-    position: relative;
-  }
-  .flbls {
-    display: flex;
-    justify-content: space-around;
-    width: var(--board-size);
-    margin-top: 3px;
-    margin-left: 0;
-    color: var(--text2);
-    font-size: 0.6rem;
-    font-weight: 700;
-    user-select: none;
-  }
-  .flbls span { display: flex; align-items: center; justify-content: center; width: calc(var(--board-size) / 8); }
+/* ── Board container ── */
+.board-container{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  margin-bottom:12px;
+}
 
-  /* Squares */
-  .rsq {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .rsq.light { background: var(--sq-l); }
-  .rsq.dark  { background: var(--sq-d); }
-  .rsq.lf    { background: rgba(205,210,20,.32) !important; }
-  .rsq.lt    { background: rgba(205,210,20,.48) !important; }
-  .rsq.best-from { outline: 2px dashed rgba(56,189,248,.9); outline-offset: -2px; background: rgba(56,189,248,.2) !important; }
-  .rsq.best-to   { outline: 2px solid rgba(56,189,248,.9); outline-offset: -2px; background: rgba(56,189,248,.3) !important; }
+/* Eval bar – horizontal strip above board */
+.eval-row{
+  width:var(--board-size);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;  /* gap between eval bar and board */
+}
+#eval-score{
+  font-size:0.92rem;
+  font-weight:800;
+  min-width:52px;
+  text-align:center;
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-0.3px;
+  white-space:nowrap;
+}
+.eval-track{
+  flex:1;
+  height:8px;
+  background:#1a1916;
+  border-radius:4px;
+  overflow:hidden;
+  border:1px solid var(--border);
+  position:relative;
+}
+#eval-fill{
+  height:100%;
+  /* White portion from the left */
+  background:#e8e4df;
+  width:50%;
+  transition:width 0.45s cubic-bezier(.4,0,.2,1);
+  border-radius:3px 0 0 3px;
+}
 
-  /* Pieces */
-  .rpiece {
-    width: 84%;
-    height: 84%;
-    object-fit: contain;
-    position: relative;
-    z-index: 2;
-    pointer-events: none;
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,.4));
-  }
+/* Board with rank/file labels */
+.board-wrap{display:flex;align-items:flex-start;}
+.rank-labels{
+  display:flex;
+  flex-direction:column;
+  height:var(--board-size);
+  margin-right:4px;
+  color:var(--text2);
+  font-size:0.58rem;
+  font-weight:700;
+  user-select:none;
+}
+.rank-labels span{flex:1;display:flex;align-items:center;justify-content:center;}
+.board-col{display:flex;flex-direction:column;}
+#chessboard{
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  grid-template-rows:repeat(8,1fr);
+  width:var(--board-size);
+  height:var(--board-size);
+  border-radius:3px;
+  overflow:hidden;
+  box-shadow:0 6px 28px rgba(0,0,0,.75);
+}
+.file-labels{
+  display:flex;
+  width:var(--board-size);
+  margin-top:4px;
+  color:var(--text2);
+  font-size:0.58rem;
+  font-weight:700;
+  user-select:none;
+}
+.file-labels span{flex:1;display:flex;align-items:center;justify-content:center;}
 
-  /* Controls */
-  .control-row {
-    display: flex;
-    gap: 6px;
-    margin: 8px 0;
-    justify-content: center;
-    width: 100%;
-  }
-  .btn {
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--panel2);
-    color: var(--text);
-    cursor: pointer;
-    font-size: 0.78rem;
-    font-weight: 600;
-    transition: all 0.15s;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .btn:active { filter: brightness(1.25); transform: scale(0.96); }
-  .btn-accent {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent2);
-  }
+/* Squares */
+.sq{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.sq.light{background:var(--sq-l);}
+.sq.dark {background:var(--sq-d);}
+.sq.lf   {background:rgba(205,210,20,.4) !important;}
+.sq.lt   {background:rgba(205,210,20,.55) !important;}
+.sq.bf   {background:rgba(20,160,240,.22) !important;
+          outline:2px dashed rgba(20,160,240,.85);
+          outline-offset:-2px;}
+.sq.bt   {background:rgba(20,160,240,.32) !important;
+          outline:2px solid rgba(20,160,240,.9);
+          outline-offset:-2px;}
 
-  /* Eval graph */
-  .graph-wrap {
-    width: var(--board-size);
-    height: 72px;
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-top: 6px;
-    position: relative;
-  }
-  .graph-wrap svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  .graph-dot { cursor: pointer; }
+/* Piece images */
+.piece{
+  width:86%;
+  height:86%;
+  object-fit:contain;
+  pointer-events:none;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));
+  -webkit-user-drag:none;
+}
 
-  /* Progress */
-  .progress-wrap {
-    width: var(--board-size);
-    margin-top: 4px;
-    display: none;
-  }
-  .progress-txt { font-size: 0.68rem; color: var(--text2); margin-bottom: 3px; }
-  .progress-track {
-    width: 100%;
-    height: 4px;
-    background: var(--panel2);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    background: var(--accent);
-    width: 0%;
-    transition: width 0.2s;
-    border-radius: 2px;
-  }
+/* Nav buttons */
+.nav-row{
+  display:flex;
+  gap:6px;
+  margin:10px 0 8px;
+  justify-content:center;
+}
+.btn{
+  padding:7px 13px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background:var(--panel2);
+  color:var(--text);
+  cursor:pointer;
+  font-size:0.8rem;
+  font-weight:600;
+  transition:filter 0.12s,transform 0.08s;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+.btn:active{filter:brightness(1.35);transform:scale(0.94);}
+.btn-accent{background:var(--accent);border-color:var(--accent2);color:#fff;}
 
-  /* Badges */
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.52rem;
-    font-weight: 800;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    color: #fff;
-    margin-left: 4px;
-    flex-shrink: 0;
-  }
-  .badge.blunder    { background: #ef4444; }
-  .badge.mistake    { background: #f97316; }
-  .badge.inaccuracy { background: #fbbf24; color: #1e1c19; }
-  .badge.good       { background: #9ca3af; }
-  .badge.excellent  { background: #38bdf8; }
-  .badge.best       { background: #629924; }
-  .badge.forced     { background: #629924; }
+/* Eval graph */
+.graph-wrap{
+  width:var(--board-size);
+  height:68px;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:7px;
+  overflow:hidden;
+  position:relative;
+}
+.graph-wrap svg{width:100%;height:100%;display:block;}
+.g-dot{cursor:pointer;}
 
-  /* Stats table */
-  .summary-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.72rem;
-  }
-  .summary-table td, .summary-table th {
-    padding: 4px 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .summary-table th {
-    text-align: left;
-    color: var(--text2);
-    font-size: 0.65rem;
-    text-transform: uppercase;
-  }
+/* Cards */
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:8px;
+  margin-bottom:10px;
+  overflow:hidden;
+}
+.card-head{
+  padding:6px 12px;
+  font-size:0.62rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:1.5px;
+  color:var(--text2);
+  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.018);
+}
+.card-body{padding:11px 12px;}
 
-  /* Move list */
-  .mlist {
-    max-height: 160px;
-    overflow-y: auto;
-  }
-  .rev-mrow {
-    display: flex;
-    align-items: center;
-    padding: 4px 6px;
-    font-size: 0.74rem;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
-  }
-  .rev-mrow.active { background: rgba(181,136,99,0.15); }
-  .rev-mnum {
-    width: 28px;
-    color: var(--text2);
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-  .rev-msan {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    padding: 0 3px;
-    border-radius: 3px;
-    min-height: 18px;
-    cursor: pointer;
-  }
-  .rev-msan.cur {
-    background: var(--accent);
-    color: #fff;
-  }
+/* Classification pill */
+.cls-pill{
+  display:inline-block;
+  padding:2px 10px;
+  border-radius:20px;
+  font-size:0.68rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.7px;
+  margin-bottom:6px;
+}
+.cls-best,.cls-forced{background:#629924;color:#fff;}
+.cls-excellent{background:#38bdf8;color:#fff;}
+.cls-good{background:#9ca3af;color:#fff;}
+.cls-inaccuracy{background:#fbbf24;color:#1e1c19;}
+.cls-mistake{background:#f97316;color:#fff;}
+.cls-blunder{background:#ef4444;color:#fff;}
 
-  /* Move quality card */
-  .cls-label {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-  }
-  .cls-best, .cls-forced { background: #629924; color: #fff; }
-  .cls-excellent { background: #38bdf8; color: #fff; }
-  .cls-good { background: #9ca3af; color: #fff; }
-  .cls-inaccuracy { background: #fbbf24; color: #1e1c19; }
-  .cls-mistake { background: #f97316; color: #fff; }
-  .cls-blunder { background: #ef4444; color: #fff; }
+/* Accuracy boxes */
+.acc-row{display:flex;gap:10px;margin-bottom:11px;}
+.acc-box{
+  flex:1;
+  background:var(--panel2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:10px 8px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+}
+.acc-val{
+  font-size:1.45rem;
+  font-weight:800;
+  color:var(--green);
+  font-variant-numeric:tabular-nums;
+  line-height:1;
+}
+.acc-lbl{font-size:0.58rem;color:var(--text2);text-transform:uppercase;letter-spacing:.9px;}
 
-  /* Accuracy ring */
-  .acc-row {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    margin-bottom: 8px;
-  }
-  .acc-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: var(--panel2);
-    border-radius: 8px;
-    padding: 8px 16px;
-    flex: 1;
-    border: 1px solid var(--border);
-  }
-  .acc-val {
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: var(--green);
-  }
-  .acc-lbl { font-size: 0.6rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; }
+/* Summary table */
+.sum-tbl{width:100%;border-collapse:collapse;font-size:0.72rem;}
+.sum-tbl th,.sum-tbl td{padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
+.sum-tbl th{color:var(--text2);font-size:0.62rem;text-transform:uppercase;letter-spacing:.5px;font-weight:600;text-align:left;}
+.sum-tbl td:nth-child(2),.sum-tbl td:nth-child(3){text-align:center;font-weight:600;}
 
-  /* Error state */
-  #error-banner {
-    display: none;
-    background: rgba(201,79,54,0.15);
-    border: 1px solid rgba(201,79,54,0.4);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 0.72rem;
-    color: #f97316;
-    margin-bottom: 8px;
-    text-align: center;
-  }
+/* Move list */
+.mlist{max-height:175px;overflow-y:auto;}
+.mrow{display:flex;align-items:center;padding:4px 6px;font-size:0.74rem;border-bottom:1px solid rgba(255,255,255,.025);}
+.mrow.active{background:rgba(181,136,99,.12);}
+.mnum{width:28px;color:var(--text2);font-weight:700;flex-shrink:0;font-size:0.68rem;}
+.msan{
+  flex:1;
+  display:flex;
+  align-items:center;
+  padding:2px 4px;
+  border-radius:4px;
+  min-height:20px;
+  cursor:pointer;
+  gap:3px;
+  -webkit-tap-highlight-color:transparent;
+}
+.msan:active{background:rgba(255,255,255,.08);}
+.msan.cur{background:var(--accent);color:#fff;}
+
+/* Move badges */
+.mbadge{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:13px;height:13px;border-radius:50%;
+  font-size:0.42rem;font-weight:900;
+  color:#fff;flex-shrink:0;line-height:1;
+}
+.mb-best,.mb-forced{background:#629924;}
+.mb-excellent{background:#38bdf8;}
+.mb-good{background:#9ca3af;}
+.mb-inaccuracy{background:#fbbf24;color:#1e1c19;}
+.mb-mistake{background:#f97316;}
+.mb-blunder{background:#ef4444;}
 </style>
 </head>
 <body>
 
 <div id="content">
 
-  <!-- Error Banner -->
+  <!-- Error banner -->
   <div id="error-banner"></div>
 
-  <!-- Progress -->
-  <div class="progress-wrap" id="progress-wrap">
-    <div class="progress-txt" id="progress-txt">Initializing engine...</div>
-    <div class="progress-track">
-      <div class="progress-fill" id="progress-fill"></div>
+  <!-- Progress & Timer (with clear gap below) -->
+  <div id="status-bar">
+    <div id="status-row">
+      <span id="status-msg">Initializing engine…</span>
+      <div id="timer-wrap">
+        <span id="timer-icon">⏱</span>
+        <span id="timer-val">0:00</span>
+        <span id="timer-eta"></span>
+      </div>
     </div>
+    <div id="prog-track"><div id="prog-fill"></div></div>
   </div>
 
-  <!-- Board section -->
+  <!-- Board area -->
   <div class="board-container">
+
     <!-- Eval bar -->
-    <div class="eval-section">
-      <div class="eval-num" id="eval-num">0.0</div>
-      <div class="eval-track"><div class="eval-fill" id="eval-fill"></div></div>
+    <div class="eval-row">
+      <div id="eval-score">+0.0</div>
+      <div class="eval-track"><div id="eval-fill"></div></div>
     </div>
 
-    <!-- Board with rank labels -->
+    <!-- Board + labels -->
     <div class="board-wrap">
-      <div class="rlbls" id="rlbls"></div>
+      <div class="rank-labels" id="rank-labels"></div>
       <div class="board-col">
-        <div id="rboard"></div>
-        <div class="flbls" id="flbls"></div>
+        <div id="chessboard"></div>
+        <div class="file-labels" id="file-labels"></div>
       </div>
     </div>
 
-    <!-- Navigation controls -->
-    <div class="control-row">
-      <button class="btn" onclick="jumpStart()">&#171;</button>
-      <button class="btn" onclick="prevMove()">&#8249;</button>
-      <button class="btn" onclick="nextMove()">&#8250;</button>
-      <button class="btn" onclick="jumpEnd()">&#187;</button>
-      <button class="btn" onclick="flip()">&#8597;</button>
+    <!-- Navigation -->
+    <div class="nav-row">
+      <button class="btn" onclick="jumpStart()">«</button>
+      <button class="btn" onclick="prevMove()">‹</button>
+      <button class="btn" onclick="nextMove()">›</button>
+      <button class="btn" onclick="jumpEnd()">»</button>
+      <button class="btn" onclick="flipBoard()">⇅</button>
     </div>
 
     <!-- Eval graph -->
     <div class="graph-wrap">
-      <svg id="graph-svg" viewBox="0 0 320 72" preserveAspectRatio="none"></svg>
+      <svg id="graph-svg" viewBox="0 0 320 68" preserveAspectRatio="none"></svg>
+    </div>
+
+  </div>
+
+  <!-- Move Quality -->
+  <div class="card">
+    <div class="card-head">Move Quality</div>
+    <div class="card-body">
+      <div id="cls-row" style="display:none;margin-bottom:6px;"></div>
+      <div id="played-san" style="font-weight:700;font-size:0.82rem;margin-bottom:3px;">—</div>
+      <div id="played-eval" style="font-size:0.71rem;color:var(--text2);margin-bottom:9px;">Select a move to see details.</div>
+      <div id="best-san" style="font-weight:700;font-size:0.78rem;color:#38bdf8;margin-bottom:2px;">—</div>
+      <div id="best-eval" style="font-size:0.68rem;color:var(--text2);margin-bottom:10px;"></div>
+      <button class="btn btn-accent" id="btn-best" style="width:100%;display:none;" onclick="toggleBest()">Show Best Move</button>
     </div>
   </div>
 
-  <!-- Move quality card -->
+  <!-- Review Report -->
   <div class="card">
-    <div class="card-h">Move Quality</div>
-    <div class="card-b">
-      <div id="cls-badge-row" style="margin-bottom:6px;display:none;"></div>
-      <div style="font-weight:600; font-size:0.8rem; margin-bottom:2px;" id="played-move">—</div>
-      <div style="font-size:0.72rem; color:var(--text2); margin-bottom:8px;" id="played-desc">Select a move to see details.</div>
-      <div style="font-weight:600; font-size:0.78rem; margin-bottom:2px; color:#38bdf8;" id="suggested-move">—</div>
-      <div style="font-size:0.7rem; color:var(--text2); margin-bottom:8px;" id="suggested-desc"></div>
-      <button class="btn btn-accent" style="width:100%; display:none;" id="btn-show-best" onclick="toggleBest()">Show Best Move</button>
-    </div>
-  </div>
-
-  <!-- Review stats -->
-  <div class="card">
-    <div class="card-h">Review Report</div>
-    <div class="card-b">
+    <div class="card-head">Review Report</div>
+    <div class="card-body">
       <div class="acc-row">
         <div class="acc-box">
           <div class="acc-val" id="acc-w">—</div>
-          <div class="acc-lbl">White</div>
+          <div class="acc-lbl">⬜ White</div>
         </div>
         <div class="acc-box">
           <div class="acc-val" id="acc-b">—</div>
-          <div class="acc-lbl">Black</div>
+          <div class="acc-lbl">⬛ Black</div>
         </div>
       </div>
-      <table class="summary-table">
-        <thead>
-          <tr><th>Move Type</th><th>White</th><th>Black</th></tr>
-        </thead>
+      <table class="sum-tbl">
+        <thead><tr><th>Type</th><th>White</th><th>Black</th></tr></thead>
         <tbody>
-          <tr><td>Best / Forced</td><td id="best-w">0</td><td id="best-b">0</td></tr>
-          <tr><td>Excellent</td><td id="exc-w">0</td><td id="exc-b">0</td></tr>
-          <tr><td>Good</td><td id="gd-w">0</td><td id="gd-b">0</td></tr>
-          <tr><td style="color:#fbbf24">Inaccuracy</td><td id="inac-w">0</td><td id="inac-b">0</td></tr>
-          <tr><td style="color:#f97316">Mistake</td><td id="mist-w">0</td><td id="mist-b">0</td></tr>
-          <tr><td style="color:#ef4444;font-weight:700">Blunder</td><td id="blun-w">0</td><td id="blun-b">0</td></tr>
+          <tr><td>Best / Forced</td><td id="s-best-w">—</td><td id="s-best-b">—</td></tr>
+          <tr><td>Excellent</td><td id="s-exc-w">—</td><td id="s-exc-b">—</td></tr>
+          <tr><td>Good</td><td id="s-gd-w">—</td><td id="s-gd-b">—</td></tr>
+          <tr><td style="color:#fbbf24">Inaccuracy</td><td id="s-inac-w">—</td><td id="s-inac-b">—</td></tr>
+          <tr><td style="color:#f97316">Mistake</td><td id="s-mist-w">—</td><td id="s-mist-b">—</td></tr>
+          <tr><td style="color:#ef4444;font-weight:700">Blunder</td><td id="s-blun-w">—</td><td id="s-blun-b">—</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Game moves list -->
+  <!-- Game Moves -->
   <div class="card">
-    <div class="card-h">Game Moves</div>
-    <div class="mlist card-b" id="mlist"></div>
+    <div class="card-head">Game Moves</div>
+    <div class="mlist card-body" id="mlist"></div>
   </div>
 
 </div><!-- /content -->
@@ -463,794 +462,73 @@
 <script>
 'use strict';
 
-const FILES = ['a','b','c','d','e','f','g','h'];
-const RANKS = [8,7,6,5,4,3,2,1];
-
+/* ─── State ─── */
 let chess     = new Chess();
-let hist      = [];
-let fens      = [];
-let evals     = [];
-let clsArr    = [];
-let moveIdx   = 0;
-const WORKER_COUNT = 3;
-let sfWorkers = [];
-let sfWorkersReady = [];
-let analyzing = false;
+let hist      = [];      // SAN moves
+let uciMoves  = [];      // UCI moves (parallel to hist)
+let fens      = [];      // FEN string at each position index
+let evals     = [];      // eval result at each FEN index
+let clsArr    = [];      // classification per hist move
 let flipped   = false;
 let showBest  = false;
+let moveIdx   = 0;
 let lastMove  = null;
 let pTheme    = 'cburnett';
+let analyzing = false;
 
-/* ─── Android bridge ─────────────────────────────── */
-function android(method, ...args) {
-  if (window.Android && typeof window.Android[method] === 'function') {
-    try { window.Android[method](...args); } catch(e) { console.warn('android bridge error', e); }
+/* ── Workers ── */
+const WORKERS   = 3;
+let sfW         = [];   // worker instances
+let sfReady     = [];   // ready flags
+let blobURL     = null;
+
+/* ── Timer ── */
+let timerInt    = null;
+let tStart      = 0;
+
+/* ─── Android bridge ─── */
+function android(fn, ...a) {
+  if (window.Android && typeof window.Android[fn] === 'function') {
+    try { window.Android[fn](...a); } catch(e) {}
   }
 }
 
-/* ─── IndexedDB cache ────────────────────────────── */
-const DB = 'ChessReview_v3';
-let db = null;
-
-async function openDB() {
-  if (db) return db;
-  return new Promise(res => {
-    const r = indexedDB.open(DB, 1);
-    r.onupgradeneeded = e => e.target.result.createObjectStore('ev');
-    r.onsuccess = e => { db = e.target.result; res(db); };
-    r.onerror   = () => res(null);
-  });
-}
-async function cacheGet(k) {
-  const d = await openDB();
-  if (!d) return null;
-  return new Promise(res => {
-    try {
-      const tx = d.transaction('ev', 'readonly');
-      const rq = tx.objectStore('ev').get(k);
-      rq.onsuccess = () => res(rq.result || null);
-      rq.onerror   = () => res(null);
-    } catch(e) { res(null); }
-  });
-}
-async function cacheSet(k, v) {
-  const d = await openDB();
-  if (!d) return;
-  return new Promise(res => {
-    try {
-      const tx = d.transaction('ev', 'readwrite');
-      const rq = tx.objectStore('ev').put(v, k);
-      rq.onsuccess = () => res(true);
-      rq.onerror   = () => res(false);
-    } catch(e) { res(false); }
-  });
+/* ─── Timer ─── */
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec) % 60;
+  return m + ':' + String(s).padStart(2, '0');
 }
 
-let workerURL = null;
+function startTimer() {
+  tStart = Date.now();
+  document.getElementById('timer-val').textContent = '0:00';
+  document.getElementById('timer-eta').textContent = '';
+  timerInt = setInterval(() => {
+    const elapsed = (Date.now() - tStart) / 1000;
+    document.getElementById('timer-val').textContent = fmtTime(elapsed);
 
-async function initSF() {
-  if (sfWorkers.length > 0) return;
-  try {
-    setProgress(true, 'Initializing engine...', 0);
-    const res = await fetch('stockfish.js');
-    const jsCode = await res.text();
-    
-    const prefix = 'https://appassets.androidplatform.net/assets/';
-    const blobCode = `
-self.Module = {
-  locateFile: function(path) {
-    return "${prefix}" + path;
-  }
-};
-` + jsCode;
-
-    const blob = new Blob([blobCode], { type: 'application/javascript' });
-    workerURL = URL.createObjectURL(blob);
-
-    for (let i = 0; i < WORKER_COUNT; i++) {
-      const w = new Worker(workerURL);
-      const idx = i;
-      w.onerror = (e) => {
-        console.error(`SF Worker ${idx} error:`, e);
-      };
-      w.postMessage('uci');
-      w.postMessage('setoption name Hash value 16');
-      w.postMessage('setoption name Threads value 1');
-      w.postMessage('isready');
-      w.addEventListener('message', function onReady(e) {
-        if (e.data === 'readyok') {
-          sfWorkersReady[idx] = true;
-          w.removeEventListener('message', onReady);
-        }
-      });
-      sfWorkers.push(w);
-      sfWorkersReady.push(false);
-    }
-  } catch (e) {
-    console.error('Cannot create SF workers:', e);
-    showError('Engine not available. Board view only.');
-  }
-}
-
-function evalPosWithWorker(worker, fen, depth) {
-  return new Promise(resolve => {
-    let cp = 0, mate = null, bestMove = '(none)';
-    const timeout = setTimeout(() => {
-      worker.removeEventListener('message', onMsg);
-      resolve({ cp, mate, bestMove });
-    }, 8000); // 8s timeout per position
-
-    function onMsg(e) {
-      const line = e.data;
-      const cpM  = line.match(/score cp (-?\d+)/);
-      const matM = line.match(/score mate (-?\d+)/);
-      if (cpM)  cp   = parseInt(cpM[1]);
-      if (matM) mate = parseInt(matM[1]);
-      if (line.startsWith('bestmove')) {
-        clearTimeout(timeout);
-        const parts = line.split(' ');
-        bestMove = parts[1] || '(none)';
-        worker.removeEventListener('message', onMsg);
-        resolve({ cp, mate, bestMove });
-      }
-    }
-    worker.addEventListener('message', onMsg);
-    worker.postMessage('position fen ' + fen);
-    worker.postMessage('go depth ' + depth);
-  });
-}
-
-/* ─── Entry point ───────────────────────────────── */
-window.startReview = function(b64moves, pieceTheme, lightColor, darkColor) {
-  try {
-    if (pieceTheme)   pTheme = pieceTheme;
-    if (lightColor)   document.documentElement.style.setProperty('--sq-l', lightColor);
-    if (darkColor)    document.documentElement.style.setProperty('--sq-d', darkColor);
-
-    const decoded = atob(b64moves);
-    const rawMoves = decoded.split(',').map(m => m.trim()).filter(m => m.length > 0);
-
-    // Validate moves with chess.js
-    const temp = new Chess();
-    hist = [];
-    for (const mv of rawMoves) {
-      const r = temp.move(mv);
-      if (r) hist.push(r.san);
-    }
-
-    if (hist.length === 0) {
-      showError('No valid moves to review.');
-      renderBoard(); // show empty starting board
-      return;
-    }
-
-    moveIdx = hist.length; // start at final position
-    renderBoard(); // show board immediately with starting position
-    runAnalysis();
-  } catch(e) {
-    console.error('startReview error:', e);
-    showError('Failed to parse game moves.');
-    renderBoard();
-  }
-};
-
-/* ─── Analysis ──────────────────────────────────── */
-async function runAnalysis() {
-  if (analyzing) return;
-  analyzing = true;
-  showBest = false;
-
-  try {
-    setProgress(true, 'Checking cache...', 0);
-
-    const cacheKey = hist.join(',') + '_v3';
-    const cached = await cacheGet(cacheKey);
-    if (cached && cached.evals && cached.evals.length > 0) {
-      evals   = cached.evals;
-      clsArr  = cached.clsArr;
-      fens    = cached.fens;
-      analyzing = false;
-      setProgress(false, '', 100);
-      calcStats();
-      drawGraph();
-      moveIdx = hist.length;
-      render();
-      android('onAnalysisComplete');
-      return;
-    }
-
-    // Build FEN sequence
-    const temp2 = new Chess();
-    fens = [temp2.fen()];
-    const uciMoves = [];
-    const forcedFlags = [];
-
-    for (let i = 0; i < hist.length; i++) {
-      const legal = temp2.moves().length;
-      forcedFlags.push(legal === 1);
-      const r = temp2.move(hist[i]);
-      if (r) {
-        fens.push(temp2.fen());
-        uciMoves.push(r.from + r.to + (r.promotion || ''));
-      }
-    }
-
-    await initSF();
-    
-    // Wait for at least one worker to be ready (up to 1.5 seconds)
-    let startTime = Date.now();
-    while (!sfWorkersReady.some(r => r) && sfWorkers.length > 0 && Date.now() - startTime < 1500) {
-      await new Promise(res => setTimeout(res, 100));
-    }
-
-    if (sfWorkers.length === 0) {
-      analyzing = false;
-      setProgress(false, '', 0);
-      moveIdx = hist.length;
-      render();
-      return;
-    }
-
-    // Pass 1: Bulk scan at depth 8 in parallel
-    evals = new Array(fens.length);
-    const activeTasks = [];
-    const temp3 = new Chess();
-    for (let i = 0; i < fens.length; i++) {
-      if (temp3.game_over()) {
-        if (temp3.in_checkmate()) {
-          evals[i] = { cp: 0, mate: 0, bestMove: '(none)' };
-        } else {
-          evals[i] = { cp: 0, mate: null, bestMove: '(none)' };
-        }
-      } else {
-        activeTasks.push({ fen: fens[i], index: i });
-      }
-      if (i < hist.length) {
-        temp3.move(hist[i]);
-      }
-    }
-
-    if (activeTasks.length > 0) {
-      let nextTaskIdx = 0;
-      let finishedCount = fens.length - activeTasks.length;
-
-      const workerPromises = sfWorkers.map(async (worker) => {
-        while (nextTaskIdx < activeTasks.length) {
-          const taskIdx = nextTaskIdx++;
-          const task = activeTasks[taskIdx];
-          
-          const res = await evalPosWithWorker(worker, task.fen, 8);
-          evals[task.index] = res;
-          
-          finishedCount++;
-          setProgress(true, `Analyzing ${finishedCount} / ${fens.length - 1}`, Math.round((finishedCount / fens.length) * 100));
-        }
-      });
-      await Promise.all(workerPromises);
-    }
-
-    // Pass 2: High-depth re-verification (depth 12) in parallel
-    const depth12Tasks = [];
-    const depth12Verified = new Array(fens.length).fill(false);
-    for (let i = 0; i < hist.length; i++) {
-      if (!evals[i] || !evals[i+1]) continue;
-      
-      const turn = i % 2 === 0 ? 'w' : 'b';
-      const evalBefore = getWhitePerspectiveEval(evals[i], turn);
-      const evalAfter = getWhitePerspectiveEval(evals[i+1], turn === 'w' ? 'b' : 'w');
-
-      const movingPlayerEvalBefore = turn === 'w' ? evalBefore : -evalBefore;
-      const movingPlayerEvalAfter = turn === 'w' ? evalAfter : -evalAfter;
-      const loss = movingPlayerEvalBefore - movingPlayerEvalAfter;
-
-      const isEvalFlip = (movingPlayerEvalBefore >= 150 && movingPlayerEvalAfter <= 50) || 
-                         (movingPlayerEvalBefore > 0 && movingPlayerEvalAfter <= -100);
-
-      if ((loss > 200 || isEvalFlip || evals[i].mate !== null || evals[i+1].mate !== null) && !forcedFlags[i] && evals[i].bestMove !== uciMoves[i]) {
-        // Collect indices to evaluate at depth 12
-        if (!depth12Verified[i]) {
-          const tempCheck = new Chess();
-          for (let k = 0; k < i; k++) tempCheck.move(hist[k]);
-          if (!tempCheck.game_over()) {
-            depth12Tasks.push({ fen: fens[i], index: i });
-            depth12Verified[i] = true;
-          }
-        }
-        if (!depth12Verified[i+1] && i+1 < fens.length) {
-          const tempCheck = new Chess();
-          for (let k = 0; k < i + 1; k++) tempCheck.move(hist[k]);
-          if (!tempCheck.game_over()) {
-            depth12Tasks.push({ fen: fens[i+1], index: i+1 });
-            depth12Verified[i+1] = true;
-          }
-        }
-      }
-    }
-
-    if (depth12Tasks.length > 0) {
-      let nextD12TaskIdx = 0;
-      let finishedD12Count = 0;
-      
-      const d12Promises = sfWorkers.map(async (worker) => {
-        while (nextD12TaskIdx < depth12Tasks.length) {
-          const taskIdx = nextD12TaskIdx++;
-          const task = depth12Tasks[taskIdx];
-          
-          const res = await evalPosWithWorker(worker, task.fen, 12);
-          evals[task.index] = res;
-          
-          finishedD12Count++;
-          setProgress(true, `Refining move ${finishedD12Count} / ${depth12Tasks.length}...`, Math.round((finishedD12Count / depth12Tasks.length) * 100));
-        }
-      });
-      await Promise.all(d12Promises);
-    }
-
-    // Pass 3: Final pass classification
-    clsArr = [];
-    for (let i = 0; i < hist.length; i++) {
-      if (!evals[i] || !evals[i+1]) { clsArr.push('good'); continue; }
-      const turn = i % 2 === 0 ? 'w' : 'b';
-      const cls = classifyMove(evals[i], evals[i+1], turn, uciMoves[i], evals[i].bestMove, forcedFlags[i]);
-      clsArr.push(cls);
-    }
-
-    await cacheSet(cacheKey, { evals, clsArr, fens });
-
-    analyzing = false;
-    setProgress(false, '', 100);
-    calcStats();
-    drawGraph();
-    moveIdx = hist.length;
-    render();
-    android('onAnalysisComplete');
-
-  } catch (err) {
-    console.error('runAnalysis error:', err);
-    analyzing = false;
-    setProgress(false, '', 0);
-    showError('Analysis failed: ' + err.message);
-  }
-}
-
-/* ─── Classification ────────────────────────────── */
-function getWhitePerspectiveEval(ev, sideToMove) {
-  let val = 0;
-  if (ev.mate !== null) {
-    val = ev.mate > 0 ? (10000 - ev.mate * 10) : (-10000 - ev.mate * 10);
-  } else {
-    val = ev.cp;
-  }
-  return sideToMove === 'w' ? val : -val;
-}
-
-function classifyMove(prev, curr, turn, playedUci, bestUci, forced) {
-  if (forced) return 'forced';
-  if (playedUci === bestUci) return 'best';
-
-  const evalBefore = getWhitePerspectiveEval(prev, turn);
-  const evalAfter = getWhitePerspectiveEval(curr, turn === 'w' ? 'b' : 'w');
-
-  const movingPlayerEvalBefore = turn === 'w' ? evalBefore : -evalBefore;
-  const movingPlayerEvalAfter = turn === 'w' ? evalAfter : -evalAfter;
-
-  const loss = movingPlayerEvalBefore - movingPlayerEvalAfter;
-
-  if (loss <= 0) return 'best';
-
-  // Check for eval-flip (Blunder)
-  const isEvalFlip = (movingPlayerEvalBefore >= 150 && movingPlayerEvalAfter <= 50) || 
-                     (movingPlayerEvalBefore > 0 && movingPlayerEvalAfter <= -100);
-
-  if (loss > 300 || isEvalFlip) return 'blunder';
-  if (loss > 100) return 'mistake';
-  if (loss > 50) return 'inaccuracy';
-  if (loss > 10) return 'good';
-  return 'excellent';
-}
-
-/* ─── Stats ─────────────────────────────────────── */
-function calcStats() {
-  const s = {
-    w: { best:0, excellent:0, good:0, inaccuracy:0, mistake:0, blunder:0, forced:0, lossSum:0, count:0 },
-    b: { best:0, excellent:0, good:0, inaccuracy:0, mistake:0, blunder:0, forced:0, lossSum:0, count:0 }
-  };
-  for (let i = 0; i < hist.length; i++) {
-    const cls  = clsArr[i] || 'good';
-    const turn = i % 2 === 0 ? 'w' : 'b';
-    const t = s[turn];
-    t.count++;
-    if (cls === 'best')       t.best++;
-    else if (cls === 'excellent') t.excellent++;
-    else if (cls === 'good')      t.good++;
-    else if (cls === 'inaccuracy') t.inaccuracy++;
-    else if (cls === 'mistake')   t.mistake++;
-    else if (cls === 'blunder')   t.blunder++;
-    else if (cls === 'forced')    t.forced++;
-
-    if (evals[i] && evals[i+1] && cls !== 'forced') {
-      const evalBefore = getWhitePerspectiveEval(evals[i], turn);
-      const evalAfter = getWhitePerspectiveEval(evals[i+1], turn === 'w' ? 'b' : 'w');
-      
-      // Ignore mates in ACPL calculation to avoid extreme skewing
-      if (evals[i].mate === null && evals[i+1].mate === null && Math.abs(evalBefore) < 800) {
-        const loss = turn === 'w' ? Math.max(0, evalBefore - evalAfter) : Math.max(0, evalAfter - evalBefore);
-        t.lossSum += loss;
-      }
-    }
-  }
-
-  setText('best-w',  s.w.best + s.w.forced);
-  setText('best-b',  s.b.best + s.b.forced);
-  setText('exc-w',   s.w.excellent);
-  setText('exc-b',   s.b.excellent);
-  setText('gd-w',    s.w.good);
-  setText('gd-b',    s.b.good);
-  setText('inac-w',  s.w.inaccuracy);
-  setText('inac-b',  s.b.inaccuracy);
-  setText('mist-w',  s.w.mistake);
-  setText('mist-b',  s.b.mistake);
-  setText('blun-w',  s.w.blunder);
-  setText('blun-b',  s.b.blunder);
-
-  const acplW = s.w.count ? s.w.lossSum / s.w.count : 0;
-  const acplB = s.b.count ? s.b.lossSum / s.b.count : 0;
-  const accW  = s.w.count ? Math.round(100 * Math.exp(-0.007 * acplW)) : '—';
-  const accB  = s.b.count ? Math.round(100 * Math.exp(-0.007 * acplB)) : '—';
-  setText('acc-w', s.w.count ? accW + '%' : '—');
-  setText('acc-b', s.b.count ? accB + '%' : '—');
-}
-
-/* ─── Graph ─────────────────────────────────────── */
-function drawGraph() {
-  const svg = document.getElementById('graph-svg');
-  svg.innerHTML = '';
-  if (evals.length < 2) return;
-
-  const W = 320, H = 72, N = evals.length - 1;
-  const pts = evals.map((ev, i) => {
-    const x  = N === 0 ? W/2 : (i / N) * (W - 20) + 10;
-    const turn = i % 2 === 0 ? 'w' : 'b';
-    let val  = ev ? (getWhitePerspectiveEval(ev, turn) / 100) : 0;
-    val = Math.max(-8, Math.min(8, val));
-    const y  = H/2 - (val / 8) * (H/2 - 6);
-    return { x, y };
-  });
-
-  let html = '';
-  // Center line
-  html += `<line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>`;
-
-  // Shaded areas
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p1 = pts[i], p2 = pts[i+1];
-    const avgY = (p1.y + p2.y) / 2;
-    const col = avgY < H/2 ? 'rgba(98,153,36,0.2)' : 'rgba(201,79,54,0.2)';
-    html += `<polygon points="${p1.x},${p1.y} ${p2.x},${p2.y} ${p2.x},${H/2} ${p1.x},${H/2}" fill="${col}"/>`;
-  }
-
-  // Line
-  let path = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 1; i < pts.length; i++) path += ` L ${pts[i].x} ${pts[i].y}`;
-  html += `<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`;
-
-  // Dots
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i];
-    const active = i === moveIdx;
-    const r  = active ? 5 : 3;
-    const fc = active ? '#fff' : 'var(--accent)';
-    const sc = active ? 'var(--green)' : 'rgba(255,255,255,0.5)';
-    const sw = active ? 2 : 1;
-    html += `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fc}" stroke="${sc}" stroke-width="${sw}" class="graph-dot" onclick="jumpTo(${i})"/>`;
-  }
-
-  svg.innerHTML = html;
-}
-
-/* ─── Render ─────────────────────────────────────── */
-function render() {
-  // Rebuild chess state up to moveIdx (or moveIdx - 1 if showBest is true)
-  const effectiveMoveIdx = (showBest && moveIdx > 0) ? (moveIdx - 1) : moveIdx;
-  
-  chess = new Chess();
-  for (let i = 0; i < effectiveMoveIdx; i++) chess.move(hist[i]);
-
-  // Track last move for highlights
-  lastMove = null;
-  if (effectiveMoveIdx > 0) {
-    const t = new Chess();
-    for (let i = 0; i < effectiveMoveIdx - 1; i++) t.move(hist[i]);
-    const r = t.move(hist[effectiveMoveIdx - 1]);
-    if (r) lastMove = { from: r.from, to: r.to };
-  }
-
-  renderBoard();
-  updMoveList();
-  updRecommendation();
-  updEval();
-  drawGraph();
-}
-
-function updEval() {
-  // Sync chess to current position
-  chess = new Chess();
-  for (let i = 0; i < moveIdx; i++) chess.move(hist[i]);
-
-  if (chess.game_over()) {
-    if (chess.in_checkmate()) {
-      // The side to move is checkmated.
-      const turn = chess.turn(); // 'w' or 'b'
-      const isWhiteMated = (turn === 'w');
-      document.getElementById('eval-fill').style.width = isWhiteMated ? '0%' : '100%';
-      document.getElementById('eval-num').textContent = 'Checkmate';
-      document.getElementById('eval-num').style.color = isWhiteMated ? '#8a8178' : '#f0d9b5';
+    // ETA estimate from progress
+    const pct = parseFloat(document.getElementById('prog-fill').style.width) || 0;
+    if (pct > 8 && pct < 98) {
+      const total = elapsed / (pct / 100);
+      const rem   = Math.max(0, total - elapsed);
+      document.getElementById('timer-eta').textContent = '· ~' + fmtTime(rem) + ' left';
     } else {
-      // Draw/Stalemate
-      document.getElementById('eval-fill').style.width = '50%';
-      document.getElementById('eval-num').textContent = 'Draw';
-      document.getElementById('eval-num').style.color = 'var(--text)';
+      document.getElementById('timer-eta').textContent = '';
     }
-    return;
-  }
-
-  if (evals.length > moveIdx && evals[moveIdx]) {
-    const ev = evals[moveIdx];
-    const turn = moveIdx % 2 === 0 ? 'w' : 'b';
-    const whiteEval = getWhitePerspectiveEval(ev, turn);
-    
-    let pct = 50;
-    if (ev.mate !== null) {
-      pct = whiteEval > 0 ? 95 : 5;
-    } else {
-      pct = Math.max(5, Math.min(95, 50 + (whiteEval / 100) * 8));
-    }
-    document.getElementById('eval-fill').style.width = pct + '%';
-
-    let s = '';
-    if (ev.mate !== null) {
-      const isWhiteMating = (turn === 'w' && ev.mate > 0) || (turn === 'b' && ev.mate < 0);
-      s = 'M' + (isWhiteMating ? '+' : '-') + Math.abs(ev.mate);
-    } else {
-      const val = whiteEval / 100;
-      s = (val >= 0 ? '+' : '') + val.toFixed(1);
-    }
-    document.getElementById('eval-num').textContent = s;
-    document.getElementById('eval-num').style.color = whiteEval >= 0 ? '#f0d9b5' : '#8a8178';
-  } else {
-    document.getElementById('eval-fill').style.width = '50%';
-    document.getElementById('eval-num').textContent = '0.0';
-    document.getElementById('eval-num').style.color = 'var(--text)';
-  }
+  }, 500);
 }
 
-function pImg(color, type) {
-  // color: 'w'/'b',  type: 'k','q','r','b','n','p'
-  return 'pieces/' + pTheme + '/' + color + type.toUpperCase() + '.svg';
+function stopTimer() {
+  if (timerInt) { clearInterval(timerInt); timerInt = null; }
 }
 
-function renderBoard() {
-  const board = document.getElementById('rboard');
-  board.innerHTML = '';
-
-  const dR = flipped ? [...RANKS].reverse() : RANKS;
-  const dF = flipped ? [...FILES].reverse() : FILES;
-
-  // Rank labels
-  document.getElementById('rlbls').innerHTML = dR.map(r => `<span>${r}</span>`).join('');
-  // File labels
-  document.getElementById('flbls').innerHTML = dF.map(f => `<span>${f}</span>`).join('');
-
-  // Best move arrows
-  let bfrom = null, bto = null;
-  if (showBest && moveIdx > 0 && evals[moveIdx - 1]) {
-    const bm = evals[moveIdx - 1].bestMove;
-    if (bm && bm !== '(none)' && bm.length >= 4) {
-      bfrom = bm.slice(0, 2);
-      bto   = bm.slice(2, 4);
-    }
-  }
-
-  const unicodeMap = {
-    w: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
-    b: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' }
-  };
-
-  for (let ri = 0; ri < 8; ri++) {
-    for (let fi = 0; fi < 8; fi++) {
-      const f  = dF[fi], r = dR[ri], sq = f + r;
-      const p  = chess.get(sq);
-      const isL = (FILES.indexOf(f) + r) % 2 === 1;
-
-      const d = document.createElement('div');
-      d.className = 'rsq ' + (isL ? 'light' : 'dark');
-
-      if (lastMove?.from === sq) d.classList.add('lf');
-      if (lastMove?.to   === sq) d.classList.add('lt');
-      if (bfrom === sq) d.classList.add('best-from');
-      if (bto   === sq) d.classList.add('best-to');
-
-      if (p) {
-        if (pTheme === 'Unicode') {
-          const sym = unicodeMap[p.color]?.[p.type] || '';
-          const span = document.createElement('span');
-          span.textContent = sym;
-          span.className = 'rpiece';
-          span.style.fontSize = '2.2rem';
-          span.style.lineHeight = '1';
-          span.style.display = 'flex';
-          span.style.alignItems = 'center';
-          span.style.justifyContent = 'center';
-          span.style.color = p.color === 'w' ? '#ffffff' : '#1a1a1a';
-          if (p.color === 'w') {
-            span.style.textShadow = '0 0 2px #000, 0 0 2px #000';
-          }
-          d.appendChild(span);
-        } else {
-          const img = document.createElement('img');
-          img.src = pImg(p.color, p.type);
-          img.className = 'rpiece';
-          img.draggable = false;
-          img.onerror = () => { img.style.display = 'none'; };
-          d.appendChild(img);
-        }
-      }
-      board.appendChild(d);
-    }
-  }
-}
-
-/* ─── Move list ─────────────────────────────────── */
-function badgeHtml(cls) {
-  if (!cls) return '';
-  const map = {
-    best:      ['best',      '✓'],
-    forced:    ['forced',    '✓'],
-    excellent: ['excellent', '!'],
-    good:      ['good',      '⬈'],
-    inaccuracy:['inaccuracy','?!'],
-    mistake:   ['mistake',   '?'],
-    blunder:   ['blunder',   '??'],
-  };
-  const [c, t] = map[cls] || ['good', ''];
-  return `<span class="badge ${c}">${t}</span>`;
-}
-
-function updMoveList() {
-  const container = document.getElementById('mlist');
-  container.innerHTML = '';
-  for (let i = 0; i < hist.length; i += 2) {
-    const row = document.createElement('div');
-    row.className = 'rev-mrow';
-    if (i === moveIdx - 1 || i + 1 === moveIdx - 1) row.classList.add('active');
-
-    const wA = i === moveIdx - 1     ? ' cur' : '';
-    const bA = i + 1 === moveIdx - 1 ? ' cur' : '';
-    const wB = badgeHtml(clsArr[i]);
-    const bB = badgeHtml(clsArr[i+1]);
-
-    row.innerHTML = `
-      <span class="rev-mnum">${Math.floor(i/2)+1}.</span>
-      <span class="rev-msan${wA}" onclick="jumpTo(${i+1})">${hist[i]||''}${wB}</span>
-      <span class="rev-msan${bA}" onclick="jumpTo(${i+2})">${hist[i+1]||''}${bB}</span>
-    `;
-    container.appendChild(row);
-  }
-  const active = container.querySelector('.rev-msan.cur');
-  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-}
-
-/* ─── Recommendation ─────────────────────────────── */
-function updRecommendation() {
-  const playedEl   = document.getElementById('played-move');
-  const descEl     = document.getElementById('played-desc');
-  const suggEl     = document.getElementById('suggested-move');
-  const suggDesc   = document.getElementById('suggested-desc');
-  const btnShow    = document.getElementById('btn-show-best');
-  const clsRow     = document.getElementById('cls-badge-row');
-
-  // Sync chess to current position
-  chess = new Chess();
-  for (let i = 0; i < moveIdx; i++) chess.move(hist[i]);
-
-  if (hist.length === 0 || moveIdx === 0) {
-    playedEl.textContent = '—';
-    descEl.textContent   = 'Navigate moves to see details.';
-    suggEl.textContent   = '—';
-    suggDesc.textContent = '';
-    btnShow.style.display = 'none';
-    clsRow.style.display  = 'none';
-    return;
-  }
-
-  const idx  = moveIdx - 1;
-  const turn = idx % 2 === 0 ? 'White' : 'Black';
-  const san  = hist[idx];
-  const cls  = clsArr[idx];
-
-  // Classification badge
-  if (cls) {
-    clsRow.style.display = 'block';
-    clsRow.innerHTML = `<span class="cls-label cls-${cls}">${cls}</span>`;
-  } else {
-    clsRow.style.display = 'none';
-  }
-
-  playedEl.textContent = `${turn}: ${san}`;
-
-  if (cls && evals[idx+1]) {
-    const ev = evals[idx+1];
-    // Check if this resulting position is terminal
-    const temp = new Chess();
-    for (let k = 0; k < idx + 1; k++) temp.move(hist[k]);
-
-    let cpStr = '';
-    if (temp.in_checkmate()) {
-      cpStr = 'Checkmate';
-    } else if (temp.in_draw()) {
-      cpStr = 'Draw';
-    } else if (ev.mate !== null) {
-      cpStr = 'Mate in ' + ev.mate;
-    } else {
-      cpStr = (ev.cp >= 0 ? '+' : '') + (ev.cp / 100).toFixed(2);
-    }
-    descEl.textContent = `Evaluation after move: ${cpStr}`;
-  } else {
-    descEl.textContent = '';
-  }
-
-  if (chess.game_over()) {
-    suggEl.textContent = 'Game Over';
-    suggDesc.textContent = chess.in_checkmate() ? 'Checkmate' : 'Draw';
-    btnShow.style.display = 'none';
-  } else {
-    btnShow.style.display = 'block';
-    btnShow.textContent   = showBest ? 'Hide Best Move' : 'Show Best Move';
-
-    if (evals[idx] && evals[idx].bestMove && evals[idx].bestMove !== '(none)') {
-      const uci = evals[idx].bestMove;
-      const from = uci.slice(0, 2).toUpperCase();
-      const to   = uci.slice(2, 4).toUpperCase();
-      suggEl.textContent = `Best: ${from} → ${to}`;
-
-      const ev2 = evals[idx];
-      const cpStr2 = ev2.mate !== null
-        ? 'Mate in ' + ev2.mate
-        : (ev2.cp >= 0 ? '+' : '') + (ev2.cp / 100).toFixed(2);
-      suggDesc.textContent = `Engine evaluation: ${cpStr2}`;
-    } else {
-      suggEl.textContent = evals.length > 0 ? 'Analysis pending...' : '—';
-      suggDesc.textContent = '';
-    }
-  }
-}
-
-/* ─── Navigation ─────────────────────────────────── */
-function jumpStart() { moveIdx = 0;            showBest = false; render(); }
-function prevMove()  { if (moveIdx > 0) { moveIdx--; showBest = false; render(); } }
-function nextMove()  { if (moveIdx < hist.length) { moveIdx++; showBest = false; render(); } }
-function jumpEnd()   { moveIdx = hist.length;  showBest = false; render(); }
-function jumpTo(i)   { moveIdx = i;            showBest = false; render(); }
-function flip()      { flipped = !flipped; renderBoard(); }
-function toggleBest() {
-  showBest = !showBest;
-  renderBoard();
-  document.getElementById('btn-show-best').textContent = showBest ? 'Hide Best Move' : 'Show Best Move';
-}
-
-/* ─── UI helpers ─────────────────────────────────── */
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
-
-function setProgress(show, msg, pct) {
-  const w = document.getElementById('progress-wrap');
-  const t = document.getElementById('progress-txt');
-  const f = document.getElementById('progress-fill');
-  w.style.display = show ? 'block' : 'none';
-  if (t) t.textContent = msg;
-  if (f) f.style.width  = pct + '%';
+/* ─── Progress UI ─── */
+function setProgress(visible, msg, pct) {
+  document.getElementById('status-bar').style.display = visible ? 'block' : 'none';
+  if (msg !== null) document.getElementById('status-msg').textContent = msg;
+  if (pct !== null) document.getElementById('prog-fill').style.width = pct + '%';
 }
 
 function showError(msg) {
@@ -1260,15 +538,706 @@ function showError(msg) {
   android('onError', msg);
 }
 
-/* ─── Keyboard navigation ────────────────────────── */
+/* ─── IndexedDB cache v4 ─── */
+let _db = null;
+async function openDB() {
+  if (_db) return _db;
+  return new Promise(res => {
+    const r = indexedDB.open('ChessReview_v4', 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('ev');
+    r.onsuccess = e => { _db = e.target.result; res(_db); };
+    r.onerror   = () => res(null);
+  });
+}
+async function cacheGet(k) {
+  const d = await openDB(); if (!d) return null;
+  return new Promise(res => {
+    try {
+      const rq = d.transaction('ev','readonly').objectStore('ev').get(k);
+      rq.onsuccess = () => res(rq.result || null);
+      rq.onerror   = () => res(null);
+    } catch { res(null); }
+  });
+}
+async function cacheSet(k, v) {
+  const d = await openDB(); if (!d) return;
+  return new Promise(res => {
+    try {
+      const rq = d.transaction('ev','readwrite').objectStore('ev').put(v, k);
+      rq.onsuccess = () => res(true);
+      rq.onerror   = () => res(false);
+    } catch { res(false); }
+  });
+}
+
+/* ─── Stockfish worker init ─── */
+async function initWorkers() {
+  if (sfW.length) return;
+  try {
+    const code = await fetch('stockfish.js').then(r => r.text());
+    const pfx  = 'https://appassets.androidplatform.net/assets/';
+    const blob = new Blob([
+      `self.Module={locateFile:function(p){return "${pfx}"+p;}};\n` + code
+    ], { type: 'application/javascript' });
+    blobURL = URL.createObjectURL(blob);
+
+    for (let i = 0; i < WORKERS; i++) {
+      const w = new Worker(blobURL);
+      sfReady.push(false);
+      const idx = i;
+      w.addEventListener('message', function rdy(e) {
+        if (e.data === 'readyok') {
+          sfReady[idx] = true;
+          w.removeEventListener('message', rdy);
+        }
+      });
+      w.onerror = e => console.warn('SF worker error:', e.message);
+      w.postMessage('uci');
+      w.postMessage('setoption name Hash value 16');
+      w.postMessage('setoption name Threads value 1');
+      w.postMessage('isready');
+      sfW.push(w);
+    }
+  } catch(e) {
+    console.error('Worker init failed:', e);
+    showError('Chess engine unavailable — board view only.');
+  }
+}
+
+/* ─── Single position evaluation ─── */
+function evalPos(worker, fen, depth) {
+  return new Promise(res => {
+    let cp = 0, mate = null, best = '(none)';
+    const tid = setTimeout(() => {
+      worker.removeEventListener('message', h);
+      res({ cp, mate, bestMove: best });
+    }, 10000);
+
+    function h(e) {
+      const ln = e.data;
+      const cm = ln.match(/score cp (-?\d+)/);
+      const mm = ln.match(/score mate (-?\d+)/);
+      if (cm) cp   = parseInt(cm[1]);
+      if (mm) mate = parseInt(mm[1]);
+      if (ln.startsWith('bestmove')) {
+        clearTimeout(tid);
+        best = ln.split(' ')[1] || '(none)';
+        worker.removeEventListener('message', h);
+        res({ cp, mate, bestMove: best });
+      }
+    }
+    worker.addEventListener('message', h);
+    worker.postMessage('position fen ' + fen);
+    worker.postMessage('go depth ' + depth);
+  });
+}
+
+/* ═══════════════════════
+   Entry point from Android
+═══════════════════════ */
+window.startReview = async function(b64moves, pieceTheme, lightColor, darkColor) {
+  try {
+    if (pieceTheme) pTheme = pieceTheme;
+    if (lightColor) document.documentElement.style.setProperty('--sq-l', lightColor);
+    if (darkColor)  document.documentElement.style.setProperty('--sq-d', darkColor);
+
+    const raw = atob(b64moves).split(',').map(s => s.trim()).filter(Boolean);
+
+    // Build hist, uciMoves, fens
+    const tmp = new Chess();
+    hist = []; uciMoves = []; fens = [tmp.fen()];
+    for (const m of raw) {
+      const r = tmp.move(m);
+      if (!r) break;
+      hist.push(r.san);
+      uciMoves.push(r.from + r.to + (r.promotion || ''));
+      fens.push(tmp.fen());
+    }
+
+    if (!hist.length) { showError('No valid moves to review.'); renderBoard(); return; }
+
+    moveIdx = hist.length;
+    rebuildBoard(moveIdx);
+    renderBoard();
+    updMoveList();
+    updEvalBar();
+
+    await runAnalysis();
+  } catch(e) {
+    showError('startReview error: ' + e.message);
+    renderBoard();
+  }
+};
+
+/* ═══════════════════
+   Analysis pipeline
+═══════════════════ */
+async function runAnalysis() {
+  if (analyzing) return;
+  analyzing = true; showBest = false;
+
+  try {
+    setProgress(true, 'Checking cache…', 2);
+
+    const cacheKey = hist.join(',') + '_v4';
+    const cached   = await cacheGet(cacheKey);
+    if (cached && cached.evals?.length === fens.length && cached.clsArr?.length === hist.length) {
+      evals   = cached.evals;
+      clsArr  = cached.clsArr;
+      analyzing = false;
+      setProgress(false, null, 100);
+      calcStats(); drawGraph(); render();
+      android('onAnalysisComplete');
+      return;
+    }
+
+    // Fresh analysis
+    startTimer();
+    setProgress(true, 'Loading engine…', 3);
+    await initWorkers();
+
+    // Wait up to 2 s for at least 1 worker
+    const deadline = Date.now() + 2000;
+    while (!sfReady.some(Boolean) && sfW.length && Date.now() < deadline)
+      await sleep(100);
+
+    if (!sfW.length) {
+      stopTimer(); analyzing = false;
+      setProgress(false, null, 0);
+      render(); return;
+    }
+
+    // ── Precompute forced flags ──
+    const forced = fens.map((fen, i) => {
+      if (i >= hist.length) return false;
+      return new Chess(fen).moves().length === 1;
+    });
+
+    evals = new Array(fens.length).fill(null);
+
+    // Fill game-over positions immediately (no engine needed)
+    for (let i = 0; i < fens.length; i++) {
+      const t = new Chess(fens[i]);
+      if (t.game_over()) {
+        // From White's perspective: if it's White's turn and checkmate → White is mated = -∞
+        evals[i] = {
+          cp: t.in_checkmate() ? (t.turn() === 'w' ? -30000 : 30000) : 0,
+          mate: null,
+          bestMove: '(none)',
+          fixedWhite: true  // already in White perspective, skip toWhite inversion
+        };
+      }
+    }
+
+    // ── Pass 1: depth 8, all non-terminal positions ──
+    const pass1 = fens.map((fen, i) => evals[i] ? null : { fen, i }).filter(Boolean);
+    let done1 = fens.length - pass1.length;
+    let nxt1  = 0;
+
+    await Promise.all(sfW.map(async w => {
+      while (nxt1 < pass1.length) {
+        const task = pass1[nxt1++];
+        evals[task.i] = await evalPos(w, task.fen, 8);
+        done1++;
+        setProgress(true,
+          `Analyzing ${done1} / ${fens.length}`,
+          Math.round(done1 / fens.length * 78));
+      }
+    }));
+
+    // ── Pass 2: depth 12 for critical moves ──
+    const seen = new Set();
+    const pass2 = [];
+    for (let i = 0; i < hist.length; i++) {
+      if (!evals[i] || !evals[i+1]) continue;
+      const turn = turnAt(i);
+      const wB   = toWhite(evals[i],   turn);
+      const wA   = toWhite(evals[i+1], turn === 'w' ? 'b' : 'w');
+      const pB   = turn === 'w' ? wB : -wB;
+      const pA   = turn === 'w' ? wA : -wA;
+      const loss = pB - pA;
+      const flip = (pB >= 150 && pA <= 50) || (pB > 0 && pA <= -100);
+
+      // Re-evaluate only critical blunder/eval-flip/mate threat swings
+      if ((loss > 200 || flip || evals[i].mate !== null || evals[i+1].mate !== null) && !forced[i]) {
+        [i, i+1].forEach(idx => {
+          if (!seen.has(idx) && idx < fens.length && !(new Chess(fens[idx]).game_over())) {
+            seen.add(idx); pass2.push({ fen: fens[idx], i: idx });
+          }
+        });
+      }
+    }
+
+    let done2 = 0, nxt2 = 0;
+    if (pass2.length) {
+      setProgress(true, `Refining ${pass2.length} critical positions…`, 80);
+      await Promise.all(sfW.map(async w => {
+        while (nxt2 < pass2.length) {
+          const task = pass2[nxt2++];
+          evals[task.i] = await evalPos(w, task.fen, 12);
+          done2++;
+          setProgress(true,
+            `Refining ${done2} / ${pass2.length}…`,
+            80 + Math.round(done2 / pass2.length * 18));
+        }
+      }));
+    }
+
+    // ── Classify moves ──
+    clsArr = hist.map((_, i) => {
+      if (!evals[i] || !evals[i+1]) return 'good';
+      return classifyMove(i, forced[i]);
+    });
+
+    await cacheSet(cacheKey, { evals, clsArr });
+
+    stopTimer();
+    analyzing = false;
+    setProgress(false, null, 100);
+    calcStats(); drawGraph(); render();
+    android('onAnalysisComplete');
+
+  } catch(err) {
+    stopTimer();
+    analyzing = false;
+    setProgress(false, null, 0);
+    showError('Analysis failed: ' + err.message);
+    render();
+  }
+}
+
+/* ─── Eval normalization ─── */
+function toWhite(ev, turn) {
+  if (!ev) return 0;
+  if (ev.fixedWhite) return ev.cp;
+
+  let val;
+  if (ev.mate !== null) {
+    val = ev.mate > 0 ? (30000 - ev.mate * 10) : (-30000 - ev.mate * 10);
+  } else {
+    val = Math.max(-3000, Math.min(3000, ev.cp));
+  }
+  return turn === 'w' ? val : -val;
+}
+
+function turnAt(i) {
+  if (fens[i]) return fens[i].split(' ')[1] || (i % 2 === 0 ? 'w' : 'b');
+  return i % 2 === 0 ? 'w' : 'b';
+}
+
+/* ─── Move classification ─── */
+function classifyMove(i, forced) {
+  if (forced) return 'forced';
+
+  const played = uciMoves[i];
+  const best   = evals[i]?.bestMove;
+  if (played && best && played === best) return 'best';
+
+  const turn  = turnAt(i);
+  const nextT = turn === 'w' ? 'b' : 'w';
+  const wBef  = toWhite(evals[i],   turn);
+  const wAft  = toWhite(evals[i+1], nextT);
+
+  const pBef  = turn === 'w' ? wBef : -wBef;
+  const pAft  = turn === 'w' ? wAft : -wAft;
+  const loss  = pBef - pAft;
+
+  if (loss <= 0) return 'best';
+
+  const flip = (pBef >= 150 && pAft <= 50) || (pBef > 0 && pAft <= -100);
+  if (loss > 300 || flip) return 'blunder';
+  if (loss > 100)          return 'mistake';
+  if (loss > 50)           return 'inaccuracy';
+  if (loss > 15)           return 'good';
+  return 'excellent';
+}
+
+/* ─── Stats + Accuracy ─── */
+function calcStats() {
+  const init = () => ({
+    best:0,excellent:0,good:0,inaccuracy:0,mistake:0,blunder:0,forced:0,
+    lossSum:0,cnt:0
+  });
+  const s = { w: init(), b: init() };
+
+  for (let i = 0; i < hist.length; i++) {
+    const cls  = clsArr[i] || 'good';
+    const turn = turnAt(i);
+    const t    = s[turn];
+    t.cnt++;
+    t[cls] = (t[cls] || 0) + 1;
+
+    if (cls !== 'forced' && evals[i] && evals[i+1] &&
+        evals[i].mate === null && evals[i+1].mate === null &&
+        !evals[i].fixedWhite && !evals[i+1].fixedWhite) {
+      const nextT = turn === 'w' ? 'b' : 'w';
+      const wB    = toWhite(evals[i],   turn);
+      const wA    = toWhite(evals[i+1], nextT);
+      const pB    = Math.max(-700, Math.min(700, turn === 'w' ? wB : -wB));
+      const pA    = Math.max(-700, Math.min(700, turn === 'w' ? wA : -wA));
+      t.lossSum  += Math.max(0, pB - pA);
+    }
+  }
+
+  function acplToAcc(acpl) {
+    return Math.max(0, Math.min(100,
+      Math.round(103.1668 * Math.exp(-0.04354 * (acpl * 0.6)) - 3.1669)
+    ));
+  }
+
+  const acplW = s.w.cnt > 0 ? s.w.lossSum / s.w.cnt : 0;
+  const acplB = s.b.cnt > 0 ? s.b.lossSum / s.b.cnt : 0;
+  const accW  = s.w.cnt > 0 ? acplToAcc(acplW) : null;
+  const accB  = s.b.cnt > 0 ? acplToAcc(acplB) : null;
+
+  function accColor(v) {
+    if (v >= 90) return '#629924';
+    if (v >= 75) return '#38bdf8';
+    if (v >= 55) return '#fbbf24';
+    return '#ef4444';
+  }
+
+  const wEl = document.getElementById('acc-w');
+  const bEl = document.getElementById('acc-b');
+  if (accW !== null) { wEl.textContent = accW + '%'; wEl.style.color = accColor(accW); }
+  if (accB !== null) { bEl.textContent = accB + '%'; bEl.style.color = accColor(accB); }
+
+  const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('s-best-w',  s.w.best+s.w.forced); set('s-best-b',  s.b.best+s.b.forced);
+  set('s-exc-w',   s.w.excellent);       set('s-exc-b',   s.b.excellent);
+  set('s-gd-w',    s.w.good);            set('s-gd-b',    s.b.good);
+  set('s-inac-w',  s.w.inaccuracy);      set('s-inac-b',  s.b.inaccuracy);
+  set('s-mist-w',  s.w.mistake);         set('s-mist-b',  s.b.mistake);
+  set('s-blun-w',  s.w.blunder);         set('s-blun-b',  s.b.blunder);
+}
+
+/* ─── Eval graph ─── */
+function drawGraph() {
+  const svg = document.getElementById('graph-svg');
+  if (!evals.length) { svg.innerHTML = ''; return; }
+
+  const W = 320, H = 68, mid = H / 2;
+  const N = evals.length - 1;
+
+  const pts = evals.map((ev, i) => {
+    const x   = N === 0 ? W/2 : (i/N) * (W-20) + 10;
+    if (!ev) return { x, y: mid };
+    const wv  = toWhite(ev, turnAt(i)) / 100;
+    const val = Math.max(-8, Math.min(8, wv));
+    const y   = mid - (val / 8) * (mid - 5);
+    return { x, y };
+  });
+
+  let html = '';
+  // Center line
+  html += `<line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="rgba(255,255,255,.1)" stroke-width="1"/>`;
+
+  // Shaded fill area
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i+1];
+    const avgY = (a.y + b.y) / 2;
+    const col  = avgY < mid ? 'rgba(98,153,36,.18)' : 'rgba(201,79,54,.18)';
+    html += `<polygon points="${a.x},${a.y} ${b.x},${b.y} ${b.x},${mid} ${a.x},${mid}" fill="${col}"/>`;
+  }
+
+  // Line
+  if (pts.length > 1) {
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x} ${pts[i].y}`;
+    html += `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/>`;
+  }
+
+  // Dots
+  pts.forEach((p, i) => {
+    const active = i === moveIdx;
+    html += `<circle cx="${p.x}" cy="${p.y}"
+               r="${active ? 5 : 3}"
+               fill="${active ? '#fff' : 'var(--accent)'}"
+               stroke="${active ? 'var(--green)' : 'rgba(255,255,255,.25)'}"
+               stroke-width="${active ? 2 : 1}"
+               class="g-dot" onclick="jumpTo(${i})"/>`;
+  });
+
+  svg.innerHTML = html;
+}
+
+/* ─── Board rendering ─── */
+function rebuildBoard(toIdx) {
+  chess = new Chess();
+  for (let i = 0; i < toIdx; i++) chess.move(hist[i]);
+}
+
+function renderBoard() {
+  const board = document.getElementById('chessboard');
+  board.innerHTML = '';
+
+  const dR = flipped ? [...RANKS].reverse() : RANKS;
+  const dF = flipped ? [...FILES].reverse() : FILES;
+
+  document.getElementById('rank-labels').innerHTML = dR.map(r => `<span>${r}</span>`).join('');
+  document.getElementById('file-labels').innerHTML = dF.map(f => `<span>${f}</span>`).join('');
+
+  let bFrom = null, bTo = null;
+  if (showBest && moveIdx > 0 && evals[moveIdx - 1]) {
+    const bm = evals[moveIdx - 1].bestMove;
+    if (bm && bm !== '(none)' && bm.length >= 4) {
+      bFrom = bm.slice(0, 2);
+      bTo   = bm.slice(2, 4);
+    }
+  }
+
+  for (let ri = 0; ri < 8; ri++) {
+    for (let fi = 0; fi < 8; fi++) {
+      const file = dF[fi], rank = dR[ri], sq = file + rank;
+      const piece = chess.get(sq);
+      const isL   = (FILES.indexOf(file) + rank) % 2 === 1;
+
+      const div = document.createElement('div');
+      div.className = 'sq ' + (isL ? 'light' : 'dark');
+      if (lastMove?.from === sq) div.classList.add('lf');
+      if (lastMove?.to   === sq) div.classList.add('lt');
+      if (bFrom === sq) div.classList.add('bf');
+      if (bTo   === sq) div.classList.add('bt');
+
+      if (piece) {
+        const img = document.createElement('img');
+        img.src       = `pieces/${pTheme}/${piece.color}${piece.type.toUpperCase()}.svg`;
+        img.className = 'piece';
+        img.draggable = false;
+        img.onerror   = () => { img.style.display = 'none'; };
+        div.appendChild(img);
+      }
+      board.appendChild(div);
+    }
+  }
+}
+
+/* ─── Eval bar update ─── */
+function updEvalBar() {
+  const scoreEl = document.getElementById('eval-score');
+  const fillEl  = document.getElementById('eval-fill');
+
+  const tmp = new Chess();
+  for (let i = 0; i < moveIdx; i++) tmp.move(hist[i]);
+
+  if (tmp.game_over()) {
+    if (tmp.in_checkmate()) {
+      const whiteLost = tmp.turn() === 'w';
+      fillEl.style.width  = whiteLost ? '2%' : '98%';
+      scoreEl.textContent = whiteLost ? '0-1' : '1-0';
+      scoreEl.style.color = whiteLost ? '#8a8178' : '#f0d9b5';
+    } else {
+      fillEl.style.width  = '50%';
+      scoreEl.textContent = '½-½';
+      scoreEl.style.color = 'var(--text)';
+    }
+    return;
+  }
+
+  const ev = evals[moveIdx];
+  if (!ev) {
+    fillEl.style.width  = '50%';
+    scoreEl.textContent = '+0.0';
+    scoreEl.style.color = 'var(--text)';
+    return;
+  }
+
+  const turn    = tmp.turn();
+  const wVal    = toWhite(ev, turn);
+
+  let pct, txt;
+
+  if (ev.mate !== null) {
+    const wMating = wVal > 0;
+    pct = wMating ? 96 : 4;
+    const mN = Math.abs(ev.mate);
+    txt = wMating ? `M+${mN}` : `M-${mN}`;
+    scoreEl.style.color = wMating ? '#f0d9b5' : '#8a8178';
+  } else {
+    const clampedCp = Math.max(-800, Math.min(800, wVal));
+    pct = Math.max(4, Math.min(96, 50 + (clampedCp / 800) * 46));
+    const v = wVal / 100;
+    txt = (v >= 0 ? '+' : '') + v.toFixed(1);
+    scoreEl.style.color = wVal >= 0 ? '#f0d9b5' : '#9a9590';
+  }
+
+  fillEl.style.width  = pct + '%';
+  scoreEl.textContent = txt;
+}
+
+/* ─── Move quality panel ─── */
+function updQualityPanel() {
+  const clsRow   = document.getElementById('cls-row');
+  const playedEl = document.getElementById('played-san');
+  const evalEl   = document.getElementById('played-eval');
+  const bestEl   = document.getElementById('best-san');
+  const bestDesc = document.getElementById('best-eval');
+  const btnBest  = document.getElementById('btn-best');
+
+  if (moveIdx === 0 || !hist.length) {
+    clsRow.style.display  = 'none';
+    playedEl.textContent  = '—';
+    evalEl.textContent    = 'Select a move to see details.';
+    bestEl.textContent    = '—';
+    bestDesc.textContent  = '';
+    btnBest.style.display = 'none';
+    return;
+  }
+
+  const i    = moveIdx - 1;
+  const cls  = clsArr[i];
+  const turn = i % 2 === 0 ? 'White' : 'Black';
+
+  clsRow.style.display = cls ? 'block' : 'none';
+  if (cls) clsRow.innerHTML = `<span class="cls-pill cls-${cls}">${cls}</span>`;
+
+  playedEl.textContent = `${turn}: ${hist[i]}`;
+
+  if (evals[i+1]) {
+    const ev  = evals[i+1];
+    const tmp = new Chess();
+    for (let k = 0; k <= i; k++) tmp.move(hist[k]);
+
+    let cpStr;
+    if (tmp.in_checkmate()) cpStr = 'Checkmate';
+    else if (tmp.in_draw()) cpStr = 'Draw';
+    else if (ev.mate !== null) cpStr = 'Mate in ' + Math.abs(ev.mate);
+    else {
+      const wv = toWhite(ev, tmp.turn()) / 100;
+      cpStr = (wv >= 0 ? '+' : '') + wv.toFixed(2);
+    }
+    evalEl.textContent = `Eval after move: ${cpStr}`;
+  } else {
+    evalEl.textContent = evals.length > 0 ? 'Evaluating…' : '';
+  }
+
+  const posBefore = new Chess();
+  for (let k = 0; k < i; k++) posBefore.move(hist[k]);
+
+  if (posBefore.game_over()) {
+    bestEl.textContent   = 'Game Over';
+    bestDesc.textContent = '';
+    btnBest.style.display = 'none';
+    return;
+  }
+
+  btnBest.style.display = 'block';
+  btnBest.textContent   = showBest ? 'Hide Best Move' : 'Show Best Move';
+
+  const bm = evals[i]?.bestMove;
+  if (bm && bm !== '(none)' && bm.length >= 4) {
+    const t = new Chess(fens[i]);
+    let bmSAN = bm.slice(0,2).toUpperCase() + '→' + bm.slice(2,4).toUpperCase();
+    try {
+      const r = t.move({ from: bm.slice(0,2), to: bm.slice(2,4), promotion: bm[4] || undefined });
+      if (r) bmSAN = r.san;
+    } catch {}
+
+    bestEl.textContent = `Best: ${bmSAN}`;
+
+    const ev2 = evals[i];
+    if (ev2.mate !== null) {
+      bestDesc.textContent = `Engine: Mate in ${Math.abs(ev2.mate)}`;
+    } else {
+      const bvW = toWhite(ev2, turnAt(i)) / 100;
+      bestDesc.textContent = `Engine eval: ${bvW >= 0 ? '+' : ''}${bvW.toFixed(2)}`;
+    }
+  } else {
+    bestEl.textContent   = analyzing ? 'Analyzing…' : '—';
+    bestDesc.textContent = '';
+  }
+}
+
+/* ─── Move list ─── */
+const BADGE = {
+  best:      ['mb-best',      '✓'],
+  forced:    ['mb-forced',    '✓'],
+  excellent: ['mb-excellent', '!'],
+  good:      ['mb-good',      '↗'],
+  inaccuracy:['mb-inaccuracy','?!'],
+  mistake:   ['mb-mistake',   '?'],
+  blunder:   ['mb-blunder',   '??'],
+};
+function badge(cls) {
+  if (!cls) return '';
+  const [c, s] = BADGE[cls] || ['mb-good',''];
+  return `<span class="mbadge ${c}">${s}</span>`;
+}
+
+function updMoveList() {
+  const el = document.getElementById('mlist');
+  el.innerHTML = '';
+
+  for (let i = 0; i < hist.length; i += 2) {
+    const num  = Math.floor(i/2) + 1;
+    const wCur = moveIdx === i+1;
+    const bCur = moveIdx === i+2;
+    const row  = document.createElement('div');
+    row.className = 'mrow' + (wCur || bCur ? ' active' : '');
+    row.innerHTML = `
+      <span class="mnum">${num}.</span>
+      <span class="msan${wCur?' cur':''}" onclick="jumpTo(${i+1})">
+        ${hist[i]||''}${badge(clsArr[i])}
+      </span>
+      <span class="msan${bCur?' cur':''}" onclick="jumpTo(${i+2})">
+        ${hist[i+1] ? hist[i+1]+badge(clsArr[i+1]) : ''}
+      </span>`;
+    el.appendChild(row);
+  }
+
+  el.querySelector('.msan.cur')?.scrollIntoView({ block:'nearest', behavior:'smooth' });
+}
+
+/* ─── Full render ─── */
+function render() {
+  const boardIdx = (showBest && moveIdx > 0) ? moveIdx - 1 : moveIdx;
+
+  chess = new Chess();
+  for (let i = 0; i < boardIdx; i++) chess.move(hist[i]);
+
+  lastMove = null;
+  if (boardIdx > 0) {
+    const t = new Chess();
+    for (let i = 0; i < boardIdx - 1; i++) t.move(hist[i]);
+    const r = t.move(hist[boardIdx - 1]);
+    if (r) lastMove = { from: r.from, to: r.to };
+  }
+
+  renderBoard();
+  updEvalBar();
+  updQualityPanel();
+  updMoveList();
+  drawGraph();
+}
+
+/* ─── Navigation ─── */
+function jumpStart() { moveIdx = 0;               showBest=false; render(); }
+function prevMove()  { if(moveIdx>0){ moveIdx--;  showBest=false; render(); } }
+function nextMove()  { if(moveIdx<hist.length){ moveIdx++; showBest=false; render(); } }
+function jumpEnd()   { moveIdx = hist.length;      showBest=false; render(); }
+function jumpTo(i)   { moveIdx=Math.max(0,Math.min(hist.length,i)); showBest=false; render(); }
+function flipBoard() { flipped=!flipped; renderBoard(); }
+
+function toggleBest() {
+  if (moveIdx === 0) return;
+  showBest = !showBest;
+  render();
+}
+
+/* ─── Keyboard ─── */
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft')  prevMove();
-  if (e.key === 'ArrowRight') nextMove();
-  if (e.key === 'ArrowUp')    jumpStart();
-  if (e.key === 'ArrowDown')  jumpEnd();
+  switch(e.key) {
+    case 'ArrowLeft':  prevMove();  break;
+    case 'ArrowRight': nextMove();  break;
+    case 'ArrowUp':    jumpStart(); break;
+    case 'ArrowDown':  jumpEnd();   break;
+  }
 });
 
-/* ─── Initial render (empty board) ──────────────── */
+/* ─── Util ─── */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ─── Initial empty board ─── */
 renderBoard();
 android('onReviewLoaded');
 </script>
