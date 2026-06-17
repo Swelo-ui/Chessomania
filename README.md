@@ -1,6 +1,10 @@
 # <p align="center"><img src="https://raw.githubusercontent.com/Swelo-ui/Chessomania/main/public/logo/logo-with-name-dark.png" alt="Chessomania Banner" width="600"></p>
 
 <p align="center">
+  <img src="https://raw.githubusercontent.com/Swelo-ui/Chessomania/main/public/logo/chessomania%20text%20logo.png" alt="Chessomania Text Logo" width="320">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Web-007ACC?style=for-the-badge&logo=android&logoColor=white" alt="Platform Badge">
   <img src="https://img.shields.io/badge/Kotlin-1.9.22-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin Badge">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js Badge">
@@ -55,6 +59,16 @@
 *   **Web App Client**: Play directly from your browser:
     *   **Local Server**: [http://localhost:3000](http://localhost:3000) or `/chess`
     *   **Vercel Client**: `https://chessomania-server.vercel.app/`
+
+---
+
+## 📱 Visual Interface Preview
+
+Below is the launch interface of the native Android application:
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Swelo-ui/Chessomania/main/public/logo/splashscreen.png" alt="Chessomania Splash Screen" width="280" style="border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.35);">
+</p>
 
 ---
 
