@@ -978,6 +978,15 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
         <div class="sound-btns" id="snd-grid"></div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-h">Haptic Feedback (Vibration)</div>
+      <div class="card-b" style="padding: 12px;">
+        <div class="sound-btns">
+          <button id="haptic-btn-on" class="snd-btn" onclick="toggleWebHaptic(true)">Enabled</button>
+          <button id="haptic-btn-off" class="snd-btn" onclick="toggleWebHaptic(false)">Disabled</button>
+        </div>
+      </div>
+    </div>
     <div class="card card-wide" style="grid-column: 1 / -1;">
       <div class="card-h" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <span>About & Rules</span>
@@ -1116,6 +1125,7 @@ let G = {
   pieceSet: 'cburnett',
   boardTheme: 'brown',
   soundTheme: 'standard',
+  hapticEnabled: localStorage.getItem('haptic_enabled') !== 'false'
 };
 const CSS_BOARDS = {
   brown:{l:'#f0d9b5',d:'#b58863'},blue:{l:'#dee3e6',d:'#8ca2ad'},
@@ -1184,6 +1194,58 @@ function snd(name) {
   }
   sfxCache[k].currentTime=0; 
   sfxCache[k].play().catch(()=>{});
+}
+
+// ── HAPTIC FEEDBACK ──────────────────────────────────────────────────
+function triggerWebHaptic(type) {
+  if (!G.hapticEnabled) return;
+  if (!navigator.vibrate) return;
+  switch (type) {
+    case 'move':
+      navigator.vibrate(15);
+      break;
+    case 'capture':
+      navigator.vibrate(30);
+      break;
+    case 'check':
+      navigator.vibrate([40, 50, 40]);
+      break;
+    case 'checkmate':
+    case 'solved':
+      navigator.vibrate([80, 80, 80, 80, 80, 250]);
+      break;
+    case 'draw':
+    case 'stalemate':
+      navigator.vibrate(200);
+      break;
+    case 'start':
+      navigator.vibrate([35, 60, 35]);
+      break;
+    case 'error':
+      navigator.vibrate([60, 40, 60]);
+      break;
+  }
+}
+function toggleWebHaptic(enabled) {
+  G.hapticEnabled = enabled;
+  localStorage.setItem('haptic_enabled', enabled ? 'true' : 'false');
+  updateHapticUI();
+  if (enabled) {
+    triggerWebHaptic('move');
+  }
+}
+function updateHapticUI() {
+  const btnOn = document.getElementById('haptic-btn-on');
+  const btnOff = document.getElementById('haptic-btn-off');
+  if (btnOn && btnOff) {
+    if (G.hapticEnabled) {
+      btnOn.classList.add('on');
+      btnOff.classList.remove('on');
+    } else {
+      btnOn.classList.remove('on');
+      btnOff.classList.add('on');
+    }
+  }
 }
 
 // ── BOARD THEME APPLY ────────────────────────────────────────────────
@@ -1318,6 +1380,15 @@ function bDoMove(mv){
   if(r.captured)snd('Capture'); else snd('Move');
   if(bChess.in_check())setTimeout(()=>snd('GenericNotify'),60);
   bRender(); bChkOver();
+  if (!bOver) {
+    if (bChess.in_check()) {
+      triggerWebHaptic('check');
+    } else if (r.captured) {
+      triggerWebHaptic('capture');
+    } else {
+      triggerWebHaptic('move');
+    }
+  }
   if(bMode==='friend'){
     if(p2pConn&&p2pConn.open)p2pConn.send({type:'move',from:r.from,to:r.to,promotion:r.promotion||undefined});
     p2pUpdTurnInfo();
@@ -1336,7 +1407,14 @@ function bChkOver(){
   else if(bChess.in_stalemate())bEndGame('Stalemate','Draw by stalemate','handshake');
   else if(bChess.in_draw())bEndGame('Draw','Draw by repetition','handshake');
 }
-function bEndGame(t,s,i){bOver=true;document.getElementById('go-ttl').textContent=t;document.getElementById('go-sub').textContent=s;const ico=document.getElementById('go-ico');ico.innerHTML=`<i data-lucide="${i}" style="width: 48px; height: 48px;"></i>`;lucide.createIcons();document.getElementById('go-overlay').classList.add('on');}
+function bEndGame(t,s,i){
+  bOver=true;document.getElementById('go-ttl').textContent=t;document.getElementById('go-sub').textContent=s;const ico=document.getElementById('go-ico');ico.innerHTML=`<i data-lucide="${i}" style="width: 48px; height: 48px;"></i>`;lucide.createIcons();document.getElementById('go-overlay').classList.add('on');
+  if (t === 'Checkmate!') {
+    triggerWebHaptic('checkmate');
+  } else {
+    triggerWebHaptic('draw');
+  }
+}
 function bUpdStatus(){
   const bar=document.getElementById('sbar'),txt=document.getElementById('stxt');
   bar.className='sbar';
@@ -1398,6 +1476,7 @@ function newB(){
   bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];
   document.getElementById('go-overlay').classList.remove('on');
   bRender();
+  triggerWebHaptic('start');
 }
 function undoB(){
   if(bMode==='friend'){alert('Cannot undo in P2P game!');return;}
@@ -1433,7 +1512,10 @@ function setMode(m){
   }
   if(prev==='friend')p2pDestroy();
   if(m==='ai')initSF();
-  if(m!=='friend'){bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];document.getElementById('go-overlay').classList.remove('on');bRender();}
+  if(m!=='friend'){
+    bChess.reset();bSel=null;bLastMv=null;bOver=false;bHist=[];document.getElementById('go-overlay').classList.remove('on');bRender();
+    triggerWebHaptic('start');
+  }
 }
 function setDiff(btn,d,name,skill){
   bDepth=d;bDiff=name;
@@ -1655,6 +1737,15 @@ function p2pSetupConn(){
         bRender();
         p2pUpdTurnInfo();
         bChkOver();
+        if (!bOver) {
+          if (bChess.in_check()) {
+            triggerWebHaptic('check');
+          } else if (r.captured) {
+            triggerWebHaptic('capture');
+          } else {
+            triggerWebHaptic('move');
+          }
+        }
       }
     } else if(data.type==='resign'){
       const winner=p2pMyColor==='w'?'You (White)':'You (Black)';
@@ -1722,6 +1813,7 @@ function p2pOnConnected(myColor){
     lucide.createIcons();
   }
   p2pUpdTurnInfo();
+  triggerWebHaptic('start');
 }
 
 function p2pUpdTurnInfo(){
@@ -3704,9 +3796,11 @@ function pOnSq(sq){
         pMoveIdx++;
         markSq(sq,'good');
         snd('Move');
+        triggerWebHaptic(r.captured ? 'capture' : 'move');
         setTimeout(()=>{
           if(pMoveIdx>=moves.length){
             pSolved++;snd('Confirmation');setMsg('Puzzle solved! Well done!','ok');updatePuzStats();
+            triggerWebHaptic('solved');
             const theme=PUZZLE_THEMES[curThemeIdx];
             let level = parseInt(localStorage.getItem('puz_level_' + theme.name) || '0');
             localStorage.setItem('puz_level_' + theme.name, level + 1);
@@ -3717,6 +3811,7 @@ function pOnSq(sq){
         },300);
       } else {
         pFailed++;snd('Error');setMsg('Wrong! Try again.','err');markSq(sq,'bad');
+        triggerWebHaptic('error');
         setTimeout(()=>{pSel=null;pRender();},400);
         updatePuzStats();
       }
@@ -3731,7 +3826,10 @@ function pAutoMove(){
   if(pMoveIdx>=curPuzzle.moves.length)return;
   const mv=curPuzzle.moves[pMoveIdx];
   const r=pChess.move({from:mv.slice(0,2),to:mv.slice(2,4),promotion:mv[4]||'q'});
-  if(r){pLastMv={from:r.from,to:r.to};pHist.push(r.san);pMoveIdx++;snd('Move');pRender();}
+  if(r){
+    pLastMv={from:r.from,to:r.to};pHist.push(r.san);pMoveIdx++;snd('Move');pRender();
+    triggerWebHaptic(r.captured ? 'capture' : 'move');
+  }
 }
 function markSq(sq,type){
   const el=document.querySelector(`#pboard [data-sq="${sq}"]`);
@@ -3808,14 +3906,14 @@ function cOnSq(sq){
   if(!coordTarget)return;
   const el=document.querySelector(`#cboard [data-sq="${sq}"]`);
   if(sq===coordTarget){
-    coordRight++;coordStreak++;snd('Move');
+    coordRight++;coordStreak++;snd('Move');triggerWebHaptic('move');
     el.classList.add('ok-sq');
     document.getElementById('c-msg').innerHTML='<i data-lucide="check-circle" style="color:var(--green)"></i> Correct!';
     lucide.createIcons();
     document.getElementById('c-msg').className='coord-msg ok';
     setTimeout(()=>{el.classList.remove('ok-sq');document.getElementById('c-msg').innerHTML='';nextTarget();},500);
   } else {
-    coordWrong++;coordStreak=0;snd('Error');
+    coordWrong++;coordStreak=0;snd('Error');triggerWebHaptic('error');
     el.classList.add('err-sq');
     document.getElementById('c-msg').innerHTML=`<i data-lucide="x-circle" style="color:var(--red)"></i> Wrong! That was ${sq.toUpperCase()}`;
     lucide.createIcons();
@@ -3941,6 +4039,7 @@ function initSettings(){
     b.onclick=()=>{ G.soundTheme=s; document.querySelectorAll('.snd-btn').forEach(x=>x.classList.remove('on')); b.classList.add('on'); snd('Move'); };
     sg.appendChild(b);
   });
+  updateHapticUI();
   lucide.createIcons();
 }
 function switchAboutTab(tab) {
@@ -4684,6 +4783,7 @@ function revRenderBoard() {
 }
 
 function browserVibrate(cls) {
+  if (!G.hapticEnabled) return;
   if (navigator.vibrate) {
     if (cls === 'blunder') {
       navigator.vibrate(250);

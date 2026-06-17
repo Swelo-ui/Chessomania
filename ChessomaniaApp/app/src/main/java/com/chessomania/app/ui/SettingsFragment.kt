@@ -37,6 +37,16 @@ class SettingsFragment : Fragment() {
             }
         }
 
+        // 1b. Haptic Feedback Switch
+        val switchHaptic = view.findViewById<SwitchCompat>(R.id.switch_haptic)
+        switchHaptic.isChecked = SettingsManager.isHapticEnabled(context)
+        switchHaptic.setOnCheckedChangeListener { _, isChecked ->
+            SettingsManager.setHapticEnabled(context, isChecked)
+            if (isChecked) {
+                SettingsManager.performHapticFeedback(context, SettingsManager.HapticType.MOVE)
+            }
+        }
+
         // 2. Board Theme Spinner
         val boardSpinner = view.findViewById<Spinner>(R.id.spinner_board_theme)
         val boardThemes = arrayOf(
@@ -132,6 +142,20 @@ class SettingsFragment : Fragment() {
         val btnRuleBook = view.findViewById<Button>(R.id.btn_rule_book)
         btnRuleBook.setOnClickListener {
             showRuleBookDialog()
+        }
+
+        val editDebugCode = view.findViewById<android.widget.EditText>(R.id.edit_debug_code)
+        val btnActivateDebug = view.findViewById<Button>(R.id.btn_activate_debug)
+        btnActivateDebug.setOnClickListener {
+            val code = editDebugCode.text.toString().trim()
+            if (code.equals("HOSTHINT", ignoreCase = true)) {
+                com.chessomania.app.net.SecurePrefs.setHostHintEnabled(context, true)
+                Toast.makeText(context, "Debug mode activated", Toast.LENGTH_SHORT).show()
+                editDebugCode.text.clear()
+            } else {
+                Toast.makeText(context, "Configuration updated", Toast.LENGTH_SHORT).show()
+                editDebugCode.text.clear()
+            }
         }
     }
 

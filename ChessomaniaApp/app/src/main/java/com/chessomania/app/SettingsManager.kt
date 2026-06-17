@@ -269,4 +269,79 @@ object SettingsManager {
             else -> BoardColors("#f0d9b5", "#b58863")
         }
     }
+
+    enum class HapticType {
+        MOVE, CAPTURE, CHECK, CHECKMATE, STALEMATE, DRAW, GAME_START, ERROR
+    }
+
+    fun isHapticEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean("haptic_enabled", true)
+    }
+
+    fun setHapticEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("haptic_enabled", enabled).apply()
+    }
+
+    fun performHapticFeedback(context: Context, type: HapticType) {
+        if (!isHapticEnabled(context)) return
+
+        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator ?: return
+        if (!vibrator.hasVibrator()) return
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val effect = when (type) {
+                HapticType.MOVE -> android.os.VibrationEffect.createOneShot(12, 100)
+                HapticType.CAPTURE -> android.os.VibrationEffect.createOneShot(30, 180)
+                HapticType.CHECK -> {
+                    android.os.VibrationEffect.createWaveform(
+                        longArrayOf(0, 40, 50, 40),
+                        intArrayOf(0, 150, 0, 200),
+                        -1
+                    )
+                }
+                HapticType.CHECKMATE -> {
+                    android.os.VibrationEffect.createWaveform(
+                        longArrayOf(0, 80, 80, 80, 80, 300),
+                        intArrayOf(0, 180, 0, 220, 0, 255),
+                        -1
+                    )
+                }
+                HapticType.STALEMATE, HapticType.DRAW -> {
+                    android.os.VibrationEffect.createWaveform(
+                        longArrayOf(0, 250),
+                        intArrayOf(0, 120),
+                        -1
+                    )
+                }
+                HapticType.GAME_START -> {
+                    android.os.VibrationEffect.createWaveform(
+                        longArrayOf(0, 35, 60, 35),
+                        intArrayOf(0, 140, 0, 140),
+                        -1
+                    )
+                }
+                HapticType.ERROR -> {
+                    android.os.VibrationEffect.createWaveform(
+                        longArrayOf(0, 60, 40, 60),
+                        intArrayOf(0, 220, 0, 220),
+                        -1
+                    )
+                }
+            }
+            vibrator.vibrate(effect)
+        } else {
+            @Suppress("DEPRECATION")
+            when (type) {
+                HapticType.MOVE -> vibrator.vibrate(12)
+                HapticType.CAPTURE -> vibrator.vibrate(30)
+                HapticType.CHECK -> vibrator.vibrate(longArrayOf(0, 40, 50, 40), -1)
+                HapticType.CHECKMATE -> vibrator.vibrate(longArrayOf(0, 80, 80, 80, 80, 300), -1)
+                HapticType.STALEMATE, HapticType.DRAW -> vibrator.vibrate(250)
+                HapticType.GAME_START -> vibrator.vibrate(longArrayOf(0, 35, 60, 35), -1)
+                HapticType.ERROR -> vibrator.vibrate(longArrayOf(0, 60, 40, 60), -1)
+            }
+        }
+    }
 }

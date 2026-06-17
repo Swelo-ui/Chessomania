@@ -33,6 +33,18 @@ object SecurePrefs {
     
     fun isLoggedIn(context: Context): Boolean = getToken(context) != null
 
+    fun setHostHintEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean("host_hint_enabled", enabled).apply()
+    }
+
+    fun getHostHintEnabled(context: Context): Boolean {
+        return getPrefs(context).getBoolean("host_hint_enabled", false)
+    }
+
+    fun clearHostHintEnabled(context: Context) {
+        setHostHintEnabled(context, false)
+    }
+
     fun clearSession(context: Context) {
         getPrefs(context).edit().clear().apply()
     }

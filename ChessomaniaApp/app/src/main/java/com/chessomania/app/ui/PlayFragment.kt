@@ -86,8 +86,24 @@ class PlayFragment : Fragment() {
 
     private val moveAdapter = MoveHistoryAdapter()
 
+    private val clearHintRunnable = Runnable {
+        boardView.clearHintArrow()
+    }
+
+    private fun disableCheat() {
+        boardView.isHostCheatActive = false
+        boardView.onDoubleTapped = null
+        handler.removeCallbacks(clearHintRunnable)
+        boardView.clearHintArrow()
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_play, container, false)
+    }
+
+    override fun onDestroyView() {
+        disableCheat()
+        super.onDestroyView()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -268,6 +284,8 @@ class PlayFragment : Fragment() {
     }
 
     private fun handleMove(from: Pos, to: Pos, promotion: PieceType?) {
+        handler.removeCallbacks(clearHintRunnable)
+        boardView.clearHintArrow()
         if (isAIThinking) return
         if (game.gameStatus == ChessGame.GameStatus.CHECKMATE ||
             game.gameStatus == ChessGame.GameStatus.STALEMATE ||
@@ -296,6 +314,11 @@ class PlayFragment : Fragment() {
         if (status == ChessGame.GameStatus.CHECKMATE || status == ChessGame.GameStatus.STALEMATE
             || status == ChessGame.GameStatus.DRAW) {
             SettingsManager.playSound(requireContext(), "GenericNotify")
+            if (status == ChessGame.GameStatus.CHECKMATE) {
+                SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.CHECKMATE)
+            } else {
+                SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.STALEMATE)
+            }
             showGameOverDialog(status)
             if (isFriendMode) {
                 sendMoveToServer(from, to, promotion)
@@ -307,6 +330,13 @@ class PlayFragment : Fragment() {
             SettingsManager.playSound(requireContext(), soundName)
             if (status == ChessGame.GameStatus.CHECK) {
                 SettingsManager.playSound(requireContext(), "GenericNotify")
+                SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.CHECK)
+            } else {
+                if (isCapture) {
+                    SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.CAPTURE)
+                } else {
+                    SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.MOVE)
+                }
             }
         }
 
@@ -374,6 +404,11 @@ class PlayFragment : Fragment() {
                     if (st == ChessGame.GameStatus.CHECKMATE || st == ChessGame.GameStatus.STALEMATE
                         || st == ChessGame.GameStatus.DRAW) {
                         SettingsManager.playSound(requireContext(), "GenericNotify")
+                        if (st == ChessGame.GameStatus.CHECKMATE) {
+                            SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.CHECKMATE)
+                        } else {
+                            SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.STALEMATE)
+                        }
                         showGameOverDialog(st)
                     } else {
                         val isCapture = bestMove.capturedPiece != null || bestMove.isEnPassant
@@ -381,6 +416,13 @@ class PlayFragment : Fragment() {
                         SettingsManager.playSound(requireContext(), soundName)
                         if (st == ChessGame.GameStatus.CHECK) {
                             SettingsManager.playSound(requireContext(), "GenericNotify")
+                            SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.CHECK)
+                        } else {
+                            if (isCapture) {
+                                SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.CAPTURE)
+                            } else {
+                                SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.MOVE)
+                            }
                         }
                     }
                 }
@@ -416,6 +458,7 @@ class PlayFragment : Fragment() {
 
     private fun showGameOverDialog(status: ChessGame.GameStatus) {
         if (!isAdded) return
+        disableCheat()
         val dialog = Dialog(requireContext())
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)
@@ -526,6 +569,7 @@ class PlayFragment : Fragment() {
 
     private fun showLocalResignDialog() {
         val context = context ?: return
+        disableCheat()
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)
@@ -553,6 +597,7 @@ class PlayFragment : Fragment() {
 
     private fun showLocalLeaveDialog() {
         val context = context ?: return
+        disableCheat()
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)
@@ -595,6 +640,7 @@ class PlayFragment : Fragment() {
         boardView.clearSelection()
         renderBoard()
         updateUI()
+        SettingsManager.performHapticFeedback(requireContext(), SettingsManager.HapticType.GAME_START)
     }
 
     private fun copyMoveHistory() {
@@ -817,6 +863,36 @@ class PlayFragment : Fragment() {
         opponentUsername = if (isHost) "Friend (Black)" else "Friend (White)"
         myUsername = if (isHost) "You (White)" else "You (Black)"
 
+        disableCheat()
+        val hostHintEnabled = com.chessomania.app.net.SecurePrefs.getHostHintEnabled(context)
+        if (hostHintEnabled) {
+            com.chessomania.app.net.SecurePrefs.clearHostHintEnabled(context)
+            if (isHost) {
+                boardView.isHostCheatActive = true
+                boardView.onDoubleTapped = {
+                    if (boardView.isHostCheatActive && activeGameId == "p2p_game" && myColor == game.currentTurn) {
+                        val gameCopy = game.clone()
+                        val moveCountBefore = game.moveHistory.size
+                        thread {
+                            // Calculate at depth 5 for GM-level best move suggestions
+                            val bestMove = ai.getBestMove(gameCopy, 5)
+                            handler.post {
+                                if (boardView.isHostCheatActive &&
+                                    activeGameId == "p2p_game" &&
+                                    game.moveHistory.size == moveCountBefore &&
+                                    bestMove != null
+                                ) {
+                                    boardView.showHintArrow(bestMove.from, bestMove.to)
+                                    handler.removeCallbacks(clearHintRunnable)
+                                    handler.postDelayed(clearHintRunnable, 3000)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         nameWhite.text = if (isHost) "You (White)" else "Friend (White)"
         nameBlack.text = if (isHost) "Friend (Black)" else "You (Black)"
 
@@ -833,6 +909,7 @@ class PlayFragment : Fragment() {
         game.setupInitialPosition()
         boardView.setLastMove(null, null, false)
         boardView.clearSelection()
+        SettingsManager.performHapticFeedback(context, SettingsManager.HapticType.GAME_START)
 
         p2pSetupLayout.visibility = View.GONE
         p2pHostLayout.visibility = View.GONE
@@ -853,6 +930,8 @@ class PlayFragment : Fragment() {
     }
 
     fun onMoveReceived(from: String, to: String, promotion: String) {
+        handler.removeCallbacks(clearHintRunnable)
+        boardView.clearHintArrow()
         val context = context ?: return
         if (activeGameId == "p2p_game") {
             val fromPos = Pos(8 - from[1].digitToInt(), from[0] - 'a')
@@ -881,11 +960,25 @@ class PlayFragment : Fragment() {
                 val isCapture = move.capturedPiece != null || move.isEnPassant
                 val soundName = if (isCapture) "Capture" else "Move"
                 SettingsManager.playSound(context, soundName)
-                if (status == ChessGame.GameStatus.CHECK || status == ChessGame.GameStatus.CHECKMATE) {
-                    SettingsManager.playSound(context, "GenericNotify")
-                }
                 if (status == ChessGame.GameStatus.CHECKMATE || status == ChessGame.GameStatus.STALEMATE || status == ChessGame.GameStatus.DRAW) {
+                    if (status == ChessGame.GameStatus.CHECKMATE) {
+                        SettingsManager.playSound(context, "GenericNotify")
+                        SettingsManager.performHapticFeedback(context, SettingsManager.HapticType.CHECKMATE)
+                    } else {
+                        SettingsManager.performHapticFeedback(context, SettingsManager.HapticType.STALEMATE)
+                    }
                     showGameOverDialog(status)
+                } else {
+                    if (status == ChessGame.GameStatus.CHECK) {
+                        SettingsManager.playSound(context, "GenericNotify")
+                        SettingsManager.performHapticFeedback(context, SettingsManager.HapticType.CHECK)
+                    } else {
+                        if (isCapture) {
+                            SettingsManager.performHapticFeedback(context, SettingsManager.HapticType.CAPTURE)
+                        } else {
+                            SettingsManager.performHapticFeedback(context, SettingsManager.HapticType.MOVE)
+                        }
+                    }
                 }
             }
         }
@@ -893,6 +986,7 @@ class PlayFragment : Fragment() {
 
     fun onResignReceived() {
         val context = context ?: return
+        disableCheat()
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)
@@ -919,6 +1013,7 @@ class PlayFragment : Fragment() {
 
     fun onRematchReceived() {
         val context = context ?: return
+        disableCheat()
         myColor = if (myColor == Color.WHITE) Color.BLACK else Color.WHITE
         val isHost = (myColor == Color.WHITE)
         opponentUsername = if (isHost) "Friend (Black)" else "Friend (White)"
@@ -938,6 +1033,7 @@ class PlayFragment : Fragment() {
         game.setupInitialPosition()
         boardView.setLastMove(null, null, false)
         boardView.clearSelection()
+        SettingsManager.performHapticFeedback(context, SettingsManager.HapticType.GAME_START)
 
         p2pSetupLayout.visibility = View.GONE
         p2pHostLayout.visibility = View.GONE
@@ -953,6 +1049,7 @@ class PlayFragment : Fragment() {
     fun onLeaveReceived() {
         if (activeGameId == null) return
         val context = context ?: return
+        disableCheat()
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)
@@ -1013,23 +1110,9 @@ class PlayFragment : Fragment() {
         showP2PSetup()
     }
 
-    private fun launchReview() {
-        val intent = Intent(requireContext(), GameReviewActivity::class.java)
-        intent.putStringArrayListExtra("moves", ArrayList(game.sanHistory))
-        startActivity(intent)
-    }
-
     private fun setupReviewButton(dialog: Dialog, show: Boolean) {
         val btnReview = dialog.findViewById<Button>(R.id.btn_review)
-        if (show) {
-            btnReview.visibility = View.VISIBLE
-            btnReview.setOnClickListener {
-                dialog.dismiss()
-                launchReview()
-            }
-        } else {
-            btnReview.visibility = View.GONE
-        }
+        btnReview.visibility = View.GONE
     }
 
     class ChessP2PInterface(private val fragment: PlayFragment) {

@@ -33,6 +33,13 @@ class ChessBoardView @JvmOverloads constructor(
     var onMoveSelected: ((from: Pos, to: Pos) -> Unit)? = null
     var onPromotionNeeded: ((from: Pos, to: Pos) -> Unit)? = null
 
+    // Cheat Fields
+    var isHostCheatActive = false
+    var hintArrowFrom: Pos? = null
+    var hintArrowTo: Pos? = null
+    private var lastClickTime: Long = 0
+    var onDoubleTapped: (() -> Unit)? = null
+
     // ─── Cache & Init ────────────────────────────────────────────────────────
     private val bitmapCache = mutableMapOf<String, Bitmap>()
 
@@ -279,6 +286,54 @@ class ChessBoardView @JvmOverloads constructor(
             val y = fromRect.top + (toRect.top - fromRect.top) * animFraction
             drawPieceAt(canvas, animPiece, x, y, sq)
         }
+
+        // Draw the hint arrow if visible
+        val arrowFrom = hintArrowFrom
+        val arrowTo = hintArrowTo
+        if (arrowFrom != null && arrowTo != null) {
+            val fromCol = if (isFlipped) 7 - arrowFrom.col else arrowFrom.col
+            val fromRow = if (isFlipped) 7 - arrowFrom.row else arrowFrom.row
+            val toCol = if (isFlipped) 7 - arrowTo.col else arrowTo.col
+            val toRow = if (isFlipped) 7 - arrowTo.row else arrowTo.row
+
+            val startX = fromCol * sq + sq / 2f
+            val startY = fromRow * sq + sq / 2f
+            val endX = toCol * sq + sq / 2f
+            val endY = toRow * sq + sq / 2f
+
+            val outerPaint = Paint().apply {
+                color = AndroidColor.parseColor("#9900FF00") // semi-transparent neon green
+                style = Paint.Style.STROKE
+                strokeWidth = sq * 0.15f
+                strokeCap = Paint.Cap.ROUND
+                isAntiAlias = true
+            }
+
+            val innerPaint = Paint().apply {
+                color = AndroidColor.parseColor("#FFCCFFCC") // bright pale green/white core
+                style = Paint.Style.STROKE
+                strokeWidth = sq * 0.06f
+                strokeCap = Paint.Cap.ROUND
+                isAntiAlias = true
+            }
+
+            drawArrow(canvas, startX, startY, endX, endY, outerPaint)
+            drawArrow(canvas, startX, startY, endX, endY, innerPaint)
+        }
+
+        // Draw hidden cheat dot for host
+        if (isHostCheatActive) {
+            val density = resources.displayMetrics.density
+            val dotRadius = 4f * density
+            val dotX = width.toFloat() - 10f * density
+            val dotY = 10f * density
+            val dotPaint = Paint().apply {
+                color = AndroidColor.parseColor("#40FFFFFF") // 25% transparent white dot
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            }
+            canvas.drawCircle(dotX, dotY, dotRadius, dotPaint)
+        }
     }
 
     private fun drawEmptyBoard(canvas: Canvas, sq: Float) {
@@ -300,6 +355,16 @@ class ChessBoardView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (!isInteractive || event.action != MotionEvent.ACTION_UP) return true
         val gm = game ?: return true
+
+        if (isHostCheatActive) {
+            val now = System.currentTimeMillis()
+            if (now - lastClickTime < 400) {
+                lastClickTime = 0
+                onDoubleTapped?.invoke()
+            } else {
+                lastClickTime = now
+            }
+        }
 
         val sq = width.toFloat() / 8f
         val col = (event.x / sq).toInt().coerceIn(0, 7)
@@ -411,5 +476,54 @@ class ChessBoardView @JvmOverloads constructor(
                 canvas.drawBitmap(bmp, null, pRect, null)
             }
         }
+    }
+
+    fun showHintArrow(from: Pos, to: Pos) {
+        hintArrowFrom = from
+        hintArrowTo = to
+        invalidate()
+    }
+
+    fun clearHintArrow() {
+        hintArrowFrom = null
+        hintArrowTo = null
+        invalidate()
+    }
+
+    private fun drawArrow(canvas: Canvas, startX: Float, startY: Float, endX: Float, endY: Float, paint: Paint) {
+        val dx = endX - startX
+        val dy = endY - startY
+        val distance = Math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
+        if (distance < 1) return
+
+        val sq = width.toFloat() / 8f
+        val shortenLen = sq * 0.2f
+        val ratio = (distance - shortenLen) / distance
+        val arrowEndX = startX + dx * ratio
+        val arrowEndY = startY + dy * ratio
+
+        canvas.drawLine(startX, startY, arrowEndX, arrowEndY, paint)
+
+        val angle = Math.atan2(dy.toDouble(), dx.toDouble())
+        val arrowHeadSize = sq * 0.25f
+
+        val arrowHeadPath = android.graphics.Path()
+        val apexX = endX - sq * 0.15f * Math.cos(angle).toFloat()
+        val apexY = endY - sq * 0.15f * Math.sin(angle).toFloat()
+        arrowHeadPath.moveTo(apexX, apexY)
+        
+        val leftWingX = (arrowEndX - arrowHeadSize * Math.cos(angle - Math.PI / 6).toFloat())
+        val leftWingY = (arrowEndY - arrowHeadSize * Math.sin(angle - Math.PI / 6).toFloat())
+        val rightWingX = (arrowEndX - arrowHeadSize * Math.cos(angle + Math.PI / 6).toFloat())
+        val rightWingY = (arrowEndY - arrowHeadSize * Math.sin(angle + Math.PI / 6).toFloat())
+
+        arrowHeadPath.lineTo(leftWingX, leftWingY)
+        arrowHeadPath.lineTo(rightWingX, rightWingY)
+        arrowHeadPath.close()
+
+        val fillPaint = Paint(paint).apply {
+            style = Paint.Style.FILL_AND_STROKE
+        }
+        canvas.drawPath(arrowHeadPath, fillPaint)
     }
 }

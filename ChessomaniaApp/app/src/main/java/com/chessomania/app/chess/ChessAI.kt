@@ -171,4 +171,10 @@ class ChessAI {
         }
         return bestMove ?: moves.first()
     }
+
+    fun getBestMove(fen: String): Move? {
+        val tempGame = ChessGame()
+        PuzzleDatabase.loadPuzzleFen(tempGame, fen)
+        return getBestMove(tempGame, 3)
+    }
 }

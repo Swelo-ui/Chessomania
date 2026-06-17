@@ -203,6 +203,11 @@ class PuzzleFragment : Fragment() {
         if (actualUci == expectedUci || (move.promotion != null && expectedUci.startsWith(actualUci))) {
             val isCapture = move.capturedPiece != null || move.isEnPassant
             com.chessomania.app.SettingsManager.playSound(requireContext(), if (isCapture) "Capture" else "Move")
+            if (isCapture) {
+                com.chessomania.app.SettingsManager.performHapticFeedback(requireContext(), com.chessomania.app.SettingsManager.HapticType.CAPTURE)
+            } else {
+                com.chessomania.app.SettingsManager.performHapticFeedback(requireContext(), com.chessomania.app.SettingsManager.HapticType.MOVE)
+            }
 
             game.applyMove(move)
             boardView.setLastMove(from, to)
@@ -218,6 +223,7 @@ class PuzzleFragment : Fragment() {
                 messageText.setTextColor(0xFF34d399.toInt())
                 boardView.isInteractive = false
                 com.chessomania.app.SettingsManager.playSound(requireContext(), "GenericNotify")
+                com.chessomania.app.SettingsManager.performHapticFeedback(requireContext(), com.chessomania.app.SettingsManager.HapticType.CHECKMATE)
                 
                 // Solve progress!
                 val solvedTheme = puzzle.theme
@@ -238,6 +244,11 @@ class PuzzleFragment : Fragment() {
                     if (oppMove != null) {
                         val isOppCapture = oppMove.capturedPiece != null || oppMove.isEnPassant
                         com.chessomania.app.SettingsManager.playSound(requireContext(), if (isOppCapture) "Capture" else "Move")
+                        if (isOppCapture) {
+                            com.chessomania.app.SettingsManager.performHapticFeedback(requireContext(), com.chessomania.app.SettingsManager.HapticType.CAPTURE)
+                        } else {
+                            com.chessomania.app.SettingsManager.performHapticFeedback(requireContext(), com.chessomania.app.SettingsManager.HapticType.MOVE)
+                        }
 
                         game.applyMove(oppMove)
                         boardView.setLastMove(oppMove.from, oppMove.to)
@@ -257,6 +268,7 @@ class PuzzleFragment : Fragment() {
             messageText.text = "✗ Wrong move! Try again."
             messageText.setTextColor(0xFFf87171.toInt())
             com.chessomania.app.SettingsManager.playSound(requireContext(), "GenericNotify")
+            com.chessomania.app.SettingsManager.performHapticFeedback(requireContext(), com.chessomania.app.SettingsManager.HapticType.ERROR)
             boardView.clearSelection()
         }
     }
