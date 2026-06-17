@@ -204,11 +204,28 @@ class SettingsFragment : Fragment() {
         themeSpinner.adapter = adapter
         themeSpinner.setSelection(com.chessomania.app.net.SecurePrefs.getMusicThemeIndex(context))
         
+        var isSpinnerInitialized = false
         themeSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!isSpinnerInitialized) {
+                    isSpinnerInitialized = true
+                    return
+                }
                 val oldPos = com.chessomania.app.net.SecurePrefs.getMusicThemeIndex(context)
                 if (position != oldPos) {
                     com.chessomania.app.net.SecurePrefs.setMusicThemeIndex(context, position)
+                    val bgMusic = com.chessomania.app.audio.BgMusicManager.getInstance(context)
+                    if (bgMusic.isEnabled) {
+                        val track = when (position) {
+                            0 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+                            1 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY
+                            2 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE
+                            3 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.VICTORY
+                            4 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.DEFEAT
+                            else -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+                        }
+                        bgMusic.play(track)
+                    }
                 }
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}

@@ -9,9 +9,7 @@ import com.chessomania.app.R
 /**
  * Background Ambient Music Manager for Chessomania.
  * Plays soft, looping ambient music during gameplay.
- * NOT move-based SFX — this is continuous background atmosphere.
- *
- * Inspired by: Splendor, Chess.com, Lichess premium feel.
+ * Robust single-pipeline state machine to prevent track and volume clashes.
  */
 class BgMusicManager private constructor(private val context: Context) {
 
@@ -26,34 +24,47 @@ class BgMusicManager private constructor(private val context: Context) {
         }
     }
 
-    // MediaPlayer for long ambient tracks
     private var mediaPlayer: MediaPlayer? = null
 
-    // Current music state
-    private var isPlaying = false
+    // Track states
     private var currentTrack: MusicTrack? = null
+    private var targetTrack: MusicTrack? = null
 
-    // Volume (0.0 to 1.0) — keep LOW for ambient feel
+    // Volume states
+    private var currentVolume: Float = 0f
+    private var targetVolume: Float = 0f
+
+    // Action when volume reaches 0
+    private enum class ZeroAction { NONE, PAUSE, STOP_RELEASE }
+    private var zeroAction = ZeroAction.NONE
+
+    // Timing parameters for fade
+    private val tickMs = 50L
+    private val fadeDurationMs = 2000.0f
+
+    private val volumeStep: Float
+        get() = if (musicVolume > 0f) (musicVolume / (fadeDurationMs / tickMs)).coerceAtLeast(0.005f) else 0.01f
+
     var musicVolume: Float = 0.25f
         set(value) {
             field = value.coerceIn(0f, 1f)
-            mediaPlayer?.setVolume(field, field)
+            // If playing or fading to active volume, update the target
+            if (mediaPlayer != null && targetVolume > 0f) {
+                targetVolume = field
+            }
+            startUpdateLoop()
         }
 
     var isEnabled: Boolean = true
         set(value) {
             field = value
-            if (!value) stop()
-            else if (currentTrack != null) play(currentTrack!!)
+            if (!value) {
+                stop()
+            } else if (targetTrack != null) {
+                play(targetTrack!!)
+            }
         }
 
-    // Fade duration in ms
-    private val fadeDuration = 2000
-    private val handler = Handler(Looper.getMainLooper())
-
-    /**
-     * Available ambient music tracks
-     */
     enum class MusicTrack(val resId: Int, val displayName: String, val category: String) {
         MENU(R.raw.bg_music_menu, "Main Menu", "menu"),
         GAMEPLAY(R.raw.bg_music_gameplay, "Gameplay", "game"),
@@ -64,24 +75,65 @@ class BgMusicManager private constructor(private val context: Context) {
         DEFEAT(R.raw.bg_music_defeat, "Defeat", "end")
     }
 
-    /**
-     * Play a specific ambient track with smooth fade-in
-     */
-    fun play(track: MusicTrack) {
-        if (!isEnabled) return
+    private val handler = Handler(Looper.getMainLooper())
+    private var isLoopRunning = false
 
-        // Don't restart if same track is already playing
-        if (currentTrack == track && isPlaying) return
+    private val updateRunnable = object : Runnable {
+        override fun run() {
+            val player = mediaPlayer
+            var needsNextTick = false
 
-        currentTrack = track
-
-        // Fade out current if playing
-        if (mediaPlayer != null && isPlaying) {
-            fadeOut {
-                startNewTrack(track)
+            // 1. If targetTrack has changed and player is active, force a fade out first
+            if (player != null && targetTrack != currentTrack && targetVolume != 0f) {
+                targetVolume = 0f
+                zeroAction = ZeroAction.STOP_RELEASE
             }
-        } else {
-            startNewTrack(track)
+
+            // 2. If player is null but we have a targetTrack, initialize it
+            if (player == null && targetTrack != null) {
+                startNewTrack(targetTrack!!)
+                needsNextTick = true
+            } else if (player != null) {
+                // Adjust current volume towards target volume
+                val diff = targetVolume - currentVolume
+                if (Math.abs(diff) < 0.001f) {
+                    currentVolume = targetVolume
+                    try {
+                        player.setVolume(currentVolume, currentVolume)
+                    } catch (e: Exception) {}
+
+                    if (currentVolume == 0f) {
+                        handleZeroVolumeReached()
+                        if (targetTrack != null) {
+                            needsNextTick = true
+                        }
+                    }
+                } else {
+                    val step = volumeStep
+                    if (currentVolume < targetVolume) {
+                        currentVolume = (currentVolume + step).coerceAtMost(targetVolume)
+                    } else {
+                        currentVolume = (currentVolume - step).coerceAtLeast(targetVolume)
+                    }
+                    try {
+                        player.setVolume(currentVolume, currentVolume)
+                    } catch (e: Exception) {}
+                    needsNextTick = true
+                }
+            }
+
+            if (needsNextTick) {
+                handler.postDelayed(this, tickMs)
+            } else {
+                isLoopRunning = false
+            }
+        }
+    }
+
+    private fun startUpdateLoop() {
+        if (!isLoopRunning) {
+            isLoopRunning = true
+            handler.post(updateRunnable)
         }
     }
 
@@ -90,126 +142,106 @@ class BgMusicManager private constructor(private val context: Context) {
             mediaPlayer?.release()
             mediaPlayer = MediaPlayer.create(context, track.resId).apply {
                 isLooping = true
-                setVolume(0f, 0f) // Start silent for fade-in
+                setVolume(0f, 0f)
                 start()
-                fadeIn()
             }
-            isPlaying = true
+            currentTrack = track
+            currentVolume = 0f
+            targetVolume = musicVolume
+            zeroAction = ZeroAction.NONE
         } catch (e: Exception) {
             e.printStackTrace()
+            mediaPlayer = null
+            currentTrack = null
+            targetTrack = null
         }
     }
 
-    /**
-     * Fade in music from 0 to set volume
-     */
-    private fun fadeIn() {
-        val mp = mediaPlayer ?: return
-        val steps = 20
-        val stepDuration = fadeDuration / steps
-        val volumeStep = musicVolume / steps
-        var currentStep = 0
-
-        val fadeRunnable = object : Runnable {
-            override fun run() {
-                currentStep++
-                val newVolume = (volumeStep * currentStep).coerceAtMost(musicVolume)
-                mediaPlayer?.setVolume(newVolume, newVolume)
-
-                if (currentStep < steps && mediaPlayer == mp) {
-                    handler.postDelayed(this, stepDuration.toLong())
-                }
+    private fun handleZeroVolumeReached() {
+        when (zeroAction) {
+            ZeroAction.PAUSE -> {
+                try {
+                    mediaPlayer?.pause()
+                } catch (e: Exception) {}
             }
+            ZeroAction.STOP_RELEASE -> {
+                try {
+                    mediaPlayer?.stop()
+                    mediaPlayer?.release()
+                } catch (e: Exception) {}
+                mediaPlayer = null
+                currentTrack = null
+            }
+            ZeroAction.NONE -> {}
         }
-        handler.post(fadeRunnable)
+        zeroAction = ZeroAction.NONE
     }
 
-    /**
-     * Fade out music then execute callback
-     */
-    private fun fadeOut(onComplete: () -> Unit) {
-        val mp = mediaPlayer
-        if (mp == null || !isPlaying) {
-            onComplete()
+    fun play(track: MusicTrack) {
+        if (!isEnabled) {
+            targetTrack = track
             return
         }
 
-        val steps = 20
-        val stepDuration = fadeDuration / steps
-        val volumeStep = musicVolume / steps
-        var currentStep = 0
-
-        val fadeRunnable = object : Runnable {
-            override fun run() {
-                currentStep++
-                val newVolume = (musicVolume - (volumeStep * currentStep)).coerceAtLeast(0f)
-                mediaPlayer?.setVolume(newVolume, newVolume)
-
-                if (currentStep >= steps || mediaPlayer != mp) {
-                    onComplete()
-                } else {
-                    handler.postDelayed(this, stepDuration.toLong())
-                }
+        // Don't restart if already playing/targeting the same track
+        if (currentTrack == track && targetTrack == track && mediaPlayer?.isPlaying == true) {
+            // Ensure target volume matches set volume if it was fading/paused
+            if (targetVolume == 0f) {
+                targetVolume = musicVolume
+                startUpdateLoop()
             }
+            return
         }
-        handler.post(fadeRunnable)
+
+        targetTrack = track
+        startUpdateLoop()
     }
 
-    /**
-     * Pause music (when app goes to background)
-     */
     fun pause() {
-        if (isPlaying) {
-            fadeOut {
-                mediaPlayer?.pause()
-                isPlaying = false
-            }
+        if (mediaPlayer?.isPlaying == true) {
+            targetVolume = 0f
+            zeroAction = ZeroAction.PAUSE
+            startUpdateLoop()
         }
     }
 
-    /**
-     * Resume music (when app comes to foreground)
-     */
     fun resume() {
-        if (isEnabled && currentTrack != null && !isPlaying) {
-            mediaPlayer?.start()
-            fadeIn()
-            isPlaying = true
+        if (isEnabled && currentTrack != null) {
+            try {
+                mediaPlayer?.start()
+            } catch (e: Exception) {}
+            targetVolume = musicVolume
+            zeroAction = ZeroAction.NONE
+            startUpdateLoop()
         }
     }
 
-    /**
-     * Stop music completely
-     */
     fun stop() {
-        fadeOut {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-            mediaPlayer = null
-            isPlaying = false
-            currentTrack = null
-        }
+        targetTrack = null
+        targetVolume = 0f
+        zeroAction = ZeroAction.STOP_RELEASE
+        startUpdateLoop()
     }
 
-    /**
-     * Play victory/defeat jingle (non-looping, short)
-     */
     fun playJingle(jingleResId: Int) {
         if (!isEnabled) return
-        MediaPlayer.create(context, jingleResId).apply {
-            setVolume(musicVolume, musicVolume)
-            setOnCompletionListener { release() }
-            start()
-        }
+        try {
+            MediaPlayer.create(context, jingleResId).apply {
+                setVolume(musicVolume, musicVolume)
+                setOnCompletionListener { release() }
+                start()
+            }
+        } catch (e: Exception) {}
     }
 
-    /**
-     * Release all resources
-     */
     fun release() {
         handler.removeCallbacksAndMessages(null)
-        mediaPlayer?.release()
+        try {
+            mediaPlayer?.release()
+        } catch (e: Exception) {}
         mediaPlayer = null
+        currentTrack = null
+        targetTrack = null
         instance = null
     }
 }

@@ -999,6 +999,16 @@ label.lbl{display:block;font-size:.68rem;font-weight:700;color:var(--text2);marg
           <span style="font-size: 0.8rem; color: var(--text2); min-width: 50px;">Volume</span>
           <input type="range" id="music-vol-slider" min="0" max="100" value="25" style="flex: 1; accent-color: var(--accent); cursor: pointer;" oninput="changeWebMusicVolume(this.value)">
         </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 0.8rem; color: var(--text2); min-width: 50px;">Style</span>
+          <select id="music-style-select" onchange="changeWebMusicStyle(this.value)">
+            <option value="menu">Calm Piano</option>
+            <option value="gameplay">Ambient Synth</option>
+            <option value="puzzle">Classical</option>
+            <option value="victory">Nature Sounds</option>
+            <option value="defeat">Focus Mode</option>
+          </select>
+        </div>
       </div>
     </div>
     <div class="card card-wide" style="grid-column: 1 / -1;">
@@ -1276,15 +1286,15 @@ function updateHapticUI() {
 }
 function playWebMusicTrack(category) {
   if (category === 'menu') {
-    bgMusic.play('sound/music/sonic289-game-music_-soundtrack_main-theme-_-menu-screen-1-372767.mp3');
+    bgMusic.play('/sound/music/sonic289-game-music_-soundtrack_main-theme-_-menu-screen-1-372767.mp3');
   } else if (category === 'gameplay') {
-    bgMusic.play('sound/music/sonic289-game-music_-soundtrack_exploration-_-peaceful-area-372769.mp3');
+    bgMusic.play('/sound/music/sonic289-game-music_-soundtrack_exploration-_-peaceful-area-372769.mp3');
   } else if (category === 'puzzle') {
-    bgMusic.play('sound/music/sonic289-gametown-_-village-theme-373822.mp3');
+    bgMusic.play('/sound/music/sonic289-gametown-_-village-theme-373822.mp3');
   } else if (category === 'victory') {
-    bgMusic.play('sound/music/u_ng6e91f4wa-bg-499851.mp3', false);
+    bgMusic.play('/sound/music/u_ng6e91f4wa-bg-499851.mp3', false);
   } else if (category === 'defeat') {
-    bgMusic.play('sound/music/u_o0a9yfwhsr-aviator-music-394813.mp3', false);
+    bgMusic.play('/sound/music/u_o0a9yfwhsr-aviator-music-394813.mp3', false);
   }
 }
 function toggleWebMusic(enabled) {
@@ -1295,10 +1305,17 @@ function changeWebMusicVolume(val) {
   const vol = val / 100;
   bgMusic.setVolume(vol);
 }
+function changeWebMusicStyle(style) {
+  localStorage.setItem('chess_music_style', style);
+  if (bgMusic.isEnabled) {
+    playWebMusicTrack(style);
+  }
+}
 function updateMusicUI() {
   const btnOn = document.getElementById('music-btn-on');
   const btnOff = document.getElementById('music-btn-off');
   const slider = document.getElementById('music-vol-slider');
+  const select = document.getElementById('music-style-select');
   if (btnOn && btnOff) {
     if (bgMusic.isEnabled) {
       btnOn.classList.add('on');
@@ -1311,10 +1328,15 @@ function updateMusicUI() {
   if (slider) {
     slider.value = Math.round(bgMusic.volume * 100);
   }
+  if (select) {
+    const style = localStorage.getItem('chess_music_style') || 'menu';
+    select.value = style;
+  }
 }
 document.addEventListener('click', () => {
   if (bgMusic.isEnabled && !bgMusic.audio && bgMusic.currentTrack === null) {
-    playWebMusicTrack('menu');
+    const style = localStorage.getItem('chess_music_style') || 'menu';
+    playWebMusicTrack(style);
   }
 }, { once: true });
 
