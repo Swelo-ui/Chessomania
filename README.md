@@ -1,7 +1,6 @@
-# <p align="center"><img src="https://raw.githubusercontent.com/Swelo-ui/Chessomania/main/public/logo/logo-with-name-dark.png" alt="Chessomania Banner" width="600"></p>
-
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Swelo-ui/Chessomania/main/public/logo/chessomania%20text%20logo.png" alt="Chessomania Text Logo" width="320">
+  <img src="https://raw.githubusercontent.com/Swelo-ui/Chessomania/main/public/logo/chessomania%20logo.png" alt="Chessomania Logo" width="80" align="center" style="margin-right: 20px;">
+  <img src="https://raw.githubusercontent.com/Swelo-ui/Chessomania/main/public/logo/chessomania%20text%20logo.png" alt="Chessomania Text Logo" width="320" align="center">
 </p>
 
 <p align="center">
@@ -64,10 +63,10 @@
 
 ## 📱 Visual Interface Preview
 
-Below is the launch interface of the native Android application:
+Below is a design and feature preview of the Chessomania application:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Swelo-ui/Chessomania/main/public/logo/splashscreen.png" alt="Chessomania Splash Screen" width="280" style="border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.35);">
+  <img src="https://raw.githubusercontent.com/Swelo-ui/Chessomania/main/public/logo/chessomania%20app%20preview.png" alt="Chessomania App Preview" width="600" style="border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);">
 </p>
 
 ---
@@ -133,7 +132,7 @@ graph TD
 ### Backend Architecture Highlights
 *   **Persistent Event Broker**: Employs an SSE-based client broker that maintains online status states. An offline queue tracks the last 50 events for each offline friend, ensuring message delivery during network transitions.
 *   **Atomic Database Operations**: Uses atomic, non-blocking disk operations writing to JSON (`data/*.json`). Employs a staging-write-and-swap strategy (`renameSync`) preventing corruption during simultaneous server writes.
-*   **Server-Side Verification**: Game states are represented as standard FEN configurations validated by `chess.js`. Moves are computed and authenticated on the server, guaranteeing match security.
+*   **Server-Side Verification**: Active game states are represented as FEN configurations validated by `chess.js` server-side, preventing client-side hacks.
 *   **Zero-Auth Quick Rooms**: Code-based matchmaking system (`/api/room/*`) generates unique 6-character room codes. Pairs hosts and guests over temporary memory maps with zero session overhead.
 
 ### Mobile App Subsystem Highlights
