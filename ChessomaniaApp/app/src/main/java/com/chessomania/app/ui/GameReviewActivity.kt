@@ -62,8 +62,19 @@ class GameReviewActivity : AppCompatActivity() {
                 view: WebView,
                 request: WebResourceRequest
             ): WebResourceResponse? {
+                val url = request.url
+                val path = url.path
+                if (path != null && path.endsWith(".wasm", ignoreCase = true)) {
+                    val assetPath = if (path.startsWith("/assets/")) path.substring(8) else path
+                    try {
+                        val inputStream = assets.open(assetPath)
+                        return WebResourceResponse("application/wasm", "UTF-8", inputStream)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
                 // Intercept asset URLs and route them to local asset loader
-                return assetLoader.shouldInterceptRequest(request.url)
+                return assetLoader.shouldInterceptRequest(url)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {

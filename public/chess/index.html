@@ -4062,27 +4062,38 @@ function evaluatePosition(fen, depth) {
   });
 }
 
-function getNumericalEval(evalObj, turn) {
-  if (evalObj.mate !== null) {
-    if (evalObj.mate > 0) return 10000 - evalObj.mate * 100;
-    return -10000 - evalObj.mate * 100;
+function getWhitePerspectiveEval(ev, sideToMove) {
+  let val = 0;
+  if (ev.mate !== null) {
+    val = ev.mate > 0 ? (10000 - ev.mate * 10) : (-10000 - ev.mate * 10);
+  } else {
+    val = ev.cp;
   }
-  return evalObj.cp;
+  return sideToMove === 'w' ? val : -val;
 }
 
 function classifyMove(prev, curr, turn, playedUci, bestUci, isForced) {
   if (isForced) return 'forced';
   if (playedUci === bestUci) return 'best';
   
-  const prevVal = getNumericalEval(prev, turn);
-  const currVal = getNumericalEval(curr, turn);
-  const loss = turn === 'w' ? (prevVal - currVal) : (currVal - prevVal);
+  const evalBefore = getWhitePerspectiveEval(prev, turn);
+  const evalAfter = getWhitePerspectiveEval(curr, turn === 'w' ? 'b' : 'w');
+
+  const movingPlayerEvalBefore = turn === 'w' ? evalBefore : -evalBefore;
+  const movingPlayerEvalAfter = turn === 'w' ? evalAfter : -evalAfter;
+
+  const loss = movingPlayerEvalBefore - movingPlayerEvalAfter;
   
-  if (loss <= 20) return 'excellent';
-  if (loss <= 50) return 'good';
-  if (loss <= 100) return 'inaccuracy';
-  if (loss <= 200) return 'mistake';
-  return 'blunder';
+  if (loss <= 0) return 'best';
+  
+  const isEvalFlip = (movingPlayerEvalBefore >= 150 && movingPlayerEvalAfter <= 50) || 
+                     (movingPlayerEvalBefore > 0 && movingPlayerEvalAfter <= -100);
+
+  if (loss > 300 || isEvalFlip) return 'blunder';
+  if (loss > 100) return 'mistake';
+  if (loss > 50) return 'inaccuracy';
+  if (loss > 10) return 'good';
+  return 'excellent';
 }
 
 async function runGameAnalysis() {
@@ -4117,78 +4128,122 @@ async function runGameAnalysis() {
     console.warn('Cache read error:', e);
   }
 
-  // Set up chess context to generate FENs
-  const temp = new Chess();
-  revFens = [temp.fen()];
-  const uciMoves = [];
-  const forcedFlags = [];
-  
-  for (let i = 0; i < revHist.length; i++) {
-    const legalCount = temp.moves().length;
-    forcedFlags.push(legalCount === 1);
-    const r = temp.move(revHist[i]);
-    if (r) {
-      revFens.push(temp.fen());
-      uciMoves.push(r.from + r.to + (r.promotion || ''));
+  try {
+    // Set up chess context to generate FENs
+    const temp = new Chess();
+    revFens = [temp.fen()];
+    const uciMoves = [];
+    const forcedFlags = [];
+    
+    for (let i = 0; i < revHist.length; i++) {
+      const legalCount = temp.moves().length;
+      forcedFlags.push(legalCount === 1);
+      const r = temp.move(revHist[i]);
+      if (r) {
+        revFens.push(temp.fen());
+        uciMoves.push(r.from + r.to + (r.promotion || ''));
+      }
     }
-  }
 
-  initRevSF();
-  revEvals = [];
-  
-  // If worker failed to initialize, skip analysis and just show board
-  if (!revWorker) {
+    initRevSF();
+    revEvals = [];
+    
+    if (!revWorker) {
+      revIsAnalyzing = false;
+      progContainer.style.display = 'none';
+      revMoveIdx = revHist.length;
+      revRender();
+      return;
+    }
+    
+    // Pass 1: Bulk scan at depth 8
+    const temp3 = new Chess();
+    for (let i = 0; i < revFens.length; i++) {
+      txt.textContent = `Analyzing position ${i} / ${revFens.length - 1}...`;
+      fill.style.width = `${Math.round((i / revFens.length) * 100)}%`;
+      
+      if (temp3.game_over()) {
+        if (temp3.in_checkmate()) {
+          revEvals.push({ cp: 0, mate: 0, bestMove: '(none)' });
+        } else {
+          revEvals.push({ cp: 0, mate: null, bestMove: '(none)' });
+        }
+      } else {
+        const res = await evaluatePosition(revFens[i], 8);
+        revEvals.push(res);
+      }
+      
+      if (i < revHist.length) {
+        temp3.move(revHist[i]);
+      }
+    }
+
+    // Pass 2: High-depth re-verification (depth 13) for large swings (> 100 cp loss)
+    const depth13Verified = new Array(revFens.length).fill(false);
+    for (let i = 0; i < revHist.length; i++) {
+      if (!revEvals[i] || !revEvals[i+1]) continue;
+      
+      const turn = i % 2 === 0 ? 'w' : 'b';
+      const evalBefore = getWhitePerspectiveEval(revEvals[i], turn);
+      const evalAfter = getWhitePerspectiveEval(revEvals[i+1], turn === 'w' ? 'b' : 'w');
+
+      const movingPlayerEvalBefore = turn === 'w' ? evalBefore : -evalBefore;
+      const movingPlayerEvalAfter = turn === 'w' ? evalAfter : -evalAfter;
+      const loss = movingPlayerEvalBefore - movingPlayerEvalAfter;
+
+      if (loss > 100 && !forcedFlags[i] && revEvals[i].bestMove !== uciMoves[i]) {
+        txt.textContent = `Refining move ${i+1} / ${revHist.length}...`;
+        fill.style.width = `${Math.round((i / revHist.length) * 100)}%`;
+        
+        const tempCheck = new Chess();
+        for (let k = 0; k < i; k++) tempCheck.move(revHist[k]);
+        if (!tempCheck.game_over() && !depth13Verified[i]) {
+          revEvals[i] = await evaluatePosition(revFens[i], 13);
+          depth13Verified[i] = true;
+        }
+
+        if (i < revHist.length) {
+          tempCheck.move(revHist[i]);
+          if (!tempCheck.game_over() && !depth13Verified[i+1]) {
+            revEvals[i+1] = await evaluatePosition(revFens[i+1], 13);
+            depth13Verified[i+1] = true;
+          }
+        }
+      }
+    }
+
+    // Pass 3: Final pass classification
+    revClassifications = [];
+    for (let i = 0; i < revHist.length; i++) {
+      if (!revEvals[i] || !revEvals[i+1]) { revClassifications.push('good'); continue; }
+      const turn = i % 2 === 0 ? 'w' : 'b';
+      const cls = classifyMove(revEvals[i], revEvals[i+1], turn, uciMoves[i], revEvals[i].bestMove, forcedFlags[i]);
+      revClassifications.push(cls);
+    }
+
+    // Save cache
+    try {
+      await setCache(cacheKey, {
+        evals: revEvals,
+        classifications: revClassifications,
+        fens: revFens
+      });
+    } catch (e) {
+      console.warn('Cache write error:', e);
+    }
+
     revIsAnalyzing = false;
     progContainer.style.display = 'none';
+    calculateReviewStats();
+    drawEvaluationGraph();
     revMoveIdx = revHist.length;
     revRender();
-    return;
-  }
-  
-  for (let i = 0; i < revFens.length; i++) {
-    txt.textContent = `Analyzing position ${i} / ${revFens.length - 1}...`;
-    fill.style.width = `${Math.round((i / revFens.length) * 100)}%`;
-    
-    // Adaptive depth based on phase
-    let depth = 10;
-    if (revFens.length - i < 12) {
-      depth = 12; // deeper in endgame
-    }
-    
-    const res = await evaluatePosition(revFens[i], depth);
-    revEvals.push(res);
-  }
 
-  revClassifications = [];
-  for (let i = 0; i < revHist.length; i++) {
-    const prev = revEvals[i];
-    const curr = revEvals[i+1];
-    const turn = i % 2 === 0 ? 'w' : 'b';
-    const playedUci = uciMoves[i];
-    const bestUci = prev.bestMove;
-    const isForced = forcedFlags[i];
-    
-    const cls = classifyMove(prev, curr, turn, playedUci, bestUci, isForced);
-    revClassifications.push(cls);
+  } catch (err) {
+    console.error('runGameAnalysis error:', err);
+    revIsAnalyzing = false;
+    progContainer.style.display = 'none';
   }
-
-  // Save cache
-  try {
-    await setCache(cacheKey, {
-      evals: revEvals,
-      classifications: revClassifications,
-      fens: revFens
-    });
-  } catch (e) {
-    console.warn('Cache write error:', e);
-  }
-
-  revIsAnalyzing = false;
-  progContainer.style.display = 'none';
-  calculateReviewStats();
-  drawEvaluationGraph();
-  revMoveIdx = revHist.length; // show final position after analysis
-  revRender();
 }
 
 function calculateReviewStats() {
@@ -4211,13 +4266,15 @@ function calculateReviewStats() {
     else if (cls === 'blunder') stat.blunder++;
     else if (cls === 'forced') stat.forced++;
     
-    // Average centipawn loss
-    const prevVal = getNumericalEval(revEvals[i], turn);
-    const currVal = getNumericalEval(revEvals[i+1], turn);
-    const loss = turn === 'w' ? Math.max(0, prevVal - currVal) : Math.max(0, currVal - prevVal);
-    // Ignore forced moves or massive drops after mates for ACPL sanity
-    if (cls !== 'forced' && Math.abs(prevVal) < 800) {
-      stat.lossSum += loss;
+    if (revEvals[i] && revEvals[i+1] && cls !== 'forced') {
+      const evalBefore = getWhitePerspectiveEval(revEvals[i], turn);
+      const evalAfter = getWhitePerspectiveEval(revEvals[i+1], turn === 'w' ? 'b' : 'w');
+      
+      // Ignore forced moves or massive drops after mates for ACPL sanity
+      if (revEvals[i].mate === null && revEvals[i+1].mate === null && Math.abs(evalBefore) < 800) {
+        const loss = turn === 'w' ? Math.max(0, evalBefore - evalAfter) : Math.max(0, evalAfter - evalBefore);
+        stat.lossSum += loss;
+      }
     }
   }
 
@@ -4259,7 +4316,8 @@ function drawEvaluationGraph() {
   const points = [];
   for (let i = 0; i < revEvals.length; i++) {
     const x = N === 0 ? 250 : (i / N) * 460 + 20;
-    let evalVal = getNumericalEval(revEvals[i], 'w') / 100;
+    const turn = i % 2 === 0 ? 'w' : 'b';
+    let evalVal = getWhitePerspectiveEval(revEvals[i], turn) / 100;
     evalVal = Math.max(-8, Math.min(8, evalVal));
     const y = 60 - (evalVal / 8) * 50;
     points.push({ x, y });
@@ -4325,11 +4383,26 @@ function revRender() {
   revUpdMoveList();
   revUpdRecommendation();
   
-  if (revEvals.length > 0) {
-    const ev = revEvals[revMoveIdx];
-    let cp = getNumericalEval(ev, 'w');
-    let pct = Math.max(5, Math.min(95, 50 + cp * 0.08));
-    document.getElementById('rev-fillh').style.width = pct + '%';
+  if (revEvals.length > 0 && revEvals[revMoveIdx]) {
+    if (revChess.game_over()) {
+      if (revChess.in_checkmate()) {
+        const turn = revChess.turn();
+        document.getElementById('rev-fillh').style.width = (turn === 'w') ? '0%' : '100%';
+      } else {
+        document.getElementById('rev-fillh').style.width = '50%';
+      }
+    } else {
+      const ev = revEvals[revMoveIdx];
+      const turn = revMoveIdx % 2 === 0 ? 'w' : 'b';
+      const whiteEval = getWhitePerspectiveEval(ev, turn);
+      let pct = 50;
+      if (ev.mate !== null) {
+        pct = whiteEval > 0 ? 95 : 5;
+      } else {
+        pct = Math.max(5, Math.min(95, 50 + (whiteEval / 100) * 8));
+      }
+      document.getElementById('rev-fillh').style.width = pct + '%';
+    }
   } else {
     document.getElementById('rev-fillh').style.width = '50%';
   }
@@ -4467,13 +4540,18 @@ function revUpdMoveList() {
     activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 }
-
 function revUpdRecommendation() {
   const revPlayed = document.getElementById('rev-played');
   const revPlayedDesc = document.getElementById('rev-played-desc');
   const revBestSugg = document.getElementById('rev-best-sugg');
   const revBestDesc = document.getElementById('rev-best-desc');
   const btnShowBest = document.getElementById('rev-btn-showbest');
+
+  // Re-sync chess
+  revChess = new Chess();
+  for (let i = 0; i < revMoveIdx; i++) {
+    revChess.move(revHist[i]);
+  }
   
   if (revHist.length === 0 || revMoveIdx === 0) {
     revPlayed.textContent = '—';
@@ -4484,43 +4562,59 @@ function revUpdRecommendation() {
     return;
   }
   
-  btnShowBest.style.display = 'block';
-  btnShowBest.textContent = revShowBest ? 'Hide Best Move' : 'Show Best Move';
-
   const idx = revMoveIdx - 1;
   const turn = idx % 2 === 0 ? 'White' : 'Black';
   const playedSan = revHist[idx];
   
   revPlayed.textContent = playedSan;
-  if (revClassifications[idx]) {
+  if (revClassifications[idx] && revEvals[idx+1]) {
     const cls = revClassifications[idx].toUpperCase();
     const ev = revEvals[idx+1];
+    
+    // Check if this resulting position is terminal
+    const temp = new Chess();
+    for (let k = 0; k < idx + 1; k++) temp.move(revHist[k]);
+    
     let cpStr = '0.0';
-    if (ev) {
-      if (ev.mate !== null) cpStr = 'Mate in ' + ev.mate;
-      else cpStr = (ev.cp / 100 > 0 ? '+' : '') + (ev.cp / 100).toFixed(2);
+    if (temp.in_checkmate()) {
+      cpStr = 'Checkmate';
+    } else if (temp.in_draw()) {
+      cpStr = 'Draw';
+    } else if (ev.mate !== null) {
+      cpStr = 'Mate in ' + ev.mate;
+    } else {
+      cpStr = (ev.cp >= 0 ? '+' : '') + (ev.cp / 100).toFixed(2);
     }
     revPlayedDesc.textContent = `${turn} played ${playedSan}. Marked as ${cls}. Evaluation: ${cpStr}`;
   } else {
     revPlayedDesc.textContent = '';
   }
 
-  const prevEv = revEvals[idx];
-  if (prevEv && prevEv.bestMove && prevEv.bestMove !== '(none)') {
-    const uci = prevEv.bestMove;
-    const from = uci.slice(0, 2).toUpperCase();
-    const to = uci.slice(2, 4).toUpperCase();
-    
-    revBestSugg.textContent = `${from} → ${to}`;
-    
-    let cpStr = '0.0';
-    if (prevEv.mate !== null) cpStr = 'Mate in ' + prevEv.mate;
-    else cpStr = (prevEv.cp / 100 > 0 ? '+' : '') + (prevEv.cp / 100).toFixed(2);
-    
-    revBestDesc.textContent = `The engine recommends ${from} to ${to}. Projected eval: ${cpStr}`;
+  if (revChess.game_over()) {
+    revBestSugg.textContent = 'Game Over';
+    revBestDesc.textContent = revChess.in_checkmate() ? 'Checkmate' : 'Draw';
+    btnShowBest.style.display = 'none';
   } else {
-    revBestSugg.textContent = '—';
-    revBestDesc.textContent = 'No suggestion available.';
+    btnShowBest.style.display = 'block';
+    btnShowBest.textContent = revShowBest ? 'Hide Best Move' : 'Show Best Move';
+
+    const prevEv = revEvals[idx];
+    if (prevEv && prevEv.bestMove && prevEv.bestMove !== '(none)') {
+      const uci = prevEv.bestMove;
+      const from = uci.slice(0, 2).toUpperCase();
+      const to = uci.slice(2, 4).toUpperCase();
+      
+      revBestSugg.textContent = `${from} → ${to}`;
+      
+      let cpStr = '0.0';
+      if (prevEv.mate !== null) cpStr = 'Mate in ' + prevEv.mate;
+      else cpStr = (prevEv.cp >= 0 ? '+' : '') + (prevEv.cp / 100).toFixed(2);
+      
+      revBestDesc.textContent = `The engine recommends ${from} to ${to}. Projected eval: ${cpStr}`;
+    } else {
+      revBestSugg.textContent = '—';
+      revBestDesc.textContent = 'No suggestion available.';
+    }
   }
 }
 

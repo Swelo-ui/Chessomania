@@ -626,14 +626,123 @@ async function runAnalysis() {
   analyzing = true;
   showBest = false;
 
-  setProgress(true, 'Checking cache...', 0);
+  try {
+    setProgress(true, 'Checking cache...', 0);
 
-  const cacheKey = hist.join(',') + '_v3';
-  const cached = await cacheGet(cacheKey);
-  if (cached && cached.evals && cached.evals.length > 0) {
-    evals   = cached.evals;
-    clsArr  = cached.clsArr;
-    fens    = cached.fens;
+    const cacheKey = hist.join(',') + '_v3';
+    const cached = await cacheGet(cacheKey);
+    if (cached && cached.evals && cached.evals.length > 0) {
+      evals   = cached.evals;
+      clsArr  = cached.clsArr;
+      fens    = cached.fens;
+      analyzing = false;
+      setProgress(false, '', 100);
+      calcStats();
+      drawGraph();
+      moveIdx = hist.length;
+      render();
+      android('onAnalysisComplete');
+      return;
+    }
+
+    // Build FEN sequence
+    const temp2 = new Chess();
+    fens = [temp2.fen()];
+    const uciMoves = [];
+    const forcedFlags = [];
+
+    for (let i = 0; i < hist.length; i++) {
+      const legal = temp2.moves().length;
+      forcedFlags.push(legal === 1);
+      const r = temp2.move(hist[i]);
+      if (r) {
+        fens.push(temp2.fen());
+        uciMoves.push(r.from + r.to + (r.promotion || ''));
+      }
+    }
+
+    initSF();
+    // Wait a moment for SF to init if it just started
+    if (!sfReady && sfWorker) {
+      await new Promise(res => setTimeout(res, 1500));
+    }
+
+    if (!sfWorker) {
+      analyzing = false;
+      setProgress(false, '', 0);
+      moveIdx = hist.length;
+      render();
+      return;
+    }
+
+    // Pass 1: Bulk scan at depth 8
+    evals = [];
+    const temp3 = new Chess();
+    for (let i = 0; i < fens.length; i++) {
+      setProgress(true, `Analyzing ${i} / ${fens.length - 1}`, Math.round((i / fens.length) * 100));
+      
+      if (temp3.game_over()) {
+        if (temp3.in_checkmate()) {
+          evals.push({ cp: 0, mate: 0, bestMove: '(none)' });
+        } else {
+          evals.push({ cp: 0, mate: null, bestMove: '(none)' });
+        }
+      } else {
+        const res = await evalPos(fens[i], 8);
+        evals.push(res);
+      }
+      
+      if (i < hist.length) {
+        temp3.move(hist[i]);
+      }
+    }
+
+    // Pass 2: High-depth re-verification (depth 13) for large swings (> 100 cp loss)
+    const depth13Verified = new Array(fens.length).fill(false);
+    for (let i = 0; i < hist.length; i++) {
+      if (!evals[i] || !evals[i+1]) continue;
+      
+      const turn = i % 2 === 0 ? 'w' : 'b';
+      const evalBefore = getWhitePerspectiveEval(evals[i], turn);
+      const evalAfter = getWhitePerspectiveEval(evals[i+1], turn === 'w' ? 'b' : 'w');
+
+      const movingPlayerEvalBefore = turn === 'w' ? evalBefore : -evalBefore;
+      const movingPlayerEvalAfter = turn === 'w' ? evalAfter : -evalAfter;
+      const loss = movingPlayerEvalBefore - movingPlayerEvalAfter;
+
+      if (loss > 100 && !forcedFlags[i] && evals[i].bestMove !== uciMoves[i]) {
+        setProgress(true, `Refining move ${i+1} / ${hist.length}...`, Math.round((i / hist.length) * 100));
+        
+        // Re-verify position before the move
+        const tempCheck = new Chess();
+        for (let k = 0; k < i; k++) tempCheck.move(hist[k]);
+        if (!tempCheck.game_over() && !depth13Verified[i]) {
+          evals[i] = await evalPos(fens[i], 13);
+          depth13Verified[i] = true;
+        }
+
+        // Re-verify position after the move
+        if (i < hist.length) {
+          tempCheck.move(hist[i]);
+          if (!tempCheck.game_over() && !depth13Verified[i+1]) {
+            evals[i+1] = await evalPos(fens[i+1], 13);
+            depth13Verified[i+1] = true;
+          }
+        }
+      }
+    }
+
+    // Pass 3: Final pass classification
+    clsArr = [];
+    for (let i = 0; i < hist.length; i++) {
+      if (!evals[i] || !evals[i+1]) { clsArr.push('good'); continue; }
+      const turn = i % 2 === 0 ? 'w' : 'b';
+      const cls = classifyMove(evals[i], evals[i+1], turn, uciMoves[i], evals[i].bestMove, forcedFlags[i]);
+      clsArr.push(cls);
+    }
+
+    await cacheSet(cacheKey, { evals, clsArr, fens });
+
     analyzing = false;
     setProgress(false, '', 100);
     calcStats();
@@ -641,85 +750,49 @@ async function runAnalysis() {
     moveIdx = hist.length;
     render();
     android('onAnalysisComplete');
-    return;
-  }
 
-  // Build FEN sequence
-  const temp2 = new Chess();
-  fens = [temp2.fen()];
-  const uciMoves = [];
-  const forcedFlags = [];
-
-  for (let i = 0; i < hist.length; i++) {
-    const legal = temp2.moves().length;
-    forcedFlags.push(legal === 1);
-    const r = temp2.move(hist[i]);
-    if (r) {
-      fens.push(temp2.fen());
-      uciMoves.push(r.from + r.to + (r.promotion || ''));
-    }
-  }
-
-  initSF();
-  // Wait a moment for SF to init if it just started
-  if (!sfReady && sfWorker) {
-    await new Promise(res => setTimeout(res, 1500));
-  }
-
-  if (!sfWorker) {
-    // No engine — show board only
+  } catch (err) {
+    console.error('runAnalysis error:', err);
     analyzing = false;
     setProgress(false, '', 0);
-    moveIdx = hist.length;
-    render();
-    return;
+    showError('Analysis failed: ' + err.message);
   }
-
-  evals = [];
-  for (let i = 0; i < fens.length; i++) {
-    setProgress(true, `Analyzing ${i} / ${fens.length - 1}`, Math.round((i / fens.length) * 100));
-    const depth = (fens.length - i < 10) ? 12 : 10;
-    const res = await evalPos(fens[i], depth);
-    evals.push(res);
-  }
-
-  // Classify moves
-  clsArr = [];
-  for (let i = 0; i < hist.length; i++) {
-    if (!evals[i] || !evals[i+1]) { clsArr.push('good'); continue; }
-    const turn = i % 2 === 0 ? 'w' : 'b';
-    const cls = classifyMove(evals[i], evals[i+1], turn, uciMoves[i], evals[i].bestMove, forcedFlags[i]);
-    clsArr.push(cls);
-  }
-
-  await cacheSet(cacheKey, { evals, clsArr, fens });
-
-  analyzing = false;
-  setProgress(false, '', 100);
-  calcStats();
-  drawGraph();
-  moveIdx = hist.length;
-  render();
-  android('onAnalysisComplete');
 }
 
 /* ─── Classification ────────────────────────────── */
-function numEval(ev) {
-  if (ev.mate !== null) return ev.mate > 0 ? 10000 - ev.mate * 10 : -10000 - ev.mate * 10;
-  return ev.cp;
+function getWhitePerspectiveEval(ev, sideToMove) {
+  let val = 0;
+  if (ev.mate !== null) {
+    val = ev.mate > 0 ? (10000 - ev.mate * 10) : (-10000 - ev.mate * 10);
+  } else {
+    val = ev.cp;
+  }
+  return sideToMove === 'w' ? val : -val;
 }
 
 function classifyMove(prev, curr, turn, playedUci, bestUci, forced) {
   if (forced) return 'forced';
   if (playedUci === bestUci) return 'best';
-  const prevV = numEval(prev);
-  const currV = numEval(curr);
-  const loss = turn === 'w' ? (prevV - currV) : (currV - prevV);
-  if (loss <= 20)  return 'excellent';
-  if (loss <= 50)  return 'good';
-  if (loss <= 100) return 'inaccuracy';
-  if (loss <= 200) return 'mistake';
-  return 'blunder';
+
+  const evalBefore = getWhitePerspectiveEval(prev, turn);
+  const evalAfter = getWhitePerspectiveEval(curr, turn === 'w' ? 'b' : 'w');
+
+  const movingPlayerEvalBefore = turn === 'w' ? evalBefore : -evalBefore;
+  const movingPlayerEvalAfter = turn === 'w' ? evalAfter : -evalAfter;
+
+  const loss = movingPlayerEvalBefore - movingPlayerEvalAfter;
+
+  if (loss <= 0) return 'best';
+
+  // Check for eval-flip (Blunder)
+  const isEvalFlip = (movingPlayerEvalBefore >= 150 && movingPlayerEvalAfter <= 50) || 
+                     (movingPlayerEvalBefore > 0 && movingPlayerEvalAfter <= -100);
+
+  if (loss > 300 || isEvalFlip) return 'blunder';
+  if (loss > 100) return 'mistake';
+  if (loss > 50) return 'inaccuracy';
+  if (loss > 10) return 'good';
+  return 'excellent';
 }
 
 /* ─── Stats ─────────────────────────────────────── */
@@ -741,11 +814,15 @@ function calcStats() {
     else if (cls === 'blunder')   t.blunder++;
     else if (cls === 'forced')    t.forced++;
 
-    if (evals[i] && evals[i+1] && cls !== 'forced' && Math.abs(numEval(evals[i])) < 800) {
-      const pv = numEval(evals[i]);
-      const cv = numEval(evals[i+1]);
-      const loss = turn === 'w' ? Math.max(0, pv - cv) : Math.max(0, cv - pv);
-      t.lossSum += loss;
+    if (evals[i] && evals[i+1] && cls !== 'forced') {
+      const evalBefore = getWhitePerspectiveEval(evals[i], turn);
+      const evalAfter = getWhitePerspectiveEval(evals[i+1], turn === 'w' ? 'b' : 'w');
+      
+      // Ignore mates in ACPL calculation to avoid extreme skewing
+      if (evals[i].mate === null && evals[i+1].mate === null && Math.abs(evalBefore) < 800) {
+        const loss = turn === 'w' ? Math.max(0, evalBefore - evalAfter) : Math.max(0, evalAfter - evalBefore);
+        t.lossSum += loss;
+      }
     }
   }
 
@@ -779,7 +856,8 @@ function drawGraph() {
   const W = 320, H = 72, N = evals.length - 1;
   const pts = evals.map((ev, i) => {
     const x  = N === 0 ? W/2 : (i / N) * (W - 20) + 10;
-    let val  = numEval(ev) / 100;
+    const turn = i % 2 === 0 ? 'w' : 'b';
+    let val  = getWhitePerspectiveEval(ev, turn) / 100;
     val = Math.max(-8, Math.min(8, val));
     const y  = H/2 - (val / 8) * (H/2 - 6);
     return { x, y };
@@ -839,16 +917,50 @@ function render() {
 }
 
 function updEval() {
+  // Sync chess to current position
+  chess = new Chess();
+  for (let i = 0; i < moveIdx; i++) chess.move(hist[i]);
+
+  if (chess.game_over()) {
+    if (chess.in_checkmate()) {
+      // The side to move is checkmated.
+      const turn = chess.turn(); // 'w' or 'b'
+      const isWhiteMated = (turn === 'w');
+      document.getElementById('eval-fill').style.width = isWhiteMated ? '0%' : '100%';
+      document.getElementById('eval-num').textContent = 'Checkmate';
+      document.getElementById('eval-num').style.color = isWhiteMated ? '#8a8178' : '#f0d9b5';
+    } else {
+      // Draw/Stalemate
+      document.getElementById('eval-fill').style.width = '50%';
+      document.getElementById('eval-num').textContent = 'Draw';
+      document.getElementById('eval-num').style.color = 'var(--text)';
+    }
+    return;
+  }
+
   if (evals.length > moveIdx && evals[moveIdx]) {
     const ev = evals[moveIdx];
-    const cp = numEval(ev);
-    const pct = Math.max(5, Math.min(95, 50 + cp * 0.07));
+    const turn = moveIdx % 2 === 0 ? 'w' : 'b';
+    const whiteEval = getWhitePerspectiveEval(ev, turn);
+    
+    let pct = 50;
+    if (ev.mate !== null) {
+      pct = whiteEval > 0 ? 95 : 5;
+    } else {
+      pct = Math.max(5, Math.min(95, 50 + (whiteEval / 100) * 8));
+    }
     document.getElementById('eval-fill').style.width = pct + '%';
-    const s = ev.mate !== null
-      ? 'M' + (ev.mate > 0 ? '+' : '') + ev.mate
-      : (cp >= 0 ? '+' : '') + (cp / 100).toFixed(1);
+
+    let s = '';
+    if (ev.mate !== null) {
+      const isWhiteMating = (turn === 'w' && ev.mate > 0) || (turn === 'b' && ev.mate < 0);
+      s = 'M' + (isWhiteMating ? '+' : '-') + Math.abs(ev.mate);
+    } else {
+      const val = whiteEval / 100;
+      s = (val >= 0 ? '+' : '') + val.toFixed(1);
+    }
     document.getElementById('eval-num').textContent = s;
-    document.getElementById('eval-num').style.color = cp >= 0 ? '#f0d9b5' : '#8a8178';
+    document.getElementById('eval-num').style.color = whiteEval >= 0 ? '#f0d9b5' : '#8a8178';
   } else {
     document.getElementById('eval-fill').style.width = '50%';
     document.getElementById('eval-num').textContent = '0.0';
@@ -981,6 +1093,10 @@ function updRecommendation() {
   const btnShow    = document.getElementById('btn-show-best');
   const clsRow     = document.getElementById('cls-badge-row');
 
+  // Sync chess to current position
+  chess = new Chess();
+  for (let i = 0; i < moveIdx; i++) chess.move(hist[i]);
+
   if (hist.length === 0 || moveIdx === 0) {
     playedEl.textContent = '—';
     descEl.textContent   = 'Navigate moves to see details.';
@@ -1008,31 +1124,48 @@ function updRecommendation() {
 
   if (cls && evals[idx+1]) {
     const ev = evals[idx+1];
-    const cpStr = ev.mate !== null
-      ? 'Mate in ' + ev.mate
-      : (ev.cp >= 0 ? '+' : '') + (ev.cp / 100).toFixed(2);
+    // Check if this resulting position is terminal
+    const temp = new Chess();
+    for (let k = 0; k < idx + 1; k++) temp.move(hist[k]);
+
+    let cpStr = '';
+    if (temp.in_checkmate()) {
+      cpStr = 'Checkmate';
+    } else if (temp.in_draw()) {
+      cpStr = 'Draw';
+    } else if (ev.mate !== null) {
+      cpStr = 'Mate in ' + ev.mate;
+    } else {
+      cpStr = (ev.cp >= 0 ? '+' : '') + (ev.cp / 100).toFixed(2);
+    }
     descEl.textContent = `Evaluation after move: ${cpStr}`;
   } else {
     descEl.textContent = '';
   }
 
-  btnShow.style.display = 'block';
-  btnShow.textContent   = showBest ? 'Hide Best Move' : 'Show Best Move';
-
-  if (evals[idx] && evals[idx].bestMove && evals[idx].bestMove !== '(none)') {
-    const uci = evals[idx].bestMove;
-    const from = uci.slice(0, 2).toUpperCase();
-    const to   = uci.slice(2, 4).toUpperCase();
-    suggEl.textContent = `Best: ${from} → ${to}`;
-
-    const ev2 = evals[idx];
-    const cpStr2 = ev2.mate !== null
-      ? 'Mate in ' + ev2.mate
-      : (ev2.cp >= 0 ? '+' : '') + (ev2.cp / 100).toFixed(2);
-    suggDesc.textContent = `Engine evaluation: ${cpStr2}`;
+  if (chess.game_over()) {
+    suggEl.textContent = 'Game Over';
+    suggDesc.textContent = chess.in_checkmate() ? 'Checkmate' : 'Draw';
+    btnShow.style.display = 'none';
   } else {
-    suggEl.textContent = evals.length > 0 ? 'Analysis pending...' : '—';
-    suggDesc.textContent = '';
+    btnShow.style.display = 'block';
+    btnShow.textContent   = showBest ? 'Hide Best Move' : 'Show Best Move';
+
+    if (evals[idx] && evals[idx].bestMove && evals[idx].bestMove !== '(none)') {
+      const uci = evals[idx].bestMove;
+      const from = uci.slice(0, 2).toUpperCase();
+      const to   = uci.slice(2, 4).toUpperCase();
+      suggEl.textContent = `Best: ${from} → ${to}`;
+
+      const ev2 = evals[idx];
+      const cpStr2 = ev2.mate !== null
+        ? 'Mate in ' + ev2.mate
+        : (ev2.cp >= 0 ? '+' : '') + (ev2.cp / 100).toFixed(2);
+      suggDesc.textContent = `Engine evaluation: ${cpStr2}`;
+    } else {
+      suggEl.textContent = evals.length > 0 ? 'Analysis pending...' : '—';
+      suggDesc.textContent = '';
+    }
   }
 }
 
