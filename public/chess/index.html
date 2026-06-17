@@ -3978,7 +3978,7 @@ let revPieces = 'cburnett';
 let revShowBest = false;
 
 // IndexedDB Caching
-const DB_NAME = 'ChessomaniaReviewCache';
+const DB_NAME = 'ChessomaniaReviewCache_v5';
 const DB_VERSION = 1;
 const STORE_NAME = 'evaluations';
 let dbInstance = null;
@@ -4123,76 +4123,62 @@ function turnAt(i) {
   return i % 2 === 0 ? 'w' : 'b';
 }
 
-/* ─── Material value mapping ─── */
-function getMaterialValue(fen) {
-  const t = new Chess(fen);
-  let wVal = 0, bVal = 0;
-  for (let ri = 0; ri < 8; ri++) {
-    for (let fi = 0; fi < 8; fi++) {
-      const sq = FILES[fi] + RANKS[ri];
-      const p = t.get(sq);
-      if (p) {
-        let val = 100;
-        if (p.type === 'n') val = 300;
-        else if (p.type === 'b') val = 320;
-        else if (p.type === 'r') val = 500;
-        else if (p.type === 'q') val = 900;
-        
-        if (p.color === 'w') wVal += val;
-        else bVal += val;
-      }
+/* ─── Material value mapping (for Brilliant detection) ─── */
+const PVAL = { p: 100, n: 320, b: 330, r: 500, q: 900 };
+function matOf(fen, color) {
+  let tot = 0;
+  if (!fen) return 0;
+  for (const ch of fen.split(' ')[0]) {
+    const lo = ch.toLowerCase();
+    if (PVAL[lo]) {
+      const isWhitePiece = ch !== lo;
+      if ((color === 'w' && isWhitePiece) || (color === 'b' && !isWhitePiece)) tot += PVAL[lo];
     }
   }
-  return { wVal, bVal };
+  return tot;
+}
+function relMaterial(fen, turn) {
+  const opp = turn === 'w' ? 'b' : 'w';
+  return matOf(fen, turn) - matOf(fen, opp);
+}
+function isSacrifice(i) {
+  if (i + 2 >= revFens.length) return false;
+  const turn = turnAt(i);
+  return relMaterial(revFens[i+2], turn) < relMaterial(revFens[i], turn) - 99;
 }
 
 function classifyMove(i, isForced) {
   if (isForced) return 'forced';
   
-  const prev = revEvals[i];
-  const curr = revEvals[i+1];
-  if (!prev || !curr) return 'good';
-
   const played = revUciMoves[i];
-  const best   = prev.bestMove;
+  const best   = revEvals[i]?.bestMove;
+  const isBest = played && best && played === best;
   
   const turn  = turnAt(i);
   const nextT = turn === 'w' ? 'b' : 'w';
-  const wBef  = getWhitePerspectiveEval(prev, turn);
-  const wAft  = getWhitePerspectiveEval(curr, nextT);
+  const wBef  = getWhitePerspectiveEval(revEvals[i], turn);
+  const wAft  = getWhitePerspectiveEval(revEvals[i+1], nextT);
 
   const pBef  = turn === 'w' ? wBef : -wBef;
   const pAft  = turn === 'w' ? wAft : -wAft;
   const loss  = pBef - pAft;
+  const flip  = (pBef >= 150 && pAft <= 50) || (pBef > 0 && pAft <= -100);
 
-  // 1. Brilliant move detection (!!)
-  if (played && best && (played === best || loss <= 10) && pAft >= -100) {
-    const matBef = getMaterialValue(revFens[i]);
-    const matAft = getMaterialValue(revFens[i+1]);
-    const matDiff = turn === 'w' ? 
-      (matBef.wVal - matBef.bVal) - (matAft.wVal - matAft.bVal) :
-      (matBef.bVal - matBef.wVal) - (matAft.bVal - matAft.wVal);
-    if (matDiff < 0) {
-      return 'brilliant';
-    }
-  }
+  // Brilliant: best move + material sacrifice + position stays acceptable
+  if (isBest && isSacrifice(i) && pAft >= -100) return 'brilliant';
 
-  // 2. Missed Win detection (miss)
-  const hadMate = prev.mate !== null && ((turn === 'w' && prev.mate > 0) || (turn === 'b' && prev.mate < 0));
-  if ((pBef >= 250 || hadMate) && loss > 150 && pAft < 150) {
-    return 'missed';
-  }
-  
-  if (played && best && played === best) return 'best';
-  if (loss <= 0) return 'best';
+  if (loss <= 0) return isBest ? 'best' : 'excellent';
+  if (isBest) return 'best';
 
-  const isEvalFlip = (pBef >= 150 && pAft <= 50) || 
-                     (pBef > 0 && pAft <= -100);
+  // Missed Win: had big advantage, squandered it (without full blunder)
+  const hadWin = (turn === 'w' ? wBef : -wBef) >= 250 || revEvals[i].mate !== null;
+  const droppedAdv = (turn === 'w' ? wAft : -wAft) < 100;
+  if (hadWin && droppedAdv && loss > 100 && loss <= 300) return 'missed';
 
-  if (loss > 300 || isEvalFlip) return 'blunder';
-  if (loss > 100) return 'mistake';
-  if (loss > 50) return 'inaccuracy';
-  if (loss > 15) return 'good';
+  if (loss > 300 || flip) return 'blunder';
+  if (loss > 100)      return 'mistake';
+  if (loss > 50)       return 'inaccuracy';
+  if (loss > 15)       return 'good';
   return 'excellent';
 }
 
@@ -4209,7 +4195,7 @@ async function runGameAnalysis() {
   txt.textContent = 'Checking local cache...';
 
   // Check cache
-  const cacheKey = revHist.join(',') + '_depth10_v4';
+  const cacheKey = revHist.join(',') + '_depth10_v5';
   try {
     const cached = await getCache(cacheKey);
     if (cached) {
@@ -4760,6 +4746,7 @@ function revUpdMoveList() {
   container.innerHTML = '';
   
   const badgeHtml = (cls) => {
+    if (cls === 'brilliant') return `<span class="badge brilliant" title="Brilliant (!!)">!!</span>`;
     if (cls === 'best') return `<span class="badge best" title="Best Move">✓</span>`;
     if (cls === 'forced') return `<span class="badge best" title="Forced Move">✓</span>`;
     if (cls === 'excellent') return `<span class="badge excellent" title="Excellent Move">🗲</span>`;
@@ -4767,6 +4754,7 @@ function revUpdMoveList() {
     if (cls === 'inaccuracy') return `<span class="badge inaccuracy" title="Inaccuracy">?!</span>`;
     if (cls === 'mistake') return `<span class="badge mistake" title="Mistake">?</span>`;
     if (cls === 'blunder') return `<span class="badge blunder" title="Blunder">??</span>`;
+    if (cls === 'missed') return `<span class="badge missed" title="Missed Win (✗)">✗</span>`;
     return '';
   };
 

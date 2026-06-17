@@ -5,388 +5,213 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>Game Review</title>
 <style>
-/* ═══════════════════════════════════════════
-   ChessOmania Review – Complete Rebuild v4
-   All bugs fixed: eval bar, best move,
-   accuracy, classification, timer, spacing
-═══════════════════════════════════════════ */
-:root {
-  --bg:         #161512;
-  --panel:      #1e1c19;
-  --panel2:     #272421;
-  --border:     #3a3630;
-  --accent:     #b58863;
-  --accent2:    #8d6840;
-  --green:      #629924;
-  --red:        #c94f36;
-  --text:       #d9d4cd;
-  --text2:      #8a8178;
-  --sq-l:       #f0d9b5;
-  --sq-d:       #b58863;
-  --board-size: min(370px, 90vw);
+/* ═══════════════════════════════════════════════
+   ChessOmania Review v5 — Full Feature Set
+   + Brilliant/Missed Win + Sounds + Haptics
+   + Interactive Practice Mode
+═══════════════════════════════════════════════ */
+:root{
+  --bg:#161512;--panel:#1e1c19;--panel2:#272421;
+  --border:#3a3630;--accent:#b58863;--accent2:#8d6840;
+  --green:#629924;--red:#c94f36;
+  --text:#d9d4cd;--text2:#8a8178;
+  --sq-l:#f0d9b5;--sq-d:#b58863;
+  --board-size:min(370px,90vw);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-
 body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:'Segoe UI',system-ui,sans-serif;
-  font-size:14px;
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
+  background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;
+  height:100vh;display:flex;flex-direction:column;overflow:hidden;
 }
-
-/* Scrollable area */
 #content{
-  flex:1;
-  overflow-y:auto;
-  overflow-x:hidden;
-  padding:10px 10px 28px;
-  -webkit-overflow-scrolling:touch;
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  padding:10px 10px 28px;-webkit-overflow-scrolling:touch;
 }
 
-/* ── Status / Timer / Progress ── */
+/* ── Practice banner ── */
+#practice-banner{
+  display:none;align-items:center;justify-content:space-between;
+  background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.35);
+  border-radius:8px;padding:8px 12px;margin-bottom:10px;
+}
+#practice-banner span{font-size:0.75rem;font-weight:700;color:#38bdf8;}
+#btn-exit-practice{
+  font-size:0.7rem;font-weight:700;padding:4px 10px;
+  border-radius:5px;border:1px solid rgba(56,189,248,.4);
+  background:rgba(56,189,248,.15);color:#38bdf8;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ── Status / Progress ── */
 #status-bar{
-  display:none;
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:8px;
-  padding:9px 12px;
-  margin-bottom:14px;   /* clear gap below progress bar */
+  display:none;background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;padding:9px 12px;margin-bottom:14px;
 }
-#status-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:6px;
-}
-#status-msg{
-  font-size:0.7rem;
-  color:var(--text2);
-  font-weight:600;
-}
-#timer-wrap{
-  display:flex;
-  align-items:center;
-  gap:5px;
-}
-#timer-icon{font-size:0.75rem;}
-#timer-val{
-  font-size:0.72rem;
-  font-weight:700;
-  color:var(--accent);
-  font-variant-numeric:tabular-nums;
-  min-width:38px;
-  text-align:right;
-}
-#timer-eta{
-  font-size:0.66rem;
-  color:var(--text2);
-}
-#prog-track{
-  height:4px;
-  background:var(--panel2);
-  border-radius:2px;
-  overflow:hidden;
-}
-#prog-fill{
-  height:100%;
-  background:var(--accent);
-  width:0%;
-  transition:width 0.3s ease;
-  border-radius:2px;
-}
+#status-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+#status-msg{font-size:0.7rem;color:var(--text2);font-weight:600;}
+#timer-wrap{display:flex;align-items:center;gap:4px;}
+#timer-val{font-size:0.72rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;min-width:36px;text-align:right;}
+#timer-eta{font-size:0.64rem;color:var(--text2);}
+#prog-track{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden;}
+#prog-fill{height:100%;background:var(--accent);width:0%;transition:width 0.3s ease;border-radius:2px;}
 
-/* Error banner */
+/* ── Error ── */
 #error-banner{
-  display:none;
-  background:rgba(201,79,54,0.12);
-  border:1px solid rgba(201,79,54,0.35);
-  border-radius:8px;
-  padding:8px 12px;
-  font-size:0.72rem;
-  color:#f97316;
-  margin-bottom:10px;
-  text-align:center;
+  display:none;background:rgba(201,79,54,.12);border:1px solid rgba(201,79,54,.35);
+  border-radius:8px;padding:8px 12px;font-size:0.72rem;color:#f97316;
+  margin-bottom:10px;text-align:center;
 }
 
 /* ── Board container ── */
-.board-container{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  margin-bottom:12px;
-}
+.board-container{display:flex;flex-direction:column;align-items:center;margin-bottom:12px;}
 
-/* Eval bar – horizontal strip above board */
-.eval-row{
-  width:var(--board-size);
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-bottom:10px;  /* gap between eval bar and board */
-}
+/* Eval bar */
+.eval-row{width:var(--board-size);display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 #eval-score{
-  font-size:0.92rem;
-  font-weight:800;
-  min-width:52px;
-  text-align:center;
-  color:var(--text);
-  font-variant-numeric:tabular-nums;
-  letter-spacing:-0.3px;
-  white-space:nowrap;
+  font-size:0.92rem;font-weight:800;min-width:52px;text-align:center;
+  color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.3px;white-space:nowrap;
 }
 .eval-track{
-  flex:1;
-  height:8px;
-  background:#1a1916;
-  border-radius:4px;
-  overflow:hidden;
-  border:1px solid var(--border);
-  position:relative;
+  flex:1;height:8px;background:#1a1916;border-radius:4px;
+  overflow:hidden;border:1px solid var(--border);
 }
 #eval-fill{
-  height:100%;
-  /* White portion from the left */
-  background:#e8e4df;
-  width:50%;
-  transition:width 0.45s cubic-bezier(.4,0,.2,1);
-  border-radius:3px 0 0 3px;
+  height:100%;background:#e8e4df;width:50%;
+  transition:width 0.45s cubic-bezier(.4,0,.2,1);border-radius:3px 0 0 3px;
 }
 
-/* Board with rank/file labels */
+/* Board + labels */
 .board-wrap{display:flex;align-items:flex-start;}
 .rank-labels{
-  display:flex;
-  flex-direction:column;
-  height:var(--board-size);
-  margin-right:4px;
-  color:var(--text2);
-  font-size:0.58rem;
-  font-weight:700;
-  user-select:none;
+  display:flex;flex-direction:column;height:var(--board-size);
+  margin-right:4px;color:var(--text2);font-size:0.58rem;font-weight:700;user-select:none;
 }
 .rank-labels span{flex:1;display:flex;align-items:center;justify-content:center;}
 .board-col{display:flex;flex-direction:column;}
 #chessboard{
-  display:grid;
-  grid-template-columns:repeat(8,1fr);
-  grid-template-rows:repeat(8,1fr);
-  width:var(--board-size);
-  height:var(--board-size);
-  border-radius:3px;
-  overflow:hidden;
-  box-shadow:0 6px 28px rgba(0,0,0,.75);
+  display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);
+  width:var(--board-size);height:var(--board-size);
+  border-radius:3px;overflow:hidden;box-shadow:0 6px 28px rgba(0,0,0,.75);
 }
 .file-labels{
-  display:flex;
-  width:var(--board-size);
-  margin-top:4px;
-  color:var(--text2);
-  font-size:0.58rem;
-  font-weight:700;
-  user-select:none;
+  display:flex;width:var(--board-size);margin-top:4px;
+  color:var(--text2);font-size:0.58rem;font-weight:700;user-select:none;
 }
 .file-labels span{flex:1;display:flex;align-items:center;justify-content:center;}
 
 /* Squares */
-.sq{
-  position:relative;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
+.sq{position:relative;display:flex;align-items:center;justify-content:center;}
 .sq.light{background:var(--sq-l);}
 .sq.dark {background:var(--sq-d);}
-.sq.lf   {background:rgba(205,210,20,.4) !important;}
-.sq.lt   {background:rgba(205,210,20,.55) !important;}
-.sq.bf   {background:rgba(20,160,240,.22) !important;
-          outline:2px dashed rgba(20,160,240,.85);
-          outline-offset:-2px;}
-.sq.bt   {background:rgba(20,160,240,.32) !important;
-          outline:2px solid rgba(20,160,240,.9);
-          outline-offset:-2px;}
-.sq.selected-sq {background:rgba(181,136,99,0.6) !important;
-                 outline:3px solid rgba(181,136,99,0.9);
-                 outline-offset:-3px;}
-.sq.dest-sq::after{content:'';
-                   width:14px;height:14px;
-                   background:rgba(0,0,0,0.18);
-                   border-radius:50%;
-                   position:absolute;
-                   pointer-events:none;}
+.sq.lf{background:rgba(205,210,20,.4)!important;}
+.sq.lt{background:rgba(205,210,20,.55)!important;}
+.sq.bf{background:rgba(20,160,240,.22)!important;outline:2px dashed rgba(20,160,240,.85);outline-offset:-2px;}
+.sq.bt{background:rgba(20,160,240,.32)!important;outline:2px solid rgba(20,160,240,.9);outline-offset:-2px;}
+.sq.sel{background:rgba(56,189,248,.45)!important;}
+/* Legal move dot */
+.sq.legal-dot::after{
+  content:'';position:absolute;width:30%;height:30%;border-radius:50%;
+  background:rgba(0,0,0,.22);z-index:3;pointer-events:none;
+}
+/* Legal capture ring */
+.sq.legal-cap{background:rgba(0,0,0,.08)!important;}
+.sq.legal-cap::after{
+  content:'';position:absolute;inset:0;border-radius:50%;
+  border:4px solid rgba(0,0,0,.22);z-index:3;pointer-events:none;box-sizing:border-box;
+}
 
-/* Piece images */
+/* Pieces */
 .piece{
-  width:86%;
-  height:86%;
-  object-fit:contain;
-  pointer-events:none;
-  filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));
-  -webkit-user-drag:none;
+  width:86%;height:86%;object-fit:contain;pointer-events:none;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));-webkit-user-drag:none;
 }
 
-/* Nav buttons */
-.nav-row{
-  display:flex;
-  gap:6px;
-  margin:10px 0 8px;
-  justify-content:center;
-}
+/* Nav */
+.nav-row{display:flex;gap:6px;margin:10px 0 8px;justify-content:center;}
 .btn{
-  padding:7px 13px;
-  border-radius:6px;
-  border:1px solid var(--border);
-  background:var(--panel2);
-  color:var(--text);
-  cursor:pointer;
-  font-size:0.8rem;
-  font-weight:600;
-  transition:filter 0.12s,transform 0.08s;
-  -webkit-tap-highlight-color:transparent;
-  user-select:none;
+  padding:7px 13px;border-radius:6px;border:1px solid var(--border);
+  background:var(--panel2);color:var(--text);cursor:pointer;font-size:0.8rem;
+  font-weight:600;transition:filter .12s,transform .08s;
+  -webkit-tap-highlight-color:transparent;user-select:none;
 }
 .btn:active{filter:brightness(1.35);transform:scale(0.94);}
 .btn-accent{background:var(--accent);border-color:var(--accent2);color:#fff;}
 
 /* Eval graph */
 .graph-wrap{
-  width:var(--board-size);
-  height:68px;
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:7px;
-  overflow:hidden;
-  position:relative;
+  width:var(--board-size);height:68px;background:var(--panel);
+  border:1px solid var(--border);border-radius:7px;overflow:hidden;
 }
 .graph-wrap svg{width:100%;height:100%;display:block;}
 .g-dot{cursor:pointer;}
 
 /* Cards */
-.card{
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:8px;
-  margin-bottom:10px;
-  overflow:hidden;
-}
-.card-head{
-  padding:6px 12px;
-  font-size:0.62rem;
-  font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:1.5px;
-  color:var(--text2);
-  border-bottom:1px solid var(--border);
-  background:rgba(255,255,255,.018);
-}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;}
+.card-head{padding:6px 12px;font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);border-bottom:1px solid var(--border);background:rgba(255,255,255,.018);}
 .card-body{padding:11px 12px;}
 
-/* Classification pill */
-.cls-pill{
-  display:inline-block;
-  padding:2px 10px;
-  border-radius:20px;
-  font-size:0.68rem;
-  font-weight:800;
-  text-transform:uppercase;
-  letter-spacing:.7px;
-  margin-bottom:6px;
-}
+/* Classification pills */
+.cls-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;}
+.cls-brilliant{background:linear-gradient(135deg,#0ea5e9,#7c3aed);color:#fff;}
 .cls-best,.cls-forced{background:#629924;color:#fff;}
 .cls-excellent{background:#38bdf8;color:#fff;}
 .cls-good{background:#9ca3af;color:#fff;}
 .cls-inaccuracy{background:#fbbf24;color:#1e1c19;}
 .cls-mistake{background:#f97316;color:#fff;}
+.cls-missed-win{background:#f97316;color:#fff;}
 .cls-blunder{background:#ef4444;color:#fff;}
-.cls-brilliant{background:#12b6ad;color:#fff;}
-.cls-missed{background:#ff7043;color:#fff;}
 
-/* Accuracy boxes */
+/* Accuracy */
 .acc-row{display:flex;gap:10px;margin-bottom:11px;}
-.acc-box{
-  flex:1;
-  background:var(--panel2);
-  border:1px solid var(--border);
-  border-radius:8px;
-  padding:10px 8px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:3px;
-}
-.acc-val{
-  font-size:1.45rem;
-  font-weight:800;
-  color:var(--green);
-  font-variant-numeric:tabular-nums;
-  line-height:1;
-}
-.acc-lbl{font-size:0.58rem;color:var(--text2);text-transform:uppercase;letter-spacing:.9px;}
+.acc-box{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.acc-val{font-size:1.45rem;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums;line-height:1;}
+.acc-lbl{font-size:.58rem;color:var(--text2);text-transform:uppercase;letter-spacing:.9px;}
 
 /* Summary table */
-.sum-tbl{width:100%;border-collapse:collapse;font-size:0.72rem;}
+.sum-tbl{width:100%;border-collapse:collapse;font-size:.72rem;}
 .sum-tbl th,.sum-tbl td{padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
-.sum-tbl th{color:var(--text2);font-size:0.62rem;text-transform:uppercase;letter-spacing:.5px;font-weight:600;text-align:left;}
+.sum-tbl th{color:var(--text2);font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;font-weight:600;text-align:left;}
 .sum-tbl td:nth-child(2),.sum-tbl td:nth-child(3){text-align:center;font-weight:600;}
 
 /* Move list */
 .mlist{max-height:175px;overflow-y:auto;}
-.mrow{display:flex;align-items:center;padding:4px 6px;font-size:0.74rem;border-bottom:1px solid rgba(255,255,255,.025);}
+.mrow{display:flex;align-items:center;padding:4px 6px;font-size:.74rem;border-bottom:1px solid rgba(255,255,255,.025);}
 .mrow.active{background:rgba(181,136,99,.12);}
-.mnum{width:28px;color:var(--text2);font-weight:700;flex-shrink:0;font-size:0.68rem;}
-.msan{
-  flex:1;
-  display:flex;
-  align-items:center;
-  padding:2px 4px;
-  border-radius:4px;
-  min-height:20px;
-  cursor:pointer;
-  gap:3px;
-  -webkit-tap-highlight-color:transparent;
-}
+.mnum{width:28px;color:var(--text2);font-weight:700;flex-shrink:0;font-size:.68rem;}
+.msan{flex:1;display:flex;align-items:center;padding:2px 4px;border-radius:4px;min-height:20px;cursor:pointer;gap:3px;-webkit-tap-highlight-color:transparent;}
 .msan:active{background:rgba(255,255,255,.08);}
 .msan.cur{background:var(--accent);color:#fff;}
 
-/* Move badges */
-.mbadge{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:13px;height:13px;border-radius:50%;
-  font-size:0.42rem;font-weight:900;
-  color:#fff;flex-shrink:0;line-height:1;
-}
+/* Badges */
+.mbadge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;font-size:.45rem;font-weight:900;color:#fff;flex-shrink:0;line-height:1;}
+.mb-brilliant{background:linear-gradient(135deg,#0ea5e9,#7c3aed);}
 .mb-best,.mb-forced{background:#629924;}
 .mb-excellent{background:#38bdf8;}
 .mb-good{background:#9ca3af;}
 .mb-inaccuracy{background:#fbbf24;color:#1e1c19;}
-.mb-mistake{background:#f97316;}
+.mb-mistake,.mb-missed-win{background:#f97316;}
 .mb-blunder{background:#ef4444;}
-.mb-brilliant{background:#12b6ad;}
-.mb-missed{background:#ff7043;}
 </style>
 </head>
 <body>
-
 <div id="content">
 
-  <!-- Error banner -->
+  <!-- Error -->
   <div id="error-banner"></div>
 
-  <!-- Practice banner -->
-  <div id="practice-banner" style="display:none;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);border-radius:8px;padding:9px 12px;margin-bottom:10px;text-align:center;">
-    <span style="font-size:0.75rem;font-weight:700;color:#38bdf8;margin-right:8px;">Practice Mode: Explore variations</span>
-    <button class="btn btn-accent" style="padding:4px 9px;font-size:0.68rem;" onclick="exitPractice()">Return to Review</button>
+  <!-- Practice Mode Banner -->
+  <div id="practice-banner">
+    <span>🎯 Practice Mode</span>
+    <button id="btn-exit-practice" onclick="exitPractice()">← Return to Review</button>
   </div>
 
-  <!-- Progress & Timer (with clear gap below) -->
+  <!-- Progress + Timer -->
   <div id="status-bar">
     <div id="status-row">
       <span id="status-msg">Initializing engine…</span>
       <div id="timer-wrap">
-        <span id="timer-icon">⏱</span>
+        <span>⏱</span>
         <span id="timer-val">0:00</span>
         <span id="timer-eta"></span>
       </div>
@@ -394,16 +219,12 @@ body{
     <div id="prog-track"><div id="prog-fill"></div></div>
   </div>
 
-  <!-- Board area -->
+  <!-- Board -->
   <div class="board-container">
-
-    <!-- Eval bar -->
     <div class="eval-row">
       <div id="eval-score">+0.0</div>
       <div class="eval-track"><div id="eval-fill"></div></div>
     </div>
-
-    <!-- Board + labels -->
     <div class="board-wrap">
       <div class="rank-labels" id="rank-labels"></div>
       <div class="board-col">
@@ -411,8 +232,6 @@ body{
         <div class="file-labels" id="file-labels"></div>
       </div>
     </div>
-
-    <!-- Navigation -->
     <div class="nav-row">
       <button class="btn" onclick="jumpStart()">«</button>
       <button class="btn" onclick="prevMove()">‹</button>
@@ -420,12 +239,9 @@ body{
       <button class="btn" onclick="jumpEnd()">»</button>
       <button class="btn" onclick="flipBoard()">⇅</button>
     </div>
-
-    <!-- Eval graph -->
     <div class="graph-wrap">
       <svg id="graph-svg" viewBox="0 0 320 68" preserveAspectRatio="none"></svg>
     </div>
-
   </div>
 
   <!-- Move Quality -->
@@ -433,10 +249,10 @@ body{
     <div class="card-head">Move Quality</div>
     <div class="card-body">
       <div id="cls-row" style="display:none;margin-bottom:6px;"></div>
-      <div id="played-san" style="font-weight:700;font-size:0.82rem;margin-bottom:3px;">—</div>
-      <div id="played-eval" style="font-size:0.71rem;color:var(--text2);margin-bottom:9px;">Select a move to see details.</div>
-      <div id="best-san" style="font-weight:700;font-size:0.78rem;color:#38bdf8;margin-bottom:2px;">—</div>
-      <div id="best-eval" style="font-size:0.68rem;color:var(--text2);margin-bottom:10px;"></div>
+      <div id="played-san" style="font-weight:700;font-size:.82rem;margin-bottom:3px;">—</div>
+      <div id="played-eval" style="font-size:.71rem;color:var(--text2);margin-bottom:9px;">Select a move to see details.</div>
+      <div id="best-san" style="font-weight:700;font-size:.78rem;color:#38bdf8;margin-bottom:2px;">—</div>
+      <div id="best-eval" style="font-size:.68rem;color:var(--text2);margin-bottom:10px;"></div>
       <button class="btn btn-accent" id="btn-best" style="width:100%;display:none;" onclick="toggleBest()">Show Best Move</button>
     </div>
   </div>
@@ -446,26 +262,20 @@ body{
     <div class="card-head">Review Report</div>
     <div class="card-body">
       <div class="acc-row">
-        <div class="acc-box">
-          <div class="acc-val" id="acc-w">—</div>
-          <div class="acc-lbl">⬜ White</div>
-        </div>
-        <div class="acc-box">
-          <div class="acc-val" id="acc-b">—</div>
-          <div class="acc-lbl">⬛ Black</div>
-        </div>
+        <div class="acc-box"><div class="acc-val" id="acc-w">—</div><div class="acc-lbl">⬜ White</div></div>
+        <div class="acc-box"><div class="acc-val" id="acc-b">—</div><div class="acc-lbl">⬛ Black</div></div>
       </div>
       <table class="sum-tbl">
         <thead><tr><th>Type</th><th>White</th><th>Black</th></tr></thead>
         <tbody>
-          <tr><td style="color:#12b6ad;font-weight:700">Brilliant</td><td id="s-bril-w">—</td><td id="s-bril-b">—</td></tr>
+          <tr><td style="color:#7c3aed;font-weight:700">Brilliant (!!) </td><td id="s-bril-w">—</td><td id="s-bril-b">—</td></tr>
           <tr><td>Best / Forced</td><td id="s-best-w">—</td><td id="s-best-b">—</td></tr>
           <tr><td>Excellent</td><td id="s-exc-w">—</td><td id="s-exc-b">—</td></tr>
           <tr><td>Good</td><td id="s-gd-w">—</td><td id="s-gd-b">—</td></tr>
           <tr><td style="color:#fbbf24">Inaccuracy</td><td id="s-inac-w">—</td><td id="s-inac-b">—</td></tr>
+          <tr><td style="color:#f97316">Missed Win (✗)</td><td id="s-mw-w">—</td><td id="s-mw-b">—</td></tr>
           <tr><td style="color:#f97316">Mistake</td><td id="s-mist-w">—</td><td id="s-mist-b">—</td></tr>
           <tr><td style="color:#ef4444;font-weight:700">Blunder</td><td id="s-blun-w">—</td><td id="s-blun-b">—</td></tr>
-          <tr><td style="color:#ff7043;font-weight:700">Missed Win</td><td id="s-miss-w">—</td><td id="s-miss-b">—</td></tr>
         </tbody>
       </table>
     </div>
@@ -477,649 +287,452 @@ body{
     <div class="mlist card-body" id="mlist"></div>
   </div>
 
-</div><!-- /content -->
+</div>
 
 <script src="chess.min.js"></script>
 <script>
 'use strict';
 
-const FILES = ['a','b','c','d','e','f','g','h'];
-const RANKS = [8,7,6,5,4,3,2,1];
+const FILES=['a','b','c','d','e','f','g','h'];
+const RANKS=[8,7,6,5,4,3,2,1];
 
-/* ─── State ─── */
-let chess     = new Chess();
-let hist      = [];      // SAN moves
-let uciMoves  = [];      // UCI moves (parallel to hist)
-let fens      = [];      // FEN string at each position index
-let evals     = [];      // eval result at each FEN index
-let clsArr    = [];      // classification per hist move
-let flipped   = false;
-let showBest  = false;
-let moveIdx   = 0;
-let lastMove  = null;
-let pTheme    = 'cburnett';
-let analyzing = false;
-let selectedSq = null;
-let practiceMode = false;
-let practiceChess = null;
+/* ── State ── */
+let chess=new Chess(),hist=[],uciMoves=[],fens=[],evals=[],clsArr=[];
+let flipped=false,showBest=false,moveIdx=0,lastMove=null,pTheme='cburnett',analyzing=false;
 
 /* ── Workers ── */
-const WORKERS   = 3;
-let sfW         = [];   // worker instances
-let sfReady     = [];   // ready flags
-let blobURL     = null;
+const WK_COUNT=3;
+let sfW=[],sfReady=[],blobURL=null;
 
 /* ── Timer ── */
-let timerInt    = null;
-let tStart      = 0;
+let timerInt=null,tStart=0;
 
-/* ─── Android bridge ─── */
-function android(fn, ...a) {
-  if (window.Android && typeof window.Android[fn] === 'function') {
-    try { window.Android[fn](...a); } catch(e) {}
-  }
+/* ── Practice mode ── */
+let practiceMode=false,selectedSq=null,legalTargets=[],practiceBase=0;
+
+/* ═══════════ Android Bridge ═══════════ */
+function android(fn,...a){
+  if(window.Android&&typeof window.Android[fn]==='function')
+    try{window.Android[fn](...a);}catch(e){}
 }
 
-/* ─── Sound & Haptic Helpers ─── */
-const sfxCache = {};
-function snd(name) {
-  const theme = 'standard';
-  const k = theme + '/' + name;
-  if (!sfxCache[k]) {
-    let folder = (name === 'Check' || name === 'Checkmate') ? 'sfx' : 'standard';
-    const a = new Audio('sounds/' + folder + '/' + name + '.mp3');
-    a.volume = 0.7;
-    sfxCache[k] = a;
-  }
-  sfxCache[k].currentTime = 0;
-  sfxCache[k].play().catch(() => {});
-}
-
-function haptic(type) {
-  if (window.Android && typeof window.Android.vibrate === 'function') {
-    try {
-      if (type === 'blunder') {
-        window.Android.vibrate(250);
-      } else if (type === 'mistake') {
-        window.Android.vibrate(100);
-      } else if (type === 'inaccuracy') {
-        window.Android.vibrate(55);
-      } else if (type === 'brilliant') {
-        window.Android.vibrate(80);
-        setTimeout(() => window.Android.vibrate(80), 180);
-      } else if (type === 'missed') {
-        window.Android.vibrate(120);
-      } else if (type === 'best' || type === 'excellent' || type === 'forced') {
-        window.Android.vibrate(35);
-      }
-    } catch(e) {}
-  }
-}
-
-/* ─── Timer ─── */
-function fmtTime(sec) {
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec) % 60;
-  return m + ':' + String(s).padStart(2, '0');
-}
-
-function startTimer() {
-  tStart = Date.now();
-  document.getElementById('timer-val').textContent = '0:00';
-  document.getElementById('timer-eta').textContent = '';
-  timerInt = setInterval(() => {
-    const elapsed = (Date.now() - tStart) / 1000;
-    document.getElementById('timer-val').textContent = fmtTime(elapsed);
-
-    // ETA estimate from progress
-    const pct = parseFloat(document.getElementById('prog-fill').style.width) || 0;
-    if (pct > 8 && pct < 98) {
-      const total = elapsed / (pct / 100);
-      const rem   = Math.max(0, total - elapsed);
-      document.getElementById('timer-eta').textContent = '· ~' + fmtTime(rem) + ' left';
-    } else {
-      document.getElementById('timer-eta').textContent = '';
-    }
-  }, 500);
-}
-
-function stopTimer() {
-  if (timerInt) { clearInterval(timerInt); timerInt = null; }
-}
-
-/* ─── Progress UI ─── */
-function setProgress(visible, msg, pct) {
-  document.getElementById('status-bar').style.display = visible ? 'block' : 'none';
-  if (msg !== null) document.getElementById('status-msg').textContent = msg;
-  if (pct !== null) document.getElementById('prog-fill').style.width = pct + '%';
-}
-
-function showError(msg) {
-  const el = document.getElementById('error-banner');
-  el.textContent = msg;
-  el.style.display = 'block';
-  android('onError', msg);
-}
-
-/* ─── IndexedDB cache v4 ─── */
-let _db = null;
-async function openDB() {
-  if (_db) return _db;
-  return new Promise(res => {
-    const r = indexedDB.open('ChessReview_v4', 1);
-    r.onupgradeneeded = e => e.target.result.createObjectStore('ev');
-    r.onsuccess = e => { _db = e.target.result; res(_db); };
-    r.onerror   = () => res(null);
+/* ═══════════ Sound System ═══════════ */
+const SFX={};
+function initSounds(){
+  ['move','capture','check','checkmate'].forEach(name=>{
+    try{SFX[name]=new Audio(`sounds/${name}.mp3`);SFX[name].volume=0.65;}catch{}
   });
 }
-async function cacheGet(k) {
-  const d = await openDB(); if (!d) return null;
-  return new Promise(res => {
-    try {
-      const rq = d.transaction('ev','readonly').objectStore('ev').get(k);
-      rq.onsuccess = () => res(rq.result || null);
-      rq.onerror   = () => res(null);
-    } catch { res(null); }
+function snd(name){
+  try{if(SFX[name]){SFX[name].currentTime=0;SFX[name].play().catch(()=>{});}}catch{}
+}
+initSounds();
+
+/* ═══════════ Haptic System ═══════════ */
+function haptic(ms){
+  if(window.Android&&typeof window.Android.vibrate==='function')
+    try{window.Android.vibrate(ms);}catch{}
+}
+function hapticForCls(cls){
+  switch(cls){
+    case 'brilliant':haptic(60);setTimeout(()=>haptic(60),150);break;
+    case 'blunder':  haptic(320);break;
+    case 'missed-win':
+    case 'mistake':  haptic(140);break;
+    case 'inaccuracy':haptic(70);break;
+    default:         haptic(22);break;
+  }
+}
+function navSound(newIdx){
+  if(newIdx<=0||newIdx>hist.length)return;
+  const tmp=new Chess();
+  for(let i=0;i<newIdx;i++)tmp.move(hist[i]);
+  if(tmp.in_checkmate())      snd('checkmate');
+  else if(tmp.in_check())     snd('check');
+  else if(hist[newIdx-1]?.includes('x')) snd('capture');
+  else                        snd('move');
+  haptic(22);
+}
+
+/* ═══════════ Timer ═══════════ */
+function fmtT(sec){const m=Math.floor(sec/60),s=Math.floor(sec)%60;return m+':'+String(s).padStart(2,'0');}
+function startTimer(){
+  tStart=Date.now();
+  document.getElementById('timer-val').textContent='0:00';
+  document.getElementById('timer-eta').textContent='';
+  timerInt=setInterval(()=>{
+    const el=(Date.now()-tStart)/1000;
+    document.getElementById('timer-val').textContent=fmtT(el);
+    const pct=parseFloat(document.getElementById('prog-fill').style.width)||0;
+    if(pct>8&&pct<98){
+      const rem=Math.max(0,(el/(pct/100))-el);
+      document.getElementById('timer-eta').textContent='· ~'+fmtT(rem)+' left';
+    }else document.getElementById('timer-eta').textContent='';
+  },500);
+}
+function stopTimer(){if(timerInt){clearInterval(timerInt);timerInt=null;}}
+
+/* ═══════════ Progress UI ═══════════ */
+function setProgress(v,msg,pct){
+  document.getElementById('status-bar').style.display=v?'block':'none';
+  if(msg!==null)document.getElementById('status-msg').textContent=msg;
+  if(pct!==null)document.getElementById('prog-fill').style.width=pct+'%';
+}
+function showError(msg){
+  const el=document.getElementById('error-banner');
+  el.textContent=msg;el.style.display='block';android('onError',msg);
+}
+
+/* ═══════════ IndexedDB cache v5 ═══════════ */
+let _db=null;
+async function openDB(){
+  if(_db)return _db;
+  return new Promise(r=>{
+    const rq=indexedDB.open('ChessReview_v5',1);
+    rq.onupgradeneeded=e=>e.target.result.createObjectStore('ev');
+    rq.onsuccess=e=>{_db=e.target.result;r(_db);};
+    rq.onerror=()=>r(null);
   });
 }
-async function cacheSet(k, v) {
-  const d = await openDB(); if (!d) return;
-  return new Promise(res => {
-    try {
-      const rq = d.transaction('ev','readwrite').objectStore('ev').put(v, k);
-      rq.onsuccess = () => res(true);
-      rq.onerror   = () => res(false);
-    } catch { res(false); }
+async function cacheGet(k){
+  const d=await openDB();if(!d)return null;
+  return new Promise(r=>{
+    try{const rq=d.transaction('ev','readonly').objectStore('ev').get(k);
+    rq.onsuccess=()=>r(rq.result||null);rq.onerror=()=>r(null);}catch{r(null);}
+  });
+}
+async function cacheSet(k,v){
+  const d=await openDB();if(!d)return;
+  return new Promise(r=>{
+    try{const rq=d.transaction('ev','readwrite').objectStore('ev').put(v,k);
+    rq.onsuccess=()=>r(true);rq.onerror=()=>r(false);}catch{r(false);}
   });
 }
 
-/* ─── Stockfish worker init ─── */
-async function initWorkers() {
-  if (sfW.length) return;
-  try {
-    const code = await fetch('stockfish.js').then(r => r.text());
-    const pfx  = 'https://appassets.androidplatform.net/assets/';
-    const blob = new Blob([
-      `self.Module={locateFile:function(p){return "${pfx}"+p;}};\n` + code
-    ], { type: 'application/javascript' });
-    blobURL = URL.createObjectURL(blob);
-
-    for (let i = 0; i < WORKERS; i++) {
-      const w = new Worker(blobURL);
+/* ═══════════ Workers ═══════════ */
+async function initWorkers(){
+  if(sfW.length)return;
+  try{
+    const code=await fetch('stockfish.js').then(r=>r.text());
+    const pfx='https://appassets.androidplatform.net/assets/';
+    const blob=new Blob([
+      `self.Module={locateFile:function(p){return "${pfx}"+p;}};\n`+code
+    ],{type:'application/javascript'});
+    blobURL=URL.createObjectURL(blob);
+    for(let i=0;i<WK_COUNT;i++){
+      const w=new Worker(blobURL);
       sfReady.push(false);
-      const idx = i;
-      w.addEventListener('message', function rdy(e) {
-        if (e.data === 'readyok') {
-          sfReady[idx] = true;
-          w.removeEventListener('message', rdy);
-        }
+      const idx=i;
+      w.addEventListener('message',function rdy(e){
+        if(e.data==='readyok'){sfReady[idx]=true;w.removeEventListener('message',rdy);}
       });
-      w.onerror = e => console.warn('SF worker error:', e.message);
+      w.onerror=e=>console.warn('SF error:',e.message);
       w.postMessage('uci');
       w.postMessage('setoption name Hash value 16');
       w.postMessage('setoption name Threads value 1');
       w.postMessage('isready');
       sfW.push(w);
     }
-  } catch(e) {
-    console.error('Worker init failed:', e);
-    showError('Chess engine unavailable — board view only.');
-  }
+  }catch(e){console.error('Worker init:',e);showError('Engine unavailable — board view only.');}
 }
 
-/* ─── Single position evaluation ─── */
-function evalPos(worker, fen, depth) {
-  return new Promise(res => {
-    let cp = 0, mate = null, best = '(none)';
-    const tid = setTimeout(() => {
-      worker.removeEventListener('message', h);
-      res({ cp, mate, bestMove: best });
-    }, 10000);
-
-    function h(e) {
-      const ln = e.data;
-      const cm = ln.match(/score cp (-?\d+)/);
-      const mm = ln.match(/score mate (-?\d+)/);
-      if (cm) cp   = parseInt(cm[1]);
-      if (mm) mate = parseInt(mm[1]);
-      if (ln.startsWith('bestmove')) {
-        clearTimeout(tid);
-        best = ln.split(' ')[1] || '(none)';
-        worker.removeEventListener('message', h);
-        res({ cp, mate, bestMove: best });
+function evalPos(worker,fen,depth){
+  return new Promise(res=>{
+    let cp=0,mate=null,best='(none)';
+    const tid=setTimeout(()=>{worker.removeEventListener('message',h);res({cp,mate,bestMove:best});},10000);
+    function h(e){
+      const ln=e.data;
+      const cm=ln.match(/score cp (-?\d+)/),mm=ln.match(/score mate (-?\d+)/);
+      if(cm)cp=parseInt(cm[1]);if(mm)mate=parseInt(mm[1]);
+      if(ln.startsWith('bestmove')){
+        clearTimeout(tid);best=ln.split(' ')[1]||'(none)';
+        worker.removeEventListener('message',h);res({cp,mate,bestMove:best});
       }
     }
-    worker.addEventListener('message', h);
-    worker.postMessage('position fen ' + fen);
-    worker.postMessage('go depth ' + depth);
+    worker.addEventListener('message',h);
+    worker.postMessage('position fen '+fen);
+    worker.postMessage('go depth '+depth);
   });
 }
 
-/* ═══════════════════════
-   Entry point from Android
-═══════════════════════ */
-window.startReview = async function(b64moves, pieceTheme, lightColor, darkColor) {
-  try {
-    if (pieceTheme) pTheme = pieceTheme;
-    if (lightColor) document.documentElement.style.setProperty('--sq-l', lightColor);
-    if (darkColor)  document.documentElement.style.setProperty('--sq-d', darkColor);
-
-    const raw = atob(b64moves).split(',').map(s => s.trim()).filter(Boolean);
-
-    // Build hist, uciMoves, fens
-    const tmp = new Chess();
-    hist = []; uciMoves = []; fens = [tmp.fen()];
-    for (const m of raw) {
-      const r = tmp.move(m);
-      if (!r) break;
-      hist.push(r.san);
-      uciMoves.push(r.from + r.to + (r.promotion || ''));
-      fens.push(tmp.fen());
+/* ═══════════ Entry Point ═══════════ */
+window.startReview=async function(b64moves,pieceTheme,lightColor,darkColor){
+  try{
+    if(pieceTheme)pTheme=pieceTheme;
+    if(lightColor)document.documentElement.style.setProperty('--sq-l',lightColor);
+    if(darkColor) document.documentElement.style.setProperty('--sq-d',darkColor);
+    const raw=atob(b64moves).split(',').map(s=>s.trim()).filter(Boolean);
+    const tmp=new Chess();
+    hist=[];uciMoves=[];fens=[tmp.fen()];
+    for(const m of raw){
+      const r=tmp.move(m);if(!r)break;
+      hist.push(r.san);uciMoves.push(r.from+r.to+(r.promotion||''));fens.push(tmp.fen());
     }
-
-    if (!hist.length) { showError('No valid moves to review.'); renderBoard(); return; }
-
-    moveIdx = hist.length;
-    rebuildBoard(moveIdx);
-    renderBoard();
-    updMoveList();
-    updEvalBar();
-
+    if(!hist.length){showError('No valid moves.');renderBoard();return;}
+    moveIdx=hist.length;
+    chess=new Chess();for(let i=0;i<moveIdx;i++)chess.move(hist[i]);
+    renderBoard();updMoveList();updEvalBar();
     await runAnalysis();
-  } catch(e) {
-    showError('startReview error: ' + e.message);
-    renderBoard();
-  }
+  }catch(e){showError('startReview: '+e.message);renderBoard();}
 };
 
-/* ═══════════════════
-   Analysis pipeline
-═══════════════════ */
-async function runAnalysis() {
-  if (analyzing) return;
-  analyzing = true; showBest = false;
-
-  try {
-    setProgress(true, 'Checking cache…', 2);
-
-    const cacheKey = hist.join(',') + '_v4';
-    const cached   = await cacheGet(cacheKey);
-    if (cached && cached.evals?.length === fens.length && cached.clsArr?.length === hist.length) {
-      evals   = cached.evals;
-      clsArr  = cached.clsArr;
-      analyzing = false;
-      setProgress(false, null, 100);
-      calcStats(); drawGraph(); render();
-      android('onAnalysisComplete');
-      return;
+/* ═══════════ Analysis Pipeline ═══════════ */
+async function runAnalysis(){
+  if(analyzing)return;
+  analyzing=true;showBest=false;
+  try{
+    setProgress(true,'Checking cache…',2);
+    const ck=hist.join(',')+  '_v5';
+    const cached=await cacheGet(ck);
+    if(cached&&cached.evals?.length===fens.length&&cached.clsArr?.length===hist.length){
+      evals=cached.evals;clsArr=cached.clsArr;
+      analyzing=false;setProgress(false,null,100);
+      calcStats();drawGraph();render();android('onAnalysisComplete');return;
     }
-
-    // Fresh analysis
     startTimer();
-    setProgress(true, 'Loading engine…', 3);
+    setProgress(true,'Loading engine…',3);
     await initWorkers();
+    const dl=Date.now()+2000;
+    while(!sfReady.some(Boolean)&&sfW.length&&Date.now()<dl)await sleep(100);
+    if(!sfW.length){stopTimer();analyzing=false;setProgress(false,null,0);render();return;}
 
-    // Wait up to 2 s for at least 1 worker
-    const deadline = Date.now() + 2000;
-    while (!sfReady.some(Boolean) && sfW.length && Date.now() < deadline)
-      await sleep(100);
-
-    if (!sfW.length) {
-      stopTimer(); analyzing = false;
-      setProgress(false, null, 0);
-      render(); return;
-    }
-
-    // ── Precompute forced flags ──
-    const forced = fens.map((fen, i) => {
-      if (i >= hist.length) return false;
-      return new Chess(fen).moves().length === 1;
+    // Forced flags
+    const forced=fens.map((fen,i)=>{
+      if(i>=hist.length)return false;
+      return new Chess(fen).moves().length===1;
     });
 
-    evals = new Array(fens.length).fill(null);
-
-    // Fill game-over positions immediately (no engine needed)
-    for (let i = 0; i < fens.length; i++) {
-      const t = new Chess(fens[i]);
-      if (t.game_over()) {
-        // From White's perspective: if it's White's turn and checkmate → White is mated = -∞
-        evals[i] = {
-          cp: t.in_checkmate() ? (t.turn() === 'w' ? -30000 : 30000) : 0,
-          mate: null,
-          bestMove: '(none)',
-          fixedWhite: true  // already in White perspective, skip toWhite inversion
-        };
+    evals=new Array(fens.length).fill(null);
+    // Game-over positions — no engine needed
+    for(let i=0;i<fens.length;i++){
+      const t=new Chess(fens[i]);
+      if(t.game_over()){
+        evals[i]={cp:t.in_checkmate()?(t.turn()==='w'?-30000:30000):0,mate:null,bestMove:'(none)',fixedW:true};
       }
     }
 
-    // ── Pass 1: depth 8, all non-terminal positions ──
-    const pass1 = fens.map((fen, i) => evals[i] ? null : { fen, i }).filter(Boolean);
-    let done1 = fens.length - pass1.length;
-    let nxt1  = 0;
-
-    await Promise.all(sfW.map(async w => {
-      while (nxt1 < pass1.length) {
-        const task = pass1[nxt1++];
-        evals[task.i] = await evalPos(w, task.fen, 8);
-        done1++;
-        setProgress(true,
-          `Analyzing ${done1} / ${fens.length}`,
-          Math.round(done1 / fens.length * 78));
+    // Pass 1: depth 8
+    const p1=fens.map((f,i)=>evals[i]?null:{fen:f,i}).filter(Boolean);
+    let d1=fens.length-p1.length,nxt1=0;
+    await Promise.all(sfW.map(async w=>{
+      while(nxt1<p1.length){
+        const t=p1[nxt1++];
+        evals[t.i]=await evalPos(w,t.fen,8);
+        d1++;setProgress(true,`Analyzing ${d1} / ${fens.length}`,Math.round(d1/fens.length*78));
       }
     }));
 
-    // ── Pass 2: depth 12 for critical moves ──
-    const seen = new Set();
-    const pass2 = [];
-    for (let i = 0; i < hist.length; i++) {
-      if (!evals[i] || !evals[i+1]) continue;
-      const turn = turnAt(i);
-      const wB   = toWhite(evals[i],   turn);
-      const wA   = toWhite(evals[i+1], turn === 'w' ? 'b' : 'w');
-      const pB   = turn === 'w' ? wB : -wB;
-      const pA   = turn === 'w' ? wA : -wA;
-      const loss = pB - pA;
-      const flip = (pB >= 150 && pA <= 50) || (pB > 0 && pA <= -100);
-
-      // Re-evaluate only critical blunder/eval-flip/mate threat swings
-      if ((loss > 200 || flip || evals[i].mate !== null || evals[i+1].mate !== null) && !forced[i]) {
-        [i, i+1].forEach(idx => {
-          if (!seen.has(idx) && idx < fens.length && !(new Chess(fens[idx]).game_over())) {
-            seen.add(idx); pass2.push({ fen: fens[idx], i: idx });
+    // Pass 2: depth 12 for critical positions
+    const seen=new Set(),p2=[];
+    for(let i=0;i<hist.length;i++){
+      if(!evals[i]||!evals[i+1])continue;
+      const turn=turnAt(i);
+      const wB=toWhite(evals[i],turn),wA=toWhite(evals[i+1],turn==='w'?'b':'w');
+      const pB=turn==='w'?wB:-wB,pA=turn==='w'?wA:-wA;
+      const loss=pB-pA;
+      const flip=(pB>=150&&pA<=50)||(pB>0&&pA<=-100);
+      if((loss>150||flip||evals[i].mate!==null||evals[i+1].mate!==null)&&!forced[i]){
+        [i,i+1].forEach(idx=>{
+          if(!seen.has(idx)&&idx<fens.length&&!new Chess(fens[idx]).game_over()){
+            seen.add(idx);p2.push({fen:fens[idx],i:idx});
           }
         });
       }
     }
-
-    let done2 = 0, nxt2 = 0;
-    if (pass2.length) {
-      setProgress(true, `Refining ${pass2.length} critical positions…`, 80);
-      await Promise.all(sfW.map(async w => {
-        while (nxt2 < pass2.length) {
-          const task = pass2[nxt2++];
-          evals[task.i] = await evalPos(w, task.fen, 12);
-          done2++;
-          setProgress(true,
-            `Refining ${done2} / ${pass2.length}…`,
-            80 + Math.round(done2 / pass2.length * 18));
+    let d2=0,nxt2=0;
+    if(p2.length){
+      setProgress(true,`Refining ${p2.length} critical positions…`,80);
+      await Promise.all(sfW.map(async w=>{
+        while(nxt2<p2.length){
+          const t=p2[nxt2++];evals[t.i]=await evalPos(w,t.fen,12);
+          d2++;setProgress(true,`Refining ${d2}/${p2.length}…`,80+Math.round(d2/p2.length*18));
         }
       }));
     }
 
-    // ── Classify moves ──
-    clsArr = hist.map((_, i) => {
-      if (!evals[i] || !evals[i+1]) return 'good';
-      return classifyMove(i, forced[i]);
-    });
-
-    await cacheSet(cacheKey, { evals, clsArr });
-
-    stopTimer();
-    analyzing = false;
-    setProgress(false, null, 100);
-    calcStats(); drawGraph(); render();
-    android('onAnalysisComplete');
-
-  } catch(err) {
-    stopTimer();
-    analyzing = false;
-    setProgress(false, null, 0);
-    showError('Analysis failed: ' + err.message);
-    render();
+    // Classify
+    clsArr=hist.map((_,i)=>(!evals[i]||!evals[i+1])?'good':classifyMove(i,forced[i]));
+    await cacheSet(ck,{evals,clsArr});
+    stopTimer();analyzing=false;setProgress(false,null,100);
+    calcStats();drawGraph();render();android('onAnalysisComplete');
+  }catch(err){
+    stopTimer();analyzing=false;setProgress(false,null,0);
+    showError('Analysis error: '+err.message);render();
   }
 }
 
-/* ─── Eval normalization ─── */
-function toWhite(ev, turn) {
-  if (!ev) return 0;
-  if (ev.fixedWhite) return ev.cp;
-
+/* ═══════════ Eval normalization ═══════════ */
+// Returns centipawns from White's perspective
+function toWhite(ev,turn){
+  if(!ev)return 0;
+  if(ev.fixedW)return ev.cp; // already White-perspective (game-over positions)
   let val;
-  if (ev.mate !== null) {
-    val = ev.mate > 0 ? (30000 - ev.mate * 10) : (-30000 - ev.mate * 10);
-  } else {
-    val = Math.max(-3000, Math.min(3000, ev.cp));
+  if(ev.mate!==null){
+    val=ev.mate>0?(30000-ev.mate*10):(-30000-ev.mate*10);
+  }else{
+    val=Math.max(-3000,Math.min(3000,ev.cp));
   }
-  return turn === 'w' ? val : -val;
+  return turn==='w'?val:-val;
+}
+function turnAt(i){
+  if(fens[i])return fens[i].split(' ')[1]||(i%2===0?'w':'b');
+  return i%2===0?'w':'b';
 }
 
-function turnAt(i) {
-  if (fens[i]) return fens[i].split(' ')[1] || (i % 2 === 0 ? 'w' : 'b');
-  return i % 2 === 0 ? 'w' : 'b';
-}
-
-/* ─── Material value mapping ─── */
-function getMaterialValue(fen) {
-  const t = new Chess(fen);
-  let wVal = 0, bVal = 0;
-  for (let ri = 0; ri < 8; ri++) {
-    for (let fi = 0; fi < 8; fi++) {
-      const sq = FILES[fi] + RANKS[ri];
-      const p = t.get(sq);
-      if (p) {
-        let val = 100;
-        if (p.type === 'n') val = 300;
-        else if (p.type === 'b') val = 320;
-        else if (p.type === 'r') val = 500;
-        else if (p.type === 'q') val = 900;
-        
-        if (p.color === 'w') wVal += val;
-        else bVal += val;
-      }
+/* ═══════════ Material counting (for Brilliant detection) ═══════════ */
+const PVAL={p:100,n:320,b:330,r:500,q:900};
+function matOf(fen,color){
+  let tot=0;
+  for(const ch of fen.split(' ')[0]){
+    const lo=ch.toLowerCase();
+    if(PVAL[lo]){
+      const isWhitePiece=ch!==lo;
+      if((color==='w'&&isWhitePiece)||(color==='b'&&!isWhitePiece))tot+=PVAL[lo];
     }
   }
-  return { wVal, bVal };
+  return tot;
+}
+function relMaterial(fen, turn) {
+  const opp = turn === 'w' ? 'b' : 'w';
+  return matOf(fen, turn) - matOf(fen, opp);
+}
+function isSacrifice(i){
+  if(i+2>=fens.length)return false;
+  const turn=turnAt(i);
+  return relMaterial(fens[i+2], turn) < relMaterial(fens[i], turn) - 99;
 }
 
-/* ─── Move classification ─── */
-function classifyMove(i, forced) {
-  if (forced) return 'forced';
+/* ═══════════ Classification ═══════════ */
+function classifyMove(i,forced){
+  if(forced)return 'forced';
+  const played=uciMoves[i],best=evals[i]?.bestMove;
+  const isBest=played&&best&&played===best;
+  const turn=turnAt(i),nextT=turn==='w'?'b':'w';
+  const wBef=toWhite(evals[i],turn),wAft=toWhite(evals[i+1],nextT);
+  const pBef=turn==='w'?wBef:-wBef,pAft=turn==='w'?wAft:-wAft;
+  const loss=pBef-pAft;
+  const flip=(pBef>=150&&pAft<=50)||(pBef>0&&pAft<=-100);
 
-  const played = uciMoves[i];
-  const best   = evals[i]?.bestMove;
-  
-  const turn  = turnAt(i);
-  const nextT = turn === 'w' ? 'b' : 'w';
-  const wBef  = toWhite(evals[i],   turn);
-  const wAft  = toWhite(evals[i+1], nextT);
+  // Brilliant: best move + material sacrifice + position stays acceptable
+  if(isBest&&isSacrifice(i)&&pAft>=-100)return 'brilliant';
 
-  const pBef  = turn === 'w' ? wBef : -wBef;
-  const pAft  = turn === 'w' ? wAft : -wAft;
-  const loss  = pBef - pAft;
+  if(loss<=0)return isBest?'best':'excellent';
+  if(isBest) return 'best';
 
-  // 1. Brilliant move detection (!!)
-  if (played && best && (played === best || loss <= 10) && pAft >= -100) {
-    const matBef = getMaterialValue(fens[i]);
-    const matAft = getMaterialValue(fens[i+1]);
-    const matDiff = turn === 'w' ? 
-      (matBef.wVal - matBef.bVal) - (matAft.wVal - matAft.bVal) :
-      (matBef.bVal - matBef.wVal) - (matAft.bVal - matAft.wVal);
-    if (matDiff < 0) {
-      return 'brilliant';
-    }
-  }
+  // Missed Win: had big advantage, squandered it (without full blunder)
+  const hadWin=(turn==='w'?wBef:-wBef)>=250||evals[i].mate!==null;
+  const droppedAdv=(turn==='w'?wAft:-wAft)<100;
+  if(hadWin&&droppedAdv&&loss>100&&loss<=300)return 'missed-win';
 
-  // 2. Missed Win detection (miss)
-  const hadMate = evals[i]?.mate !== null && ((turn === 'w' && evals[i].mate > 0) || (turn === 'b' && evals[i].mate < 0));
-  if ((pBef >= 250 || hadMate) && loss > 150 && pAft < 150) {
-    return 'missed';
-  }
-
-  if (played && best && played === best) return 'best';
-  if (loss <= 0) return 'best';
-
-  const flip = (pBef >= 150 && pAft <= 50) || (pBef > 0 && pAft <= -100);
-  if (loss > 300 || flip) return 'blunder';
-  if (loss > 100)          return 'mistake';
-  if (loss > 50)           return 'inaccuracy';
-  if (loss > 15)           return 'good';
+  if(loss>300||flip)return 'blunder';
+  if(loss>100)      return 'mistake';
+  if(loss>50)       return 'inaccuracy';
+  if(loss>15)       return 'good';
   return 'excellent';
 }
 
-/* ─── Stats + Accuracy ─── */
-function calcStats() {
-  const init = () => ({
-    brilliant:0,best:0,excellent:0,good:0,inaccuracy:0,mistake:0,blunder:0,forced:0,missed:0,
-    lossSum:0,cnt:0
-  });
-  const s = { w: init(), b: init() };
-
-  for (let i = 0; i < hist.length; i++) {
-    const cls  = clsArr[i] || 'good';
-    const turn = turnAt(i);
-    const t    = s[turn];
-    t.cnt++;
-    t[cls] = (t[cls] || 0) + 1;
-
-    if (cls !== 'forced' && evals[i] && evals[i+1] &&
-        evals[i].mate === null && evals[i+1].mate === null &&
-        !evals[i].fixedWhite && !evals[i+1].fixedWhite) {
-      const nextT = turn === 'w' ? 'b' : 'w';
-      const wB    = toWhite(evals[i],   turn);
-      const wA    = toWhite(evals[i+1], nextT);
-      const pB    = Math.max(-700, Math.min(700, turn === 'w' ? wB : -wB));
-      const pA    = Math.max(-700, Math.min(700, turn === 'w' ? wA : -wA));
-      t.lossSum  += Math.max(0, pB - pA);
+/* ═══════════ Stats + Accuracy ═══════════ */
+function calcStats(){
+  const init=()=>({brilliant:0,best:0,excellent:0,good:0,inaccuracy:0,'missed-win':0,mistake:0,blunder:0,forced:0,lossSum:0,cnt:0});
+  const s={w:init(),b:init()};
+  for(let i=0;i<hist.length;i++){
+    const cls=clsArr[i]||'good',turn=turnAt(i),t=s[turn];
+    t.cnt++;t[cls]=(t[cls]||0)+1;
+    if(cls!=='forced'&&evals[i]&&evals[i+1]&&evals[i].mate===null&&evals[i+1].mate===null&&!evals[i].fixedW&&!evals[i+1].fixedW){
+      const wB=toWhite(evals[i],turn),wA=toWhite(evals[i+1],turn==='w'?'b':'w');
+      const pB=Math.max(-700,Math.min(700,turn==='w'?wB:-wB));
+      const pA=Math.max(-700,Math.min(700,turn==='w'?wA:-wA));
+      t.lossSum+=Math.max(0,pB-pA);
     }
   }
-
-  function acplToAcc(acpl) {
-    return Math.max(0, Math.min(100,
-      Math.round(103.1668 * Math.exp(-0.04354 * (acpl * 0.6)) - 3.1669)
-    ));
+  function acplToAcc(acpl){
+    return Math.max(0,Math.min(100,Math.round(103.1668*Math.exp(-0.04354*(acpl*0.6))-3.1669)));
   }
-
-  const acplW = s.w.cnt > 0 ? s.w.lossSum / s.w.cnt : 0;
-  const acplB = s.b.cnt > 0 ? s.b.lossSum / s.b.cnt : 0;
-  const accW  = s.w.cnt > 0 ? acplToAcc(acplW) : null;
-  const accB  = s.b.cnt > 0 ? acplToAcc(acplB) : null;
-
-  function accColor(v) {
-    if (v >= 90) return '#629924';
-    if (v >= 75) return '#38bdf8';
-    if (v >= 55) return '#fbbf24';
-    return '#ef4444';
-  }
-
-  const wEl = document.getElementById('acc-w');
-  const bEl = document.getElementById('acc-b');
-  if (accW !== null) { wEl.textContent = accW + '%'; wEl.style.color = accColor(accW); }
-  if (accB !== null) { bEl.textContent = accB + '%'; bEl.style.color = accColor(accB); }
-
-  const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-  set('s-bril-w',  s.w.brilliant);       set('s-bril-b',  s.b.brilliant);
-  set('s-best-w',  s.w.best+s.w.forced); set('s-best-b',  s.b.best+s.b.forced);
-  set('s-exc-w',   s.w.excellent);       set('s-exc-b',   s.b.excellent);
-  set('s-gd-w',    s.w.good);            set('s-gd-b',    s.b.good);
-  set('s-inac-w',  s.w.inaccuracy);      set('s-inac-b',  s.b.inaccuracy);
-  set('s-mist-w',  s.w.mistake);         set('s-mist-b',  s.b.mistake);
-  set('s-blun-w',  s.w.blunder);         set('s-blun-b',  s.b.blunder);
-  set('s-miss-w',  s.w.missed);          set('s-miss-b',  s.b.missed);
+  const acW=s.w.cnt>0?s.w.lossSum/s.w.cnt:0,acB=s.b.cnt>0?s.b.lossSum/s.b.cnt:0;
+  const aW=s.w.cnt>0?acplToAcc(acW):null,aB=s.b.cnt>0?acplToAcc(acB):null;
+  function accClr(v){return v>=90?'#629924':v>=75?'#38bdf8':v>=55?'#fbbf24':'#ef4444';}
+  const wEl=document.getElementById('acc-w'),bEl=document.getElementById('acc-b');
+  if(aW!==null){wEl.textContent=aW+'%';wEl.style.color=accClr(aW);}
+  if(aB!==null){bEl.textContent=aB+'%';bEl.style.color=accClr(aB);}
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('s-bril-w',s.w.brilliant); set('s-bril-b',s.b.brilliant);
+  set('s-best-w',s.w.best+s.w.forced); set('s-best-b',s.b.best+s.b.forced);
+  set('s-exc-w', s.w.excellent);  set('s-exc-b', s.b.excellent);
+  set('s-gd-w',  s.w.good);       set('s-gd-b',  s.b.good);
+  set('s-inac-w',s.w.inaccuracy); set('s-inac-b',s.b.inaccuracy);
+  set('s-mw-w',  s.w['missed-win']); set('s-mw-b',s.b['missed-win']);
+  set('s-mist-w',s.w.mistake);    set('s-mist-b',s.b.mistake);
+  set('s-blun-w',s.w.blunder);    set('s-blun-b',s.b.blunder);
 }
 
-/* ─── Eval graph ─── */
-function drawGraph() {
-  const svg = document.getElementById('graph-svg');
-  if (!evals.length) { svg.innerHTML = ''; return; }
-
-  const W = 320, H = 68, mid = H / 2;
-  const N = evals.length - 1;
-
-  const pts = evals.map((ev, i) => {
-    const x   = N === 0 ? W/2 : (i/N) * (W-20) + 10;
-    if (!ev) return { x, y: mid };
-    const wv  = toWhite(ev, turnAt(i)) / 100;
-    const val = Math.max(-8, Math.min(8, wv));
-    const y   = mid - (val / 8) * (mid - 5);
-    return { x, y };
+/* ═══════════ Graph ═══════════ */
+function drawGraph(){
+  const svg=document.getElementById('graph-svg');
+  if(!evals.length){svg.innerHTML='';return;}
+  const W=320,H=68,mid=H/2,N=evals.length-1;
+  const pts=evals.map((ev,i)=>{
+    const x=N===0?W/2:(i/N)*(W-20)+10;
+    if(!ev)return{x,y:mid};
+    const v=Math.max(-8,Math.min(8,toWhite(ev,turnAt(i))/100));
+    return{x,y:mid-(v/8)*(mid-5)};
   });
-
-  let html = '';
-  // Center line
-  html += `<line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="rgba(255,255,255,.1)" stroke-width="1"/>`;
-
-  // Shaded fill area
-  for (let i = 0; i < pts.length - 1; i++) {
-    const a = pts[i], b = pts[i+1];
-    const avgY = (a.y + b.y) / 2;
-    const col  = avgY < mid ? 'rgba(98,153,36,.18)' : 'rgba(201,79,54,.18)';
-    html += `<polygon points="${a.x},${a.y} ${b.x},${b.y} ${b.x},${mid} ${a.x},${mid}" fill="${col}"/>`;
+  let html=`<line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="rgba(255,255,255,.1)" stroke-width="1"/>`;
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i],b=pts[i+1],ay=(a.y+b.y)/2;
+    html+=`<polygon points="${a.x},${a.y} ${b.x},${b.y} ${b.x},${mid} ${a.x},${mid}" fill="${ay<mid?'rgba(98,153,36,.18)':'rgba(201,79,54,.18)'}"/>`;
   }
-
-  // Line
-  if (pts.length > 1) {
-    let d = `M ${pts[0].x} ${pts[0].y}`;
-    for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x} ${pts[i].y}`;
-    html += `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/>`;
+  if(pts.length>1){
+    let d=`M ${pts[0].x} ${pts[0].y}`;
+    for(let i=1;i<pts.length;i++)d+=` L ${pts[i].x} ${pts[i].y}`;
+    html+=`<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/>`;
   }
-
-  // Dots
-  pts.forEach((p, i) => {
-    const active = i === moveIdx;
-    html += `<circle cx="${p.x}" cy="${p.y}"
-               r="${active ? 5 : 3}"
-               fill="${active ? '#fff' : 'var(--accent)'}"
-               stroke="${active ? 'var(--green)' : 'rgba(255,255,255,.25)'}"
-               stroke-width="${active ? 2 : 1}"
-               class="g-dot" onclick="jumpTo(${i})"/>`;
+  pts.forEach((p,i)=>{
+    const ac=i===moveIdx;
+    html+=`<circle cx="${p.x}" cy="${p.y}" r="${ac?5:3}" fill="${ac?'#fff':'var(--accent)'}" stroke="${ac?'var(--green)':'rgba(255,255,255,.25)'}" stroke-width="${ac?2:1}" class="g-dot" onclick="jumpTo(${i})"/>`;
   });
-
-  svg.innerHTML = html;
+  svg.innerHTML=html;
 }
 
-/* ─── Board rendering ─── */
-function rebuildBoard(toIdx) {
-  chess = new Chess();
-  for (let i = 0; i < toIdx; i++) chess.move(hist[i]);
-}
+/* ═══════════ Board render ═══════════ */
+function renderBoard(){
+  const board=document.getElementById('chessboard');
+  board.innerHTML='';
+  const dR=flipped?[...RANKS].reverse():RANKS;
+  const dF=flipped?[...FILES].reverse():FILES;
+  document.getElementById('rank-labels').innerHTML=dR.map(r=>`<span>${r}</span>`).join('');
+  document.getElementById('file-labels').innerHTML=dF.map(f=>`<span>${f}</span>`).join('');
 
-function renderBoard() {
-  const board = document.getElementById('chessboard');
-  board.innerHTML = '';
-
-  const dR = flipped ? [...RANKS].reverse() : RANKS;
-  const dF = flipped ? [...FILES].reverse() : FILES;
-
-  document.getElementById('rank-labels').innerHTML = dR.map(r => `<span>${r}</span>`).join('');
-  document.getElementById('file-labels').innerHTML = dF.map(f => `<span>${f}</span>`).join('');
-
-  let bFrom = null, bTo = null;
-  if (showBest && moveIdx > 0 && evals[moveIdx - 1]) {
-    const bm = evals[moveIdx - 1].bestMove;
-    if (bm && bm !== '(none)' && bm.length >= 4) {
-      bFrom = bm.slice(0, 2);
-      bTo   = bm.slice(2, 4);
-    }
+  let bFrom=null,bTo=null;
+  if(showBest&&moveIdx>0&&evals[moveIdx-1]){
+    const bm=evals[moveIdx-1].bestMove;
+    if(bm&&bm!=='(none)'&&bm.length>=4){bFrom=bm.slice(0,2);bTo=bm.slice(2,4);}
   }
 
-  const currentChess = practiceMode ? practiceChess : chess;
-  const legalMovesFromSelected = selectedSq ? currentChess.moves({ square: selectedSq, verbose: true }) : [];
-  const destSquares = legalMovesFromSelected.map(m => m.to);
+  for(let ri=0;ri<8;ri++){
+    for(let fi=0;fi<8;fi++){
+      const file=dF[fi],rank=dR[ri],sq=file+rank;
+      const piece=chess.get(sq);
+      const isL=(FILES.indexOf(file)+rank)%2===1;
+      const div=document.createElement('div');
+      div.className='sq '+(isL?'light':'dark');
+      if(lastMove?.from===sq)div.classList.add('lf');
+      if(lastMove?.to  ===sq)div.classList.add('lt');
+      if(bFrom===sq)div.classList.add('bf');
+      if(bTo  ===sq)div.classList.add('bt');
+      // Practice mode highlights
+      if(selectedSq===sq)div.classList.add('sel');
+      if(legalTargets.includes(sq)){
+        if(piece)div.classList.add('legal-cap');
+        else     div.classList.add('legal-dot');
+      }
+      // Click handler (always active for practice, review squares)
+      div.onclick=(()=>{ const s=sq; return ()=>handleSquareClick(s); })();
 
-  for (let ri = 0; ri < 8; ri++) {
-    for (let fi = 0; fi < 8; fi++) {
-      const file = dF[fi], rank = dR[ri], sq = file + rank;
-      const piece = currentChess.get(sq);
-      const isL   = (FILES.indexOf(file) + rank) % 2 === 1;
-
-      const div = document.createElement('div');
-      div.className = 'sq ' + (isL ? 'light' : 'dark');
-      div.dataset.sq = sq;
-
-      if (lastMove?.from === sq) div.classList.add('lf');
-      if (lastMove?.to   === sq) div.classList.add('lt');
-      if (bFrom === sq) div.classList.add('bf');
-      if (bTo   === sq) div.classList.add('bt');
-
-      if (selectedSq === sq) div.classList.add('selected-sq');
-      if (destSquares.includes(sq)) div.classList.add('dest-sq');
-
-      if (piece) {
-        const img = document.createElement('img');
-        img.src       = `pieces/${pTheme}/${piece.color}${piece.type.toUpperCase()}.svg`;
-        img.className = 'piece';
-        img.draggable = false;
-        img.onerror   = () => { img.style.display = 'none'; };
+      if(piece){
+        const img=document.createElement('img');
+        img.src=`pieces/${pTheme}/${piece.color}${piece.type.toUpperCase()}.svg`;
+        img.className='piece';img.draggable=false;
+        img.onerror=()=>{img.style.display='none';};
         div.appendChild(img);
       }
       board.appendChild(div);
@@ -1127,381 +740,250 @@ function renderBoard() {
   }
 }
 
-/* ─── Eval bar update ─── */
-function updEvalBar() {
-  if (practiceMode) return;
-  const scoreEl = document.getElementById('eval-score');
-  const fillEl  = document.getElementById('eval-fill');
-
-  const tmp = new Chess();
-  for (let i = 0; i < moveIdx; i++) tmp.move(hist[i]);
-
-  if (tmp.game_over()) {
-    if (tmp.in_checkmate()) {
-      const whiteLost = tmp.turn() === 'w';
-      fillEl.style.width  = whiteLost ? '2%' : '98%';
-      scoreEl.textContent = whiteLost ? '0-1' : '1-0';
-      scoreEl.style.color = whiteLost ? '#8a8178' : '#f0d9b5';
-    } else {
-      fillEl.style.width  = '50%';
-      scoreEl.textContent = '½-½';
-      scoreEl.style.color = 'var(--text)';
+/* ═══════════ Eval bar ═══════════ */
+function updEvalBar(){
+  const scoreEl=document.getElementById('eval-score'),fillEl=document.getElementById('eval-fill');
+  const tmp=new Chess();for(let i=0;i<moveIdx;i++)tmp.move(hist[i]);
+  if(tmp.game_over()){
+    if(tmp.in_checkmate()){
+      const wL=tmp.turn()==='w';
+      fillEl.style.width=wL?'2%':'98%';scoreEl.textContent=wL?'0-1':'1-0';
+      scoreEl.style.color=wL?'#8a8178':'#f0d9b5';
+    }else{
+      fillEl.style.width='50%';scoreEl.textContent='½-½';scoreEl.style.color='var(--text)';
     }
     return;
   }
-
-  const ev = evals[moveIdx];
-  if (!ev) {
-    fillEl.style.width  = '50%';
-    scoreEl.textContent = '+0.0';
-    scoreEl.style.color = 'var(--text)';
-    return;
+  const ev=evals[moveIdx];
+  if(!ev){fillEl.style.width='50%';scoreEl.textContent='+0.0';scoreEl.style.color='var(--text)';return;}
+  const turn=tmp.turn(),wVal=toWhite(ev,turn);
+  let pct,txt;
+  if(ev.mate!==null){
+    const wM=wVal>0;pct=wM?96:4;txt=wM?`M+${Math.abs(ev.mate)}`:`M-${Math.abs(ev.mate)}`;
+    scoreEl.style.color=wM?'#f0d9b5':'#8a8178';
+  }else{
+    pct=Math.max(4,Math.min(96,50+(Math.max(-800,Math.min(800,wVal))/800)*46));
+    txt=(wVal>=0?'+':'')+(wVal/100).toFixed(1);
+    scoreEl.style.color=wVal>=0?'#f0d9b5':'#9a9590';
   }
-
-  const turn    = tmp.turn();
-  const wVal    = toWhite(ev, turn);
-
-  let pct, txt;
-
-  if (ev.mate !== null) {
-    const wMating = wVal > 0;
-    pct = wMating ? 96 : 4;
-    const mN = Math.abs(ev.mate);
-    txt = wMating ? `M+${mN}` : `M-${mN}`;
-    scoreEl.style.color = wMating ? '#f0d9b5' : '#8a8178';
-  } else {
-    const clampedCp = Math.max(-800, Math.min(800, wVal));
-    pct = Math.max(4, Math.min(96, 50 + (clampedCp / 800) * 46));
-    const v = wVal / 100;
-    txt = (v >= 0 ? '+' : '') + v.toFixed(1);
-    scoreEl.style.color = wVal >= 0 ? '#f0d9b5' : '#9a9590';
-  }
-
-  fillEl.style.width  = pct + '%';
-  scoreEl.textContent = txt;
+  fillEl.style.width=pct+'%';scoreEl.textContent=txt;
 }
 
-/* ─── Move quality panel ─── */
-function updQualityPanel() {
-  const clsRow   = document.getElementById('cls-row');
-  const playedEl = document.getElementById('played-san');
-  const evalEl   = document.getElementById('played-eval');
-  const bestEl   = document.getElementById('best-san');
-  const bestDesc = document.getElementById('best-eval');
-  const btnBest  = document.getElementById('btn-best');
-
-  if (moveIdx === 0 || !hist.length) {
-    clsRow.style.display  = 'none';
-    playedEl.textContent  = '—';
-    evalEl.textContent    = 'Select a move to see details.';
-    bestEl.textContent    = '—';
-    bestDesc.textContent  = '';
-    btnBest.style.display = 'none';
-    return;
+function setEvalFromCustom(ev,turn){
+  // Used in practice mode to update eval bar with a custom eval
+  const scoreEl=document.getElementById('eval-score'),fillEl=document.getElementById('eval-fill');
+  if(!ev){return;}
+  const wVal=toWhite(ev,turn);
+  let pct,txt;
+  if(ev.mate!==null){
+    const wM=wVal>0;pct=wM?96:4;txt=wM?`M+${Math.abs(ev.mate)}`:`M-${Math.abs(ev.mate)}`;
+    scoreEl.style.color=wM?'#f0d9b5':'#8a8178';
+  }else{
+    pct=Math.max(4,Math.min(96,50+(Math.max(-800,Math.min(800,wVal))/800)*46));
+    txt=(wVal>=0?'+':'')+(wVal/100).toFixed(1);
+    scoreEl.style.color=wVal>=0?'#f0d9b5':'#9a9590';
   }
-
-  const i    = moveIdx - 1;
-  const cls  = clsArr[i];
-  const turn = i % 2 === 0 ? 'White' : 'Black';
-
-  clsRow.style.display = cls ? 'block' : 'none';
-  if (cls) clsRow.innerHTML = `<span class="cls-pill cls-${cls}">${cls}</span>`;
-
-  playedEl.textContent = `${turn}: ${hist[i]}`;
-
-  if (evals[i+1]) {
-    const ev  = evals[i+1];
-    const tmp = new Chess();
-    for (let k = 0; k <= i; k++) tmp.move(hist[k]);
-
-    let cpStr;
-    if (tmp.in_checkmate()) cpStr = 'Checkmate';
-    else if (tmp.in_draw()) cpStr = 'Draw';
-    else if (ev.mate !== null) cpStr = 'Mate in ' + Math.abs(ev.mate);
-    else {
-      const wv = toWhite(ev, tmp.turn()) / 100;
-      cpStr = (wv >= 0 ? '+' : '') + wv.toFixed(2);
-    }
-    evalEl.textContent = `Eval after move: ${cpStr}`;
-  } else {
-    evalEl.textContent = evals.length > 0 ? 'Evaluating…' : '';
-  }
-
-  const posBefore = new Chess();
-  for (let k = 0; k < i; k++) posBefore.move(hist[k]);
-
-  if (posBefore.game_over()) {
-    bestEl.textContent   = 'Game Over';
-    bestDesc.textContent = '';
-    btnBest.style.display = 'none';
-    return;
-  }
-
-  btnBest.style.display = 'block';
-  btnBest.textContent   = showBest ? 'Hide Best Move' : 'Show Best Move';
-
-  const bm = evals[i]?.bestMove;
-  if (bm && bm !== '(none)' && bm.length >= 4) {
-    const t = new Chess(fens[i]);
-    let bmSAN = bm.slice(0,2).toUpperCase() + '→' + bm.slice(2,4).toUpperCase();
-    try {
-      const r = t.move({ from: bm.slice(0,2), to: bm.slice(2,4), promotion: bm[4] || undefined });
-      if (r) bmSAN = r.san;
-    } catch {}
-
-    bestEl.textContent = `Best: ${bmSAN}`;
-
-    const ev2 = evals[i];
-    if (ev2.mate !== null) {
-      bestDesc.textContent = `Engine: Mate in ${Math.abs(ev2.mate)}`;
-    } else {
-      const bvW = toWhite(ev2, turnAt(i)) / 100;
-      bestDesc.textContent = `Engine eval: ${bvW >= 0 ? '+' : ''}${bvW.toFixed(2)}`;
-    }
-  } else {
-    bestEl.textContent   = analyzing ? 'Analyzing…' : '—';
-    bestDesc.textContent = '';
-  }
+  fillEl.style.width=pct+'%';scoreEl.textContent=txt;
 }
 
-/* ─── Move list ─── */
-const BADGE = {
-  best:      ['mb-best',      '✓'],
-  forced:    ['mb-forced',    '✓'],
-  brilliant: ['mb-brilliant', '!!'],
-  excellent: ['mb-excellent', '!'],
-  good:      ['mb-good',      '↗'],
+/* ═══════════ Move quality panel ═══════════ */
+function updQualityPanel(){
+  const clsRow=document.getElementById('cls-row');
+  const playedEl=document.getElementById('played-san');
+  const evalEl=document.getElementById('played-eval');
+  const bestEl=document.getElementById('best-san');
+  const bestDesc=document.getElementById('best-eval');
+  const btnBest=document.getElementById('btn-best');
+  if(practiceMode){
+    clsRow.style.display='none';
+    playedEl.textContent='Practice Mode';
+    evalEl.textContent='Make a move to explore.';
+    bestEl.textContent='—';bestDesc.textContent='';
+    btnBest.style.display='none';return;
+  }
+  if(moveIdx===0||!hist.length){
+    clsRow.style.display='none';playedEl.textContent='—';
+    evalEl.textContent='Select a move to see details.';
+    bestEl.textContent='—';bestDesc.textContent='';
+    btnBest.style.display='none';return;
+  }
+  const i=moveIdx-1,cls=clsArr[i],turn=i%2===0?'White':'Black';
+  clsRow.style.display=cls?'block':'none';
+  if(cls)clsRow.innerHTML=`<span class="cls-pill cls-${cls}">${cls==='missed-win'?'Missed Win ✗':cls==='brilliant'?'Brilliant !!':cls}</span>`;
+  playedEl.textContent=`${turn}: ${hist[i]}`;
+  if(evals[i+1]){
+    const ev=evals[i+1],tmp=new Chess();
+    for(let k=0;k<=i;k++)tmp.move(hist[k]);
+    let cs;
+    if(tmp.in_checkmate())cs='Checkmate';
+    else if(tmp.in_draw())cs='Draw';
+    else if(ev.mate!==null)cs='Mate in '+Math.abs(ev.mate);
+    else{const wv=toWhite(ev,tmp.turn())/100;cs=(wv>=0?'+':'')+wv.toFixed(2);}
+    evalEl.textContent=`Eval after move: ${cs}`;
+  }else evalEl.textContent=evals.length>0?'Evaluating…':'';
+  const pre=new Chess();for(let k=0;k<i;k++)pre.move(hist[k]);
+  if(pre.game_over()){bestEl.textContent='Game Over';bestDesc.textContent='';btnBest.style.display='none';return;}
+  btnBest.style.display='block';btnBest.textContent=showBest?'Hide Best Move':'Show Best Move';
+  const bm=evals[i]?.bestMove;
+  if(bm&&bm!=='(none)'&&bm.length>=4){
+    const t=new Chess(fens[i]);
+    let bmSAN=bm.slice(0,2).toUpperCase()+'→'+bm.slice(2,4).toUpperCase();
+    try{const r=t.move({from:bm.slice(0,2),to:bm.slice(2,4),promotion:bm[4]||undefined});if(r)bmSAN=r.san;}catch{}
+    bestEl.textContent=`Best: ${bmSAN}`;
+    const ev2=evals[i];
+    if(ev2.mate!==null)bestDesc.textContent=`Engine: Mate in ${Math.abs(ev2.mate)}`;
+    else{const bv=toWhite(ev2,turnAt(i))/100;bestDesc.textContent=`Engine eval: ${bv>=0?'+':''}${bv.toFixed(2)}`;}
+  }else{bestEl.textContent=analyzing?'Analyzing…':'—';bestDesc.textContent='';}
+}
+
+/* ═══════════ Move list ═══════════ */
+const BADGE_MAP={
+  brilliant: ['mb-brilliant','!!'],
+  best:      ['mb-best','✓'],
+  forced:    ['mb-forced','✓'],
+  excellent: ['mb-excellent','!'],
+  good:      ['mb-good','↗'],
   inaccuracy:['mb-inaccuracy','?!'],
-  mistake:   ['mb-mistake',   '?'],
-  blunder:   ['mb-blunder',   '??'],
-  missed:    ['mb-missed',    '✗'],
+  'missed-win':['mb-missed-win','✗'],
+  mistake:   ['mb-mistake','?'],
+  blunder:   ['mb-blunder','??'],
 };
-function badge(cls) {
-  if (!cls) return '';
-  const [c, s] = BADGE[cls] || ['mb-good',''];
-  return `<span class="mbadge ${c}">${s}</span>`;
+function badge(cls){
+  if(!cls)return'';
+  const[c,s]=BADGE_MAP[cls]||['mb-good',''];
+  return`<span class="mbadge ${c}">${s}</span>`;
 }
-
-function updMoveList() {
-  const el = document.getElementById('mlist');
-  el.innerHTML = '';
-
-  for (let i = 0; i < hist.length; i += 2) {
-    const num  = Math.floor(i/2) + 1;
-    const wCur = moveIdx === i+1;
-    const bCur = moveIdx === i+2;
-    const row  = document.createElement('div');
-    row.className = 'mrow' + (wCur || bCur ? ' active' : '');
-    row.innerHTML = `
+function updMoveList(){
+  const el=document.getElementById('mlist');el.innerHTML='';
+  for(let i=0;i<hist.length;i+=2){
+    const num=Math.floor(i/2)+1,wC=moveIdx===i+1,bC=moveIdx===i+2;
+    const row=document.createElement('div');
+    row.className='mrow'+(wC||bC?' active':'');
+    row.innerHTML=`
       <span class="mnum">${num}.</span>
-      <span class="msan${wCur?' cur':''}" onclick="jumpTo(${i+1})">
-        ${hist[i]||''}${badge(clsArr[i])}
-      </span>
-      <span class="msan${bCur?' cur':''}" onclick="jumpTo(${i+2})">
-        ${hist[i+1] ? hist[i+1]+badge(clsArr[i+1]) : ''}
-      </span>`;
+      <span class="msan${wC?' cur':''}" onclick="jumpTo(${i+1})">${hist[i]||''}${badge(clsArr[i])}</span>
+      <span class="msan${bC?' cur':''}" onclick="jumpTo(${i+2})">${hist[i+1]?hist[i+1]+badge(clsArr[i+1]):''}</span>`;
     el.appendChild(row);
   }
-
-  el.querySelector('.msan.cur')?.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  el.querySelector('.msan.cur')?.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 
-/* ─── Full render ─── */
-function render() {
-  const boardIdx = (showBest && moveIdx > 0) ? moveIdx - 1 : moveIdx;
-
-  chess = new Chess();
-  for (let i = 0; i < boardIdx; i++) chess.move(hist[i]);
-
-  lastMove = null;
-  if (boardIdx > 0) {
-    const t = new Chess();
-    for (let i = 0; i < boardIdx - 1; i++) t.move(hist[i]);
-    const r = t.move(hist[boardIdx - 1]);
-    if (r) lastMove = { from: r.from, to: r.to };
+/* ═══════════ Full render ═══════════ */
+function render(){
+  const bIdx=(showBest&&moveIdx>0)?moveIdx-1:moveIdx;
+  chess=new Chess();for(let i=0;i<bIdx;i++)chess.move(hist[i]);
+  lastMove=null;
+  if(bIdx>0){
+    const t=new Chess();for(let i=0;i<bIdx-1;i++)t.move(hist[i]);
+    const r=t.move(hist[bIdx-1]);if(r)lastMove={from:r.from,to:r.to};
   }
-
-  renderBoard();
-  updEvalBar();
-  updQualityPanel();
-  updMoveList();
-  drawGraph();
+  // Reset practice selection on render
+  selectedSq=null;legalTargets=[];
+  renderBoard();updEvalBar();updQualityPanel();updMoveList();drawGraph();
 }
 
-/* ─── Navigation ─── */
-function jumpStart() { exitPractice(); moveIdx = 0;               showBest=false; render(); }
-function prevMove()  { exitPractice(); if(moveIdx>0){ moveIdx--;  showBest=false; render(); playNavFeedback(); } }
-function nextMove()  { exitPractice(); if(moveIdx<hist.length){ moveIdx++; showBest=false; render(); playNavFeedback(); } }
-function jumpEnd()   { exitPractice(); moveIdx = hist.length;      showBest=false; render(); playNavFeedback(); }
-function jumpTo(i)   { exitPractice(); moveIdx=Math.max(0,Math.min(hist.length,i)); showBest=false; render(); playNavFeedback(); }
-function flipBoard() { flipped=!flipped; renderBoard(); }
+/* ═══════════ Practice Mode ═══════════ */
+function enterPractice(){
+  if(practiceMode)return;
+  practiceMode=true;practiceBase=moveIdx;
+  selectedSq=null;legalTargets=[];
+  document.getElementById('practice-banner').style.display='flex';
+  updQualityPanel();
+}
 
-function toggleBest() {
-  if (moveIdx === 0) return;
-  showBest = !showBest;
+function exitPractice(){
+  practiceMode=false;selectedSq=null;legalTargets=[];
+  document.getElementById('practice-banner').style.display='none';
+  moveIdx=practiceBase;
   render();
 }
 
-/* ─── Square clicking & Interactive Practice Mode ─── */
-function handleSquareClick(sq) {
-  if (analyzing && !practiceMode) return;
-
-  const currentChess = practiceMode ? practiceChess : chess;
-  const piece = currentChess.get(sq);
-
-  if (selectedSq === sq) {
-    selectedSq = null;
-    renderBoard();
+async function handleSquareClick(sq){
+  if(!practiceMode){
+    // Click a piece → auto-enter practice mode
+    const p=chess.get(sq);
+    if(p&&p.color===chess.turn()&&!chess.game_over()){
+      enterPractice();
+      selectedSq=sq;
+      legalTargets=chess.moves({square:sq,verbose:true}).map(m=>m.to);
+      renderBoard();
+    }
     return;
   }
-
-  if (selectedSq) {
-    const moves = currentChess.moves({ verbose: true });
-    const legalMove = moves.find(m => m.from === selectedSq && m.to === sq);
-
-    if (legalMove) {
-      let promotion = undefined;
-      const pieceType = currentChess.get(selectedSq)?.type;
-      if (pieceType === 'p' && (sq[1] === '8' || sq[1] === '1')) {
-        promotion = 'q';
-      }
-
-      const playedMove = currentChess.move({
-        from: selectedSq,
-        to: sq,
-        promotion: promotion
-      });
-
-      if (playedMove) {
-        selectedSq = null;
-
-        let soundName = 'Move';
-        if (playedMove.captured) soundName = 'Capture';
-        else if (currentChess.in_check()) {
-          soundName = currentChess.in_checkmate() ? 'Checkmate' : 'Check';
+  // In practice mode
+  if(selectedSq&&legalTargets.includes(sq)){
+    const promo=(sq[1]==='8'||sq[1]==='1')?'q':undefined;
+    const r=chess.move({from:selectedSq,to:sq,promotion:promo});
+    if(r){
+      if(chess.in_checkmate())     {snd('checkmate');haptic(500);}
+      else if(chess.in_check())    {snd('check');haptic(100);}
+      else if(r.captured)          {snd('capture');haptic(50);}
+      else                         {snd('move');haptic(25);}
+      lastMove={from:r.from,to:r.to};
+      selectedSq=null;legalTargets=[];
+      renderBoard();
+      // Quick engine eval of new position
+      if(sfW.length&&sfReady.some(Boolean)&&!chess.game_over()){
+        const worker=sfW[sfReady.findIndex(Boolean)];
+        const ev=await evalPos(worker,chess.fen(),8);
+        setEvalFromCustom(ev,chess.turn());
+      }else if(chess.game_over()){
+        if(chess.in_checkmate()){
+          const wL=chess.turn()==='w';
+          document.getElementById('eval-fill').style.width=wL?'2%':'98%';
+          document.getElementById('eval-score').textContent=wL?'0-1':'1-0';
         }
-        snd(soundName);
-
-        if (!practiceMode) {
-          const expectedUci = uciMoves[moveIdx];
-          const actualUci = playedMove.from + playedMove.to + (playedMove.promotion || '');
-
-          if (actualUci === expectedUci) {
-            moveIdx++;
-            render();
-            const cls = clsArr[moveIdx - 1];
-            if (cls) haptic(cls);
-            return;
-          } else {
-            practiceMode = true;
-            practiceChess = new Chess(fens[moveIdx]);
-            practiceChess.move(playedMove);
-          }
-        }
-
-        showPracticeBanner();
-        renderBoard();
-        evalPracticeMove();
-        return;
       }
-    }
-  }
-
-  if (piece && piece.color === currentChess.turn()) {
-    selectedSq = sq;
-    renderBoard();
-  } else {
-    selectedSq = null;
+    }else{selectedSq=null;legalTargets=[];renderBoard();}
+  }else{
+    const p=chess.get(sq);
+    if(p&&p.color===chess.turn()&&!chess.game_over()){
+      selectedSq=sq;
+      legalTargets=chess.moves({square:sq,verbose:true}).map(m=>m.to);
+    }else{selectedSq=null;legalTargets=[];}
     renderBoard();
   }
 }
 
-function exitPractice() {
-  practiceMode = false;
-  practiceChess = null;
-  selectedSq = null;
-  document.getElementById('practice-banner').style.display = 'none';
-  render();
+/* ═══════════ Navigation ═══════════ */
+function jumpStart(){moveIdx=0;showBest=false;render();}
+function prevMove(){
+  if(practiceMode){exitPractice();return;}
+  if(moveIdx>0){const old=moveIdx;moveIdx--;showBest=false;navSound(moveIdx);render();}
+}
+function nextMove(){
+  if(practiceMode)return;
+  if(moveIdx<hist.length){moveIdx++;showBest=false;navSound(moveIdx);render();}
+}
+function jumpEnd(){moveIdx=hist.length;showBest=false;render();}
+function jumpTo(i){
+  if(practiceMode)exitPractice();
+  moveIdx=Math.max(0,Math.min(hist.length,i));showBest=false;
+  navSound(moveIdx);render();
+}
+function flipBoard(){flipped=!flipped;renderBoard();}
+
+// KEY FIX: full render() call so board reverts to pre-move position
+function toggleBest(){
+  if(moveIdx===0||practiceMode)return;
+  showBest=!showBest;render();
 }
 
-function showPracticeBanner() {
-  document.getElementById('practice-banner').style.display = 'block';
-}
-
-async function evalPracticeMove() {
-  if (!practiceChess) return;
-  const fen = practiceChess.fen();
-
-  const scoreEl = document.getElementById('eval-score');
-  scoreEl.textContent = '...';
-
-  await initWorkers();
-  if (sfW.length > 0) {
-    const res = await evalPos(sfW[0], fen, 8);
-    updatePracticeEvalBar(res, practiceChess.turn());
-  }
-}
-
-function updatePracticeEvalBar(ev, turn) {
-  const scoreEl = document.getElementById('eval-score');
-  const fillEl  = document.getElementById('eval-fill');
-
-  const wVal = toWhite(ev, turn);
-
-  let pct, txt;
-  if (ev.mate !== null) {
-    const wMating = wVal > 0;
-    pct = wMating ? 96 : 4;
-    const mN = Math.abs(ev.mate);
-    txt = wMating ? `M+${mN}` : `M-${mN}`;
-    scoreEl.style.color = wMating ? '#f0d9b5' : '#8a8178';
-  } else {
-    const clampedCp = Math.max(-800, Math.min(800, wVal));
-    pct = Math.max(4, Math.min(96, 50 + (clampedCp / 800) * 46));
-    const v = wVal / 100;
-    txt = (v >= 0 ? '+' : '') + v.toFixed(1);
-    scoreEl.style.color = wVal >= 0 ? '#f0d9b5' : '#9a9590';
-  }
-
-  fillEl.style.width  = pct + '%';
-  scoreEl.textContent = txt;
-}
-
-function playNavFeedback() {
-  if (moveIdx > 0 && hist[moveIdx - 1]) {
-    const san = hist[moveIdx - 1];
-    let sndName = 'Move';
-    if (san.includes('#')) sndName = 'Checkmate';
-    else if (san.includes('+')) sndName = 'Check';
-    else if (san.includes('x')) sndName = 'Capture';
-    snd(sndName);
-
-    const cls = clsArr[moveIdx - 1];
-    if (cls) haptic(cls);
-  }
-}
-
-/* ─── Keyboard ─── */
-document.addEventListener('keydown', e => {
-  switch(e.key) {
-    case 'ArrowLeft':  prevMove();  break;
-    case 'ArrowRight': nextMove();  break;
-    case 'ArrowUp':    jumpStart(); break;
-    case 'ArrowDown':  jumpEnd();   break;
+/* ── Keyboard ── */
+document.addEventListener('keydown',e=>{
+  switch(e.key){
+    case 'ArrowLeft': prevMove();break;
+    case 'ArrowRight':nextMove();break;
+    case 'ArrowUp':   jumpStart();break;
+    case 'ArrowDown': jumpEnd();break;
+    case 'Escape':    if(practiceMode)exitPractice();break;
   }
 });
 
-/* ─── Util ─── */
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-/* ─── Initial empty board & Listeners ─── */
+/* ── Initial render ── */
 renderBoard();
-document.getElementById('chessboard').addEventListener('click', e => {
-  const sqEl = e.target.closest('.sq');
-  if (!sqEl) return;
-  const sq = sqEl.dataset.sq;
-  if (sq) handleSquareClick(sq);
-});
 android('onReviewLoaded');
 </script>
 </body>
