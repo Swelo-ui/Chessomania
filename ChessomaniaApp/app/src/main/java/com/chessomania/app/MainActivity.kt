@@ -114,25 +114,15 @@ class MainActivity : AppCompatActivity() {
         transaction.commit()
         activeFragment = target
 
-        // Transition music when switching tabs
+        // Transition music when switching tabs (Smart BGM approach)
         val music = com.chessomania.app.audio.BgMusicManager.getInstance(this)
-        when (tag) {
-            "play" -> {
-                // If in active game, play gameplay, else play menu
-                val playFrag = playFragment
-                if (playFrag != null && playFrag.isInActiveGame()) {
-                    music.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY)
-                } else {
-                    music.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
-                }
-            }
-            "puzzle" -> {
-                music.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE)
-            }
-            else -> {
-                music.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
-            }
+        val playFrag = playFragment
+        val targetTrack = when {
+            tag == "puzzle" -> com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE
+            playFrag != null && playFrag.isInActiveGame() -> com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY
+            else -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
         }
+        music.play(targetTrack)
     }
 
     fun updateStatusBadge(text: String) {
