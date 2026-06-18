@@ -117,10 +117,18 @@ class MainActivity : AppCompatActivity() {
         // Transition music when switching tabs (Smart BGM approach)
         val music = com.chessomania.app.audio.BgMusicManager.getInstance(this)
         val playFrag = playFragment
-        val targetTrack = when {
-            tag == "puzzle" -> com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE
-            playFrag != null && playFrag.isInActiveGame() -> com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY
-            else -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+        val targetTrack = if (playFrag != null && playFrag.isInActiveGame()) {
+            com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY
+        } else {
+            val themeIndex = com.chessomania.app.net.SecurePrefs.getMusicThemeIndex(this)
+            when (themeIndex) {
+                0 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+                1 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY
+                2 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE
+                3 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.VICTORY
+                4 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.DEFEAT
+                else -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+            }
         }
         music.play(targetTrack)
     }

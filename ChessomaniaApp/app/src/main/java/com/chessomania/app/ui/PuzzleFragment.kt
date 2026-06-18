@@ -46,8 +46,7 @@ class PuzzleFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        com.chessomania.app.audio.BgMusicManager.getInstance(requireContext()).play(com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE)
-
+        // BGM is managed contextually by MainActivity tab switching
         boardView = view.findViewById(R.id.puzzle_board)
         messageText = view.findViewById(R.id.puz_message)
         subtitleText = view.findViewById(R.id.puz_subtitle)

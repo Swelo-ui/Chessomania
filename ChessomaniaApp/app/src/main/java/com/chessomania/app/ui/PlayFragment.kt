@@ -477,7 +477,16 @@ class PlayFragment : Fragment() {
                 bgMusic.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.DEFEAT)
             }
         } else {
-            bgMusic.play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
+            val themeIndex = com.chessomania.app.net.SecurePrefs.getMusicThemeIndex(requireContext())
+            val preferredTrack = when (themeIndex) {
+                0 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+                1 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY
+                2 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE
+                3 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.VICTORY
+                4 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.DEFEAT
+                else -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+            }
+            bgMusic.play(preferredTrack)
         }
 
         val dialog = Dialog(requireContext())
@@ -620,7 +629,16 @@ class PlayFragment : Fragment() {
     private fun showLocalLeaveDialog() {
         val context = context ?: return
         disableCheat()
-        com.chessomania.app.audio.BgMusicManager.getInstance(context).play(com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU)
+        val themeIndex = com.chessomania.app.net.SecurePrefs.getMusicThemeIndex(context)
+        val preferredTrack = when (themeIndex) {
+            0 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+            1 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.GAMEPLAY
+            2 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.PUZZLE
+            3 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.VICTORY
+            4 -> com.chessomania.app.audio.BgMusicManager.MusicTrack.DEFEAT
+            else -> com.chessomania.app.audio.BgMusicManager.MusicTrack.MENU
+        }
+        com.chessomania.app.audio.BgMusicManager.getInstance(context).play(preferredTrack)
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_game_over)

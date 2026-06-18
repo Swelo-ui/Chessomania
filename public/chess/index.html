@@ -1194,12 +1194,11 @@ function goTab(id) {
   if (id==='settings') initSettings();
 
   // Handle Background Ambient Music Transitions (Smart BGM approach)
-  if (id === 'puzzle') {
-    playWebMusicTrack('puzzle');
-  } else if (!bOver && bHist.length > 0) {
+  if (!bOver && bHist.length > 0) {
     playWebMusicTrack('gameplay');
   } else {
-    playWebMusicTrack('menu');
+    const style = localStorage.getItem('chess_music_style') || 'menu';
+    playWebMusicTrack(style);
   }
 }
 
